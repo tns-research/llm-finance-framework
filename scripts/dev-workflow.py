@@ -13,7 +13,8 @@ def run_command(cmd, description):
     print(f"   Command: {' '.join(cmd)}")
     try:
         result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-        print("   ✅ Success"        return True
+        print("   ✅ Success")
+        return True
     except subprocess.CalledProcessError as e:
         print(f"   ❌ Failed: {e}")
         print(f"   Error output: {e.stderr}")
