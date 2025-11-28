@@ -14,7 +14,8 @@ def run_command(cmd, description, check=True):
     try:
         result = subprocess.run(cmd, check=check, capture_output=True, text=True)
         if result.returncode == 0:
-            print("   ✅ Success"            return True
+            print("   ✅ Success")
+            return True
         else:
             print(f"   ⚠️  Exit code: {result.returncode}")
             if result.stdout:
@@ -173,7 +174,7 @@ def show_collaboration_status():
 
     for cmd, desc in commands:
         print(f"\n{desc}:")
-        run_command(cmd, check=False)
+        run_command(cmd, desc, check=False)
 
 def main():
     actions = {
