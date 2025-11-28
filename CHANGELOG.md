@@ -12,11 +12,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Baseline trading strategies (Buy & Hold, Momentum, Mean Reversion, etc.)
 - Statistical validation with bootstrap testing
 - Comprehensive reporting and visualization
-- GitHub Actions CI/CD pipeline
-- Development tools and linting configuration
+- GitHub Actions CI/CD pipeline with automated testing and linting
+- Development tools: dev.bat (Windows), Makefile (Unix/Linux)
+- Cross-platform development workflow scripts
+- Version management system with semantic versioning
+- Collaboration tools for team development
+- Modern Python packaging with pyproject.toml
+- Comprehensive documentation and contribution guidelines
+- Code of conduct and research ethics guidelines
+- GitHub issue and PR templates for standardized contributions
+- Automated dependency management with Dependabot
 
 ### Changed
 - Migrated from master to main branch
+- Updated to modern Python project structure
+- Replaced seaborn dependency with core visualization libraries
+- Reorganized utility scripts into dedicated scripts/ directory
+- Enhanced CI/CD pipeline with comprehensive quality checks
+
+### Fixed
+- Removed unused dependencies and cleaned up requirements.txt
+- Fixed repository placeholder URLs to point to correct repository
+- Organized .gitignore with proper exclusions and removed duplicates
 
 ### Technical Details
 - Python 3.8+ compatibility

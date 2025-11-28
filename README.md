@@ -197,12 +197,14 @@ The framework is designed to work with any daily stock/index data. Modify `src/d
 
 ```
 📁 Root Level
+├── 📖 README.md               # Main project documentation
 ├── 📦 pyproject.toml          # Modern Python packaging & metadata
-├── 🪟 dev.bat                 # Windows development commands
+├── 📋 requirements.txt       # Core dependency list
 ├── 🐧 Makefile               # Unix/Linux development commands
+├── 🪟 dev.bat                 # Windows development commands
+├── ⚖️ LICENSE                 # Project license
 ├── 📝 CHANGELOG.md           # Version history & changes
-├── 🤝 CODE_OF_CONDUCT.md     # Community standards
-└── 📋 requirements.txt       # Traditional dependency list
+└── 🤝 CODE_OF_CONDUCT.md     # Community standards
 
 📁 src/
 ├── 🎯 main.py                 # Pipeline orchestrator
@@ -222,13 +224,25 @@ The framework is designed to work with any daily stock/index data. Modify `src/d
 📁 scripts/
 ├── 🏷️ version.py             # Version management system
 ├── 🔄 dev-workflow.py        # Development automation
-└── 🤝 collaborate.py         # Collaboration helpers
+├── 🤝 collaborate.py         # Collaboration helpers
+└── 📋 generate_report.py     # Report generation utility
 
 📁 docs/
 ├── 🤝 COLLABORATION_GUIDE.md # Detailed collaboration guide
 ├── ⚙️ configuration.md       # Configuration reference
 ├── 🔬 methodology.md         # Research methodology
 └── 📚 STRATEGIC_JOURNAL_FEATURE.md # Memory system details
+
+📁 tests/
+├── 🧪 test_calibration.py    # Calibration testing
+└── 🧪 test_strategic_journal_config.py # Configuration testing
+
+📁 data/
+├── 📥 raw/                   # Raw financial data (tracked)
+└── 📤 processed/             # Processed data (gitignored)
+
+📁 example_results/           # 📋 Example outputs for documentation
+📁 results/                   # 📊 Generated results (gitignored)
 
 📁 .github/
 ├── 🤖 workflows/ci.yml       # CI/CD pipeline
