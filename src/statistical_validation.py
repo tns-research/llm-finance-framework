@@ -382,9 +382,11 @@ def evaluate_hold_decisions_dual_criteria(parsed_df: pd.DataFrame) -> Dict:
         })
 
     # Calculate contextual success
+    # NOTE: context_score is HIGH when conditions are BAD for HOLD
+    # So HOLD is contextually appropriate when context_score is LOW (good conditions)
     context_scores = [c['score'] for c in contexts]
     avg_context_score = sum(context_scores) / len(context_scores) if context_scores else 0
-    context_success_rate = (np.array(context_scores) > 0.5).mean() if context_scores else 0
+    context_success_rate = (np.array(context_scores) <= 0.5).mean() if context_scores else 0
 
     # ===== COMBINED SCORING =====
     quiet_weight = 0.6
@@ -392,7 +394,8 @@ def evaluate_hold_decisions_dual_criteria(parsed_df: pd.DataFrame) -> Dict:
 
     combined_scores = []
     for i, quiet_win in enumerate(quiet_markets):
-        context_win = context_scores[i] > 0.5 if i < len(context_scores) else False
+        # Context success = LOW context score (good conditions for HOLD)
+        context_win = context_scores[i] <= 0.5 if i < len(context_scores) else False
         combined_score = (quiet_weight * int(quiet_win) + context_weight * int(context_win))
         combined_scores.append(combined_score)
 
@@ -436,7 +439,7 @@ def evaluate_hold_decisions_dual_criteria(parsed_df: pd.DataFrame) -> Dict:
             "avg_context_score": avg_context_score,
             "context_success_rate": context_success_rate,
             "reason_breakdown": context_reasons,
-            "interpretation": f"HOLD was contextually appropriate in {context_success_rate:.1%} of cases"
+            "interpretation": f"HOLD was chosen in contextually appropriate conditions in {context_success_rate:.1%} of cases"
         },
 
         # Combined assessment
@@ -456,7 +459,7 @@ def evaluate_hold_decisions_dual_criteria(parsed_df: pd.DataFrame) -> Dict:
 
         "summary": {
             "hold_effectiveness": f"{performance_category.upper()} ({overall_success_rate:.1%} success rate)",
-            "key_insight": f"HOLD decisions were most successful during quiet markets ({quiet_success_rate:.1%}) and appropriate contexts ({context_success_rate:.1%})"
+            "key_insight": f"HOLD decisions were most successful during quiet markets ({quiet_success_rate:.1%}) and were chosen in appropriate market contexts ({context_success_rate:.1%})"
         }
     }
 
