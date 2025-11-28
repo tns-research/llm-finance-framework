@@ -1,4 +1,14 @@
+# Core dependencies
 requests
 pandas
 scipy
 matplotlib
+seaborn
+
+# Development dependencies (optional)
+# pytest>=7.0
+# pytest-cov
+# flake8
+# black
+# isort
+# mypy
