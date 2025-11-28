@@ -46,7 +46,7 @@ pip install pytest black flake8 mypy
 ### Development Setup
 1. **Fork and Clone**:
    ```bash
-   git clone https://github.com/yourusername/llm-finance-experiment.git
+   git clone https://github.com/tns-research/llm-finance-framework.git
    cd llm-finance-experiment
    ```
 
@@ -197,7 +197,7 @@ If your contribution leads to research outputs, please cite:
   title={Large Language Models in Financial Decision-Making},
   author={Contributors},
   year={2025},
-  url={https://github.com/yourusername/llm-finance-experiment}
+  url={https://github.com/tns-research/llm-finance-framework}
 }
 ```
 

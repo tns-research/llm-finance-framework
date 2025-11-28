@@ -8,11 +8,11 @@ This guide explains how to collaborate effectively on the LLM Finance Framework 
 ```bash
 # Fork the repository on GitHub
 # Then clone your fork
-git clone https://github.com/YOUR_USERNAME/llm-finance-framework.git
+git clone https://github.com/tns-research/llm-finance-framework.git
 cd llm-finance-framework
 
 # Add upstream remote
-git remote add upstream https://github.com/ORIGINAL_OWNER/llm-finance-framework.git
+git remote add upstream https://github.com/tns-research/llm-finance-framework.git
 ```
 
 ### **2. Development Setup**

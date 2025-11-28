@@ -90,7 +90,7 @@ For answers to common questions about this code of conduct, see the FAQ at [http
 ## Contact Information
 
 For questions or concerns about this Code of Conduct:
-- **Maintainers**: [Repository maintainers]
+- **Maintainers**: tns-research
 - **Anonymous Reporting**: [GitHub Security Advisories or anonymous form if available]
 
 ---
