@@ -1,0 +1,651 @@
+# src/statistical_validation.py
+"""
+Statistical validation of strategy performance.
+
+Provides rigorous statistical testing for LLM trading strategies including:
+- Bootstrap significance testing vs benchmarks
+- Out-of-sample validation for overfitting detection
+- Comprehensive statistical validation suite
+"""
+
+import numpy as np
+import pandas as pd
+from scipy import stats
+from typing import Dict, Tuple, Optional
+import json
+import os
+
+
+def bootstrap_sharpe_comparison(
+    strategy_returns: np.ndarray,
+    benchmark_returns: np.ndarray,
+    n_bootstrap: int = 10000
+) -> Dict:
+    """
+    Bootstrap test: Is strategy Sharpe ratio significantly different from benchmark?
+
+    Uses bootstrap resampling to test statistical significance while accounting for
+    non-normal return distributions common in financial data.
+
+    Args:
+        strategy_returns: Array of strategy returns (percentage)
+        benchmark_returns: Array of benchmark returns (percentage)
+        n_bootstrap: Number of bootstrap resamples (default 10,000)
+
+    Returns:
+        Dict with statistical test results
+    """
+    def sharpe_ratio(returns: np.ndarray) -> float:
+        """Calculate Sharpe ratio (annualized assuming daily returns)"""
+        if len(returns) == 0 or returns.std() == 0:
+            return 0.0
+        return (returns.mean() / returns.std()) * np.sqrt(252)  # Annualize
+
+    # Observed statistics
+    observed_strategy_sharpe = sharpe_ratio(strategy_returns)
+    observed_benchmark_sharpe = sharpe_ratio(benchmark_returns)
+    observed_diff = observed_strategy_sharpe - observed_benchmark_sharpe
+
+    # Bootstrap resampling
+    diffs = []
+    n = len(strategy_returns)
+
+    for _ in range(n_bootstrap):
+        # Resample with replacement (paired bootstrap)
+        idx = np.random.choice(n, n, replace=True)
+        strategy_boot = strategy_returns[idx]
+        benchmark_boot = benchmark_returns[idx]
+
+        boot_strategy_sharpe = sharpe_ratio(strategy_boot)
+        boot_benchmark_sharpe = sharpe_ratio(benchmark_boot)
+        diffs.append(boot_strategy_sharpe - boot_benchmark_sharpe)
+
+    diffs = np.array(diffs)
+
+    # Statistical tests
+    # Two-sided test: is there a significant difference?
+    p_value_two_sided = 2 * min(
+        np.mean(diffs <= 0),
+        np.mean(diffs >= 0)
+    )
+
+    # One-sided test: is strategy significantly better? (right-tailed)
+    p_value_better = np.mean(diffs <= 0)
+
+    # One-sided test: is strategy significantly worse? (left-tailed)
+    p_value_worse = np.mean(diffs >= 0)
+
+    return {
+        "strategy_sharpe": round(observed_strategy_sharpe, 3),
+        "benchmark_sharpe": round(observed_benchmark_sharpe, 3),
+        "sharpe_difference": round(observed_diff, 3),
+        "p_value_two_sided": round(p_value_two_sided, 4),
+        "p_value_strategy_better": round(p_value_better, 4),
+        "p_value_strategy_worse": round(p_value_worse, 4),
+        "significant_difference_5pct": p_value_two_sided < 0.05,
+        "strategy_significantly_better_5pct": p_value_better < 0.05,
+        "strategy_significantly_worse_5pct": p_value_worse < 0.05,
+        "ci_95_bootstrap": [
+            float(round(np.percentile(diffs, 2.5), 3)),
+            float(round(np.percentile(diffs, 97.5), 3))
+        ],
+        "bootstrap_mean_diff": round(np.mean(diffs), 3),
+        "bootstrap_std_diff": round(np.std(diffs), 3),
+        "effect_size": round(observed_diff / np.std(diffs), 3) if np.std(diffs) > 0 else 0,
+        "n_bootstrap": n_bootstrap,
+        "n_observations": n
+    }
+
+
+def out_of_sample_validation(
+    parsed_df: pd.DataFrame,
+    split_date: str,
+    min_train_periods: int = 100
+) -> Dict:
+    """
+    Out-of-sample validation to detect overfitting and assess generalization.
+
+    Splits data chronologically into training and test periods to check if
+    the strategy performs well on unseen future data.
+
+    Args:
+        parsed_df: DataFrame with parsed trading results
+        split_date: Date string to split train/test (e.g., "2020-01-01")
+        min_train_periods: Minimum training periods required
+
+    Returns:
+        Dict with validation results
+    """
+    try:
+        split_date = pd.to_datetime(split_date)
+    except:
+        return {"error": f"Invalid split_date format: {split_date}"}
+
+    # Split data
+    train_df = parsed_df[parsed_df["date"] < split_date].copy()
+    test_df = parsed_df[parsed_df["date"] >= split_date].copy()
+
+    if len(train_df) < min_train_periods:
+        return {"error": f"Insufficient training data: {len(train_df)} < {min_train_periods}"}
+
+    if len(test_df) == 0:
+        return {"error": "No test data available"}
+
+    def calculate_performance_metrics(df: pd.DataFrame) -> Dict:
+        """Calculate comprehensive performance metrics"""
+        returns = df["strategy_return"].values
+
+        if len(returns) == 0:
+            return {"error": "No returns data"}
+
+        # Basic metrics
+        total_return = returns.sum()
+        mean_return = returns.mean()
+        volatility = returns.std()
+        sharpe = (mean_return / volatility * np.sqrt(252)) if volatility > 0 else 0
+        win_rate = (returns > 0).mean()
+
+        # Drawdown analysis
+        cumulative = np.cumsum(returns)
+        running_max = np.maximum.accumulate(cumulative)
+        drawdowns = cumulative - running_max
+        max_drawdown = np.min(drawdowns) if len(drawdowns) > 0 else 0
+
+        # Additional metrics
+        skewness = stats.skew(returns) if len(returns) > 2 else 0
+        kurtosis = stats.kurtosis(returns) if len(returns) > 2 else 0
+
+        # Value at Risk (95%)
+        var_95 = np.percentile(returns, 5)
+
+        return {
+            "total_return_pct": round(total_return, 2),
+            "mean_daily_return_pct": round(mean_return, 4),
+            "volatility_pct": round(volatility, 4),
+            "sharpe_ratio": round(sharpe, 3),
+            "win_rate_pct": round(win_rate * 100, 2),
+            "max_drawdown_pct": round(max_drawdown, 2),
+            "skewness": round(skewness, 3),
+            "kurtosis": round(kurtosis, 3),
+            "var_95_pct": round(var_95, 2),
+            "n_periods": len(df),
+            "date_range": {
+                "start": str(df["date"].min()),
+                "end": str(df["date"].max())
+            }
+        }
+
+    train_metrics = calculate_performance_metrics(train_df)
+    test_metrics = calculate_performance_metrics(test_df)
+
+    if "error" in train_metrics or "error" in test_metrics:
+        return {"error": "Performance calculation failed"}
+
+    # Comparative analysis
+    sharpe_decay = None
+    if train_metrics["sharpe_ratio"] != 0:
+        sharpe_decay = (train_metrics["sharpe_ratio"] - test_metrics["sharpe_ratio"]) / train_metrics["sharpe_ratio"]
+
+    return_decay = None
+    if abs(train_metrics["total_return_pct"]) > 0.01:  # Avoid division by very small numbers
+        return_decay = (train_metrics["total_return_pct"] - test_metrics["total_return_pct"]) / abs(train_metrics["total_return_pct"])
+
+    # Overfitting detection
+    overfitting_indicators = {
+        "sharpe_decay_severe": sharpe_decay is not None and sharpe_decay > 0.5,  # >50% decay
+        "return_decay_severe": return_decay is not None and return_decay > 0.7,  # >70% decay
+        "test_performance_poor": test_metrics["sharpe_ratio"] < -0.5,  # Very poor test performance
+        "high_train_overfitting": (
+            train_metrics["sharpe_ratio"] > 1.0 and
+            test_metrics["sharpe_ratio"] < 0.0
+        )
+    }
+
+    overall_overfitting_detected = any(overfitting_indicators.values())
+
+    # Generalization assessment
+    generalizes_well = (
+        test_metrics["sharpe_ratio"] > 0.1 and  # Decent test Sharpe
+        not overall_overfitting_detected
+    )
+
+    return {
+        "train_period": train_metrics,
+        "test_period": test_metrics,
+        "comparative_analysis": {
+            "sharpe_decay": round(sharpe_decay, 3) if sharpe_decay else None,
+            "return_decay": round(return_decay, 3) if return_decay else None,
+            "sharpe_decay_pct": round(sharpe_decay * 100, 1) if sharpe_decay else None,
+            "return_decay_pct": round(return_decay * 100, 1) if return_decay else None,
+        },
+        "overfitting_detection": {
+            **overfitting_indicators,
+            "overall_overfitting_detected": overall_overfitting_detected,
+            "overfitting_severity": "high" if sum(overfitting_indicators.values()) >= 2 else "moderate" if sum(overfitting_indicators.values()) >= 1 else "low"
+        },
+        "generalization_assessment": {
+            "generalizes_well": generalizes_well,
+            "test_performance_adequate": test_metrics["sharpe_ratio"] > 0,
+            "consistent_performance": abs(sharpe_decay or 0) < 0.3
+        },
+        "split_date": str(split_date),
+        "data_split": {
+            "train_pct": round(len(train_df) / len(parsed_df) * 100, 1),
+            "test_pct": round(len(test_df) / len(parsed_df) * 100, 1)
+        }
+    }
+
+
+def comprehensive_statistical_validation(
+    parsed_df: pd.DataFrame,
+    model_tag: str,
+    split_date: Optional[str] = None,
+    benchmark_returns: Optional[np.ndarray] = None
+) -> Dict:
+    """
+    Run comprehensive statistical validation suite for LLM trading strategy.
+
+    Args:
+        parsed_df: DataFrame with parsed trading results
+        model_tag: Name/tag of the model being validated
+        split_date: Date for train/test split (optional)
+        benchmark_returns: Benchmark returns array for comparison (optional)
+
+    Returns:
+        Comprehensive validation results dictionary
+    """
+    results = {
+        "model": model_tag,
+        "validation_timestamp": str(pd.Timestamp.now()),
+        "dataset_info": {
+            "n_periods": len(parsed_df),
+            "date_range": {
+                "start": str(parsed_df["date"].min()),
+                "end": str(parsed_df["date"].max())
+            },
+            "total_strategy_return": round(parsed_df["strategy_return"].sum(), 2),
+            "total_index_return": round(parsed_df["next_return_1d"].sum(), 2)
+        }
+    }
+
+    # Out-of-sample validation
+    if split_date:
+        print(f"Running out-of-sample validation with split date: {split_date}")
+        oos_results = out_of_sample_validation(parsed_df, split_date)
+        results["out_of_sample_validation"] = oos_results
+
+        if "error" in oos_results:
+            print(f"Warning: Out-of-sample validation failed: {oos_results['error']}")
+        else:
+            print("✓ Out-of-sample validation completed")
+
+    # Bootstrap testing vs benchmark
+    if benchmark_returns is not None:
+        print("Running bootstrap Sharpe ratio comparison...")
+        strategy_returns = parsed_df["strategy_return"].values
+
+        bootstrap_results = bootstrap_sharpe_comparison(
+            strategy_returns, benchmark_returns, n_bootstrap=5000
+        )
+        results["bootstrap_vs_benchmark"] = bootstrap_results
+        print("✓ Bootstrap comparison completed")
+    else:
+        # Default: compare vs index returns
+        print("Running bootstrap comparison vs index returns...")
+        strategy_returns = parsed_df["strategy_return"].values
+        index_returns = parsed_df["next_return_1d"].values
+
+        bootstrap_results = bootstrap_sharpe_comparison(
+            strategy_returns, index_returns, n_bootstrap=5000
+        )
+        results["bootstrap_vs_index"] = bootstrap_results
+        print("✓ Bootstrap comparison vs index completed")
+
+    # HOLD decision analysis
+    hold_analysis = evaluate_hold_decisions_dual_criteria(parsed_df)
+    results["hold_decision_analysis"] = hold_analysis
+
+    # Summary assessment
+    results["summary_assessment"] = generate_validation_summary(results)
+
+    return results
+
+
+def evaluate_hold_decisions_dual_criteria(parsed_df: pd.DataFrame) -> Dict:
+    """
+    Evaluate HOLD decisions using dual criteria:
+    1. Quiet market success (<0.2% moves)
+    2. Contextual decision correctness (volatility, regime changes, uncertainty)
+    """
+    hold_decisions = parsed_df[parsed_df["decision"] == "HOLD"].copy()
+
+    if len(hold_decisions) == 0:
+        return {"note": "No HOLD decisions to evaluate"}
+
+    # Add rolling calculations for context analysis
+    parsed_df_copy = parsed_df.copy()
+    parsed_df_copy['market_volatility_20d'] = parsed_df_copy['next_return_1d'].rolling(20).std()
+    parsed_df_copy['market_trend_10d'] = parsed_df_copy['next_return_1d'].rolling(10).mean()
+    parsed_df_copy['regime_change'] = (parsed_df_copy['market_trend_10d'].diff().abs() > 0.001)
+
+    # Filter to HOLD decisions
+    hold_data = parsed_df_copy[parsed_df_copy["decision"] == "HOLD"]
+
+    # ===== CRITERION 1: QUIET MARKET SUCCESS =====
+    quiet_threshold = 0.002  # 0.2% very quiet market
+    market_returns = hold_data["next_return_1d"]
+    quiet_markets = market_returns.abs() < quiet_threshold
+
+    quiet_success_rate = quiet_markets.mean()
+    quiet_success_count = quiet_markets.sum()
+
+    # ===== CRITERION 2: CONTEXTUAL CORRECTNESS =====
+    contexts = []
+
+    for idx, row in hold_data.iterrows():
+        context_score = 0
+        reasons = []
+
+        # High volatility context (>75th percentile of all market volatility)
+        vol_threshold = parsed_df_copy['market_volatility_20d'].quantile(0.75)
+        if pd.notna(row['market_volatility_20d']) and row['market_volatility_20d'] > vol_threshold:
+            context_score += 1.0
+            reasons.append("high_volatility")
+
+        # Regime change context (trend direction changed significantly)
+        if pd.notna(row['regime_change']) and row['regime_change']:
+            context_score += 0.8
+            reasons.append("regime_change")
+
+        # Low confidence context (decision uncertainty)
+        recent_window = parsed_df_copy.loc[max(0, idx-5):idx]
+        if len(recent_window) > 0:
+            recent_decisions = recent_window['decision'].dropna()
+            if len(recent_decisions) > 0:
+                decision_entropy = len(set(recent_decisions)) / len(recent_decisions)
+                if decision_entropy > 0.6:  # Mixed recent decisions = uncertainty
+                    context_score += 0.6
+                    reasons.append("decision_uncertainty")
+
+        # Extreme market conditions (very large recent moves)
+        recent_window = parsed_df_copy.loc[max(0, idx-3):idx]
+        if len(recent_window) > 0:
+            recent_vol = recent_window['next_return_1d'].abs().max()
+            if recent_vol > 0.03:  # 3%+ recent daily move
+                context_score += 0.7
+                reasons.append("extreme_conditions")
+
+        contexts.append({
+            'score': min(context_score, 2.0),  # Cap at 2.0
+            'reasons': reasons,
+            'max_reason': max(reasons) if reasons else None
+        })
+
+    # Calculate contextual success
+    context_scores = [c['score'] for c in contexts]
+    avg_context_score = sum(context_scores) / len(context_scores) if context_scores else 0
+    context_success_rate = (np.array(context_scores) > 0.5).mean() if context_scores else 0
+
+    # ===== COMBINED SCORING =====
+    quiet_weight = 0.6
+    context_weight = 0.4
+
+    combined_scores = []
+    for i, quiet_win in enumerate(quiet_markets):
+        context_win = context_scores[i] > 0.5 if i < len(context_scores) else False
+        combined_score = (quiet_weight * int(quiet_win) + context_weight * int(context_win))
+        combined_scores.append(combined_score)
+
+    overall_success_rate = np.mean(combined_scores) if combined_scores else 0
+
+    # ===== CONTEXT REASONS BREAKDOWN =====
+    context_reasons = {}
+    for context in contexts:
+        for reason in context['reasons']:
+            context_reasons[reason] = context_reasons.get(reason, 0) + 1
+
+    # ===== PERFORMANCE CATEGORY =====
+    def categorize_hold_performance(success_rate: float) -> str:
+        if success_rate > 0.7:
+            return "excellent"
+        elif success_rate > 0.6:
+            return "good"
+        elif success_rate > 0.5:
+            return "adequate"
+        elif success_rate > 0.4:
+            return "poor"
+        else:
+            return "very_poor"
+
+    performance_category = categorize_hold_performance(overall_success_rate)
+
+    return {
+        "overall_hold_success_rate": overall_success_rate,
+
+        # Quiet market criterion
+        "quiet_market_success": {
+            "success_rate": quiet_success_rate,
+            "threshold": quiet_threshold,
+            "successful_holds": int(quiet_success_count),
+            "total_holds": len(hold_decisions),
+            "interpretation": f"HOLD succeeded in {quiet_success_rate:.1%} of very quiet markets (<{quiet_threshold:.1%} daily moves)"
+        },
+
+        # Contextual criterion
+        "contextual_correctness": {
+            "avg_context_score": avg_context_score,
+            "context_success_rate": context_success_rate,
+            "reason_breakdown": context_reasons,
+            "interpretation": f"HOLD was contextually appropriate in {context_success_rate:.1%} of cases"
+        },
+
+        # Combined assessment
+        "combined_assessment": {
+            "quiet_weight": quiet_weight,
+            "context_weight": context_weight,
+            "overall_score": overall_success_rate,
+            "performance_category": performance_category
+        },
+
+        "hold_statistics": {
+            "total_hold_decisions": len(hold_decisions),
+            "hold_percentage": len(hold_decisions) / len(parsed_df) if len(parsed_df) > 0 else 0,
+            "avg_market_move_during_hold": market_returns.abs().mean() if len(market_returns) > 0 else 0,
+            "hold_during_quiet_pct": quiet_markets.mean() if len(quiet_markets) > 0 else 0
+        },
+
+        "summary": {
+            "hold_effectiveness": f"{performance_category.upper()} ({overall_success_rate:.1%} success rate)",
+            "key_insight": f"HOLD decisions were most successful during quiet markets ({quiet_success_rate:.1%}) and appropriate contexts ({context_success_rate:.1%})"
+        }
+    }
+
+
+def generate_validation_summary(validation_results: Dict) -> Dict:
+    """
+    Generate human-readable summary of validation results.
+    """
+    summary = {
+        "overall_assessment": "unknown",
+        "key_findings": [],
+        "recommendations": [],
+        "confidence_level": "low"
+    }
+
+    # Out-of-sample assessment
+    if "out_of_sample_validation" in validation_results:
+        oos = validation_results["out_of_sample_validation"]
+        if "error" not in oos:
+            if oos["generalization_assessment"]["generalizes_well"]:
+                summary["key_findings"].append("✅ Strategy generalizes well to out-of-sample data")
+                summary["confidence_level"] = "high"
+            else:
+                summary["key_findings"].append("⚠️  Strategy shows signs of overfitting or poor generalization")
+                summary["recommendations"].append("Consider model regularization or simpler strategy")
+
+            if oos["overfitting_detection"]["overall_overfitting_detected"]:
+                severity = oos["overfitting_detection"]["overfitting_severity"]
+                summary["key_findings"].append(f"🚨 {severity.capitalize()} overfitting detected")
+
+    # Bootstrap assessment
+    bootstrap_key = "bootstrap_vs_benchmark" if "bootstrap_vs_benchmark" in validation_results else "bootstrap_vs_index"
+    if bootstrap_key in validation_results:
+        bs = validation_results[bootstrap_key]
+        benchmark_name = "benchmark" if "benchmark" in bootstrap_key else "index"
+
+        if bs["strategy_significantly_better_5pct"]:
+            summary["key_findings"].append(f"✅ Strategy significantly outperforms {benchmark_name} (p={bs['p_value_strategy_better']})")
+        elif bs["strategy_significantly_worse_5pct"]:
+            summary["key_findings"].append(f"❌ Strategy significantly underperforms {benchmark_name} (p={bs['p_value_strategy_worse']})")
+        else:
+            summary["key_findings"].append(f"🤔 Strategy performance vs {benchmark_name} is not statistically significant")
+
+        effect_size = abs(bs["effect_size"])
+        if effect_size > 0.8:
+            summary["key_findings"].append("📈 Large effect size indicates substantial performance difference")
+        elif effect_size > 0.5:
+            summary["key_findings"].append("📊 Moderate effect size indicates meaningful performance difference")
+
+    # Overall assessment
+    if summary["confidence_level"] == "high" and len([f for f in summary["key_findings"] if "✅" in f]) > 0:
+        summary["overall_assessment"] = "strong"
+    elif len([f for f in summary["key_findings"] if "❌" in f or "🚨" in f]) > 0:
+        summary["overall_assessment"] = "concerning"
+    else:
+        summary["overall_assessment"] = "inconclusive"
+
+    return summary
+
+
+def print_validation_report(validation_results: Dict, model_tag: str):
+    """
+    Print a formatted validation report to console.
+    """
+    print("\n" + "=" * 80)
+    print(f"STATISTICAL VALIDATION REPORT - {model_tag}")
+    print("=" * 80)
+
+    # Dataset summary
+    if "dataset_info" in validation_results:
+        ds = validation_results["dataset_info"]
+        print(f"\nDataset: {ds['n_periods']} periods ({ds['date_range']['start']} to {ds['date_range']['end']})")
+        print(f"Strategy Return: {ds['total_strategy_return']:.2f}% | Index Return: {ds['total_index_return']:.2f}%")
+
+    # Out-of-sample validation
+    if "out_of_sample_validation" in validation_results:
+        oos = validation_results["out_of_sample_validation"]
+        if "error" not in oos:
+            print(f"\nOUT-OF-SAMPLE VALIDATION:")
+            print(f"  Train Period: {oos['train_period']['sharpe_ratio']:.3f} Sharpe ({oos['train_period']['n_periods']} periods)")
+            print(f"  Test Period:  {oos['test_period']['sharpe_ratio']:.3f} Sharpe ({oos['test_period']['n_periods']} periods)")
+
+            if oos["comparative_analysis"]["sharpe_decay"] is not None:
+                decay_pct = oos["comparative_analysis"]["sharpe_decay_pct"]
+                print(f"  Sharpe Decay: {decay_pct:+.1f}%")
+
+            overfitting = "YES" if oos["overfitting_detection"]["overall_overfitting_detected"] else "NO"
+            print(f"  Overfitting Detected: {overfitting}")
+
+            generalizes = "YES" if oos["generalization_assessment"]["generalizes_well"] else "NO"
+            print(f"  Generalizes Well: {generalizes}")
+        else:
+            print(f"\nOUT-OF-SAMPLE VALIDATION: ERROR - {oos['error']}")
+
+    # Bootstrap testing
+    bootstrap_key = "bootstrap_vs_benchmark" if "bootstrap_vs_benchmark" in validation_results else "bootstrap_vs_index"
+    if bootstrap_key in validation_results:
+        bs = validation_results[bootstrap_key]
+        benchmark_name = "Benchmark" if "benchmark" in bootstrap_key else "Index"
+
+        print(f"\nBOOTSTRAP TEST VS {benchmark_name.upper()}:")
+        print(f"  Strategy Sharpe: {bs['strategy_sharpe']:.3f}")
+        print(f"  {benchmark_name} Sharpe: {bs['benchmark_sharpe']:.3f}")
+        print(f"  Difference: {bs['sharpe_difference']:+.3f}")
+        print(f"  p-value (two-sided): {bs['p_value_two_sided']:.4f}")
+        # Handle CI values from JSON (now stored as list of floats)
+        try:
+            ci_vals = bs['ci_95_bootstrap']
+            if isinstance(ci_vals, (list, tuple)) and len(ci_vals) >= 2:
+                ci_lower = float(ci_vals[0])
+                ci_upper = float(ci_vals[1])
+                print(f"  95% CI: [{ci_lower:+.3f}, {ci_upper:+.3f}]")
+            else:
+                print(f"  95% CI: {ci_vals}")
+        except (ValueError, TypeError, IndexError):
+            # Fallback if CI values are malformed
+            print(f"  95% CI: {bs.get('ci_95_bootstrap', 'N/A')}")
+
+        if bs["strategy_significantly_better_5pct"]:
+            print("  RESULT: Strategy significantly outperforms benchmark ✓")
+        elif bs["strategy_significantly_worse_5pct"]:
+            print("  RESULT: Strategy significantly underperforms benchmark ✗")
+        else:
+            print("  RESULT: No significant difference detected 🤔")
+
+    # Summary
+    if "summary_assessment" in validation_results:
+        sa = validation_results["summary_assessment"]
+        print(f"\nSUMMARY ASSESSMENT:")
+        print(f"  Overall: {sa['overall_assessment'].upper()}")
+        print(f"  Confidence: {sa['confidence_level'].upper()}")
+
+        if sa["key_findings"]:
+            print("  Key Findings:")
+            for finding in sa["key_findings"]:
+                print(f"    {finding}")
+
+        if sa["recommendations"]:
+            print("  Recommendations:")
+            for rec in sa["recommendations"]:
+                print(f"    • {rec}")
+
+    print("=" * 80 + "\n")
+
+
+def save_validation_report(validation_results: Dict, output_path: str):
+    """
+    Save validation results to JSON file.
+    """
+    # Convert numpy types to native Python types for JSON serialization
+    def convert_for_json(obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, (np.floating, np.float64, np.float32)):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, (bool, np.bool_)):
+            return bool(obj)
+        elif isinstance(obj, (np.datetime64, pd.Timestamp)):
+            return str(obj)
+        elif obj is None:
+            return None
+        elif isinstance(obj, (int, float, str)):
+            return obj
+        else:
+            # For any other types, try to convert to string as fallback
+            try:
+                return str(obj)
+            except:
+                return f"<non-serializable: {type(obj).__name__}>"
+
+    # Recursively convert all numpy types
+    def recursive_convert(obj):
+        if isinstance(obj, dict):
+            return {k: recursive_convert(v) for k, v in obj.items()}
+        elif isinstance(obj, (list, tuple)):
+            # Special handling for tuples that might contain numpy floats
+            result = []
+            for item in obj:
+                converted = recursive_convert(item)
+                result.append(converted)
+            return result
+        else:
+            return convert_for_json(obj)
+
+    json_results = recursive_convert(validation_results)
+
+    with open(output_path, 'w') as f:
+        json.dump(json_results, f, indent=2)
+
+    print(f"[INFO] Statistical validation report saved to: {output_path}")

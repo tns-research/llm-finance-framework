@@ -1,0 +1,140 @@
+{
+  "model": "dummy_model_memory_feeling",
+  "validation_timestamp": "2025-11-28 03:30:35.488210",
+  "dataset_info": {
+    "n_periods": 500,
+    "date_range": {
+      "start": "2015-03-18 00:00:00",
+      "end": "2017-03-10 00:00:00"
+    },
+    "total_strategy_return": 3.53,
+    "total_index_return": 14.15
+  },
+  "out_of_sample_validation": {
+    "train_period": {
+      "total_return_pct": 3.48,
+      "mean_daily_return_pct": 0.0099,
+      "volatility_pct": 0.8275,
+      "sharpe_ratio": 0.191,
+      "win_rate_pct": 37.14,
+      "max_drawdown_pct": -16.47,
+      "skewness": -0.234,
+      "kurtosis": 3.005,
+      "var_95_pct": -1.49,
+      "n_periods": 350,
+      "date_range": {
+        "start": "2015-03-18 00:00:00",
+        "end": "2016-08-04 00:00:00"
+      }
+    },
+    "test_period": {
+      "total_return_pct": 0.05,
+      "mean_daily_return_pct": 0.0003,
+      "volatility_pct": 0.4442,
+      "sharpe_ratio": 0.011,
+      "win_rate_pct": 29.33,
+      "max_drawdown_pct": -4.32,
+      "skewness": 1.202,
+      "kurtosis": 4.92,
+      "var_95_pct": -0.6,
+      "n_periods": 150,
+      "date_range": {
+        "start": "2016-08-05 00:00:00",
+        "end": "2017-03-10 00:00:00"
+      }
+    },
+    "comparative_analysis": {
+      "sharpe_decay": 0.942,
+      "return_decay": 0.986,
+      "sharpe_decay_pct": 94.2,
+      "return_decay_pct": 98.6
+    },
+    "overfitting_detection": {
+      "sharpe_decay_severe": true,
+      "return_decay_severe": true,
+      "test_performance_poor": false,
+      "high_train_overfitting": false,
+      "overall_overfitting_detected": true,
+      "overfitting_severity": "high"
+    },
+    "generalization_assessment": {
+      "generalizes_well": false,
+      "test_performance_adequate": true,
+      "consistent_performance": false
+    },
+    "split_date": "2016-08-05 00:00:00",
+    "data_split": {
+      "train_pct": 70.0,
+      "test_pct": 30.0
+    }
+  },
+  "bootstrap_vs_index": {
+    "strategy_sharpe": 0.153,
+    "benchmark_sharpe": 0.518,
+    "sharpe_difference": -0.365,
+    "p_value_two_sided": 0.7352,
+    "p_value_strategy_better": 0.6324,
+    "p_value_strategy_worse": 0.3676,
+    "significant_difference_5pct": false,
+    "strategy_significantly_better_5pct": false,
+    "strategy_significantly_worse_5pct": false,
+    "ci_95_bootstrap": [
+      -2.394,
+      1.664
+    ],
+    "bootstrap_mean_diff": -0.375,
+    "bootstrap_std_diff": 1.041,
+    "effect_size": -0.351,
+    "n_bootstrap": 5000,
+    "n_observations": 500
+  },
+  "hold_decision_analysis": {
+    "overall_hold_success_rate": 0.4038709677419354,
+    "quiet_market_success": {
+      "success_rate": 0.0064516129032258064,
+      "threshold": 0.002,
+      "successful_holds": 1,
+      "total_holds": 155,
+      "interpretation": "HOLD succeeded in 0.6% of very quiet markets (<0.2% daily moves)"
+    },
+    "contextual_correctness": {
+      "avg_context_score": 1.5741935483870968,
+      "context_success_rate": 1.0,
+      "reason_breakdown": {
+        "decision_uncertainty": 1,
+        "extreme_conditions": 155,
+        "regime_change": 148,
+        "high_volatility": 33
+      },
+      "interpretation": "HOLD was contextually appropriate in 100.0% of cases"
+    },
+    "combined_assessment": {
+      "quiet_weight": 0.6,
+      "context_weight": 0.4,
+      "overall_score": 0.4038709677419354,
+      "performance_category": "poor"
+    },
+    "hold_statistics": {
+      "total_hold_decisions": 155,
+      "hold_percentage": 0.31,
+      "avg_market_move_during_hold": 0.5239842412025629,
+      "hold_during_quiet_pct": 0.0064516129032258064
+    },
+    "summary": {
+      "hold_effectiveness": "POOR (40.4% success rate)",
+      "key_insight": "HOLD decisions were most successful during quiet markets (0.6%) and appropriate contexts (100.0%)"
+    }
+  },
+  "summary_assessment": {
+    "overall_assessment": "concerning",
+    "key_findings": [
+      "\u26a0\ufe0f  Strategy shows signs of overfitting or poor generalization",
+      "\ud83d\udea8 High overfitting detected",
+      "\ud83e\udd14 Strategy performance vs index is not statistically significant"
+    ],
+    "recommendations": [
+      "Consider model regularization or simpler strategy"
+    ],
+    "confidence_level": "low"
+  }
+}

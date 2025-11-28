@@ -1,0 +1,612 @@
+# src/reporting.py
+
+import pandas as pd
+
+from .config import (
+    USE_DUMMY_MODEL,
+    DEBUG_SHOW_FULL_PROMPT,
+    JOURNAL_SYSTEM_PROMPT,
+    SHOW_DATE_TO_LLM,
+)
+from .openrouter_model import call_openrouter
+
+def make_empty_stats():
+    """
+    Helper to initialize per period statistics.
+    """
+    return {
+        "strategy_return": 0.0,
+        "index_return": 0.0,
+        "days": 0,
+        "wins": 0,
+        "buys": 0,
+        "holds": 0,
+        "sells": 0,
+    }
+
+
+def build_period_summary(period_label: str, end_date, stats: dict) -> str:
+    """
+    Build a compact text summary for a completed period (week, month, quarter, year).
+
+    period_label  "Week", "Month", "Quarter", "Year"
+    end_date      last trading date of the period (pandas Timestamp)
+    stats         dict from make_empty_stats, aggregated over that period
+    """
+    if stats["days"] == 0:
+        return f"{period_label} ending {end_date.strftime('%Y-%m-%d')}  no trading activity recorded."
+
+    strat_ret = stats["strategy_return"]
+    idx_ret = stats["index_return"]
+    days = stats["days"]
+    win_rate = (stats["wins"] / days) * 100.0 if days > 0 else 0.0
+
+    explanation = (
+        f"{period_label} ending {end_date.strftime('%Y-%m-%d')}. "
+        f"Market total return over the period  {idx_ret:.2f} percent. "
+        f"Strategy total return  {strat_ret:.2f} percent over {days} trading days."
+    )
+
+    journal = (
+        f"During this period you took BUY {stats['buys']} times, "
+        f"HOLD {stats['holds']} times, SELL {stats['sells']} times, "
+        f"with a win rate of {win_rate:.1f} percent on daily returns. "
+        "Reflect on whether your positioning matched the prevailing trend and volatility, "
+        "and whether you managed risk consistently."
+    )
+
+    if strat_ret > idx_ret:
+        feeling = (
+            "Feeling confident and satisfied, having outperformed the index, "
+            "but still cautious about overconfidence."
+        )
+    elif strat_ret > 0:
+        feeling = (
+            "Feeling cautiously positive. You earned a positive return but did "
+            "not beat the index, so there is room for improvement in timing and sizing."
+        )
+    else:
+        feeling = (
+            "Feeling dissatisfied and reflective. Losses highlight the need to improve "
+            "signal quality and risk management, especially during volatile regimes."
+        )
+
+    return (
+        f"{period_label} ending {end_date.strftime('%Y-%m-%d')}\n"
+        f"{explanation}\n"
+        f"Strategic journal  {journal}\n"
+        f"Feeling  {feeling}"
+    )
+
+def generate_llm_period_summary(
+    period_label: str,
+    end_date,
+    stats: dict,
+    router_model: str,
+    model_tag: str,
+) -> str:
+    """
+    Use the LLM itself to write a weekly, monthly, quarterly or yearly journal
+    based on aggregated stats for that period.
+
+    If USE_DUMMY_MODEL or router_model is None, we fall back to a simple
+    template summary.
+    """
+    if stats["days"] == 0:
+        return f"{period_label} ending {end_date.strftime('%Y-%m-%d')}  no trading activity recorded."
+
+    strat_ret = stats["strategy_return"]
+    idx_ret = stats["index_return"]
+    days = stats["days"]
+    wins = stats["wins"]
+    buys = stats["buys"]
+    holds = stats["holds"]
+    sells = stats["sells"]
+
+    # Fallback template if we are in dummy mode or no router model
+    if USE_DUMMY_MODEL or router_model is None:
+        win_rate = (wins / days) * 100.0 if days > 0 else 0.0
+        edge = strat_ret - idx_ret
+        outperform_word = "outperformed" if edge > 0 else "underperformed"
+
+        # Respect SHOW_DATE_TO_LLM setting in fallback summaries
+        if SHOW_DATE_TO_LLM:
+            period_header = f"{period_label} ending {end_date.strftime('%Y-%m-%d')}"
+            explanation_date = f"{period_label} ending {end_date.strftime('%Y-%m-%d')}. "
+        else:
+            period_header = f"{period_label} summary (date hidden)"
+            explanation_date = f"{period_label} summary. "
+
+        explanation = (
+            f"{explanation_date}"
+            f"Market total return  {idx_ret:.2f} percent. "
+            f"Strategy total return  {strat_ret:.2f} percent. "
+            f"The strategy {outperform_word} the index by {edge:.2f} percent over {days} days."
+        )
+
+        journal = (
+            f"During this period you traded BUY {buys} times, HOLD {holds} times, SELL {sells} times, "
+            f"with a win rate of {win_rate:.1f} percent on daily returns. "
+            "Reflect on whether your positioning matched the prevailing trend and volatility, "
+            "and whether your risk management was consistent."
+        )
+
+        feeling = (
+            "Feeling cautiously reflective about this period. Use the results to refine your process "
+            "without becoming overconfident or discouraged."
+        )
+
+        return (
+            f"{period_header}\n"
+            f"Explanation: {explanation}\n"
+            f"Strategic journal: {journal}\n"
+            f"Feeling log: {feeling}"
+        )
+
+    # If we are here, we can call the real LLM via OpenRouter
+    win_rate = (wins / days) * 100.0 if days > 0 else 0.0
+    edge = strat_ret - idx_ret
+
+    # When SHOW_DATE_TO_LLM is False, we send NO date information to the LLM at all
+    # This prevents the LLM from including dates in its summaries
+    if SHOW_DATE_TO_LLM:
+        date_info = f"- End date  {end_date.strftime('%Y-%m-%d')}\n"
+        period_desc = f"You are summarizing a completed {period_label}.\n\n"
+    else:
+        date_info = ""  # No date information sent to LLM in anonymized mode
+        period_desc = f"You are summarizing a completed {period_label} (time period anonymized).\n\n"
+
+    user_message = (
+        f"{period_desc}"
+        f"Period information\n"
+        f"{date_info}"
+        f"- Trading days in period  {days}\n"
+        f"- Strategy total return over the period  {strat_ret:.2f} percent\n"
+        f"- Index total return over the period  {idx_ret:.2f} percent\n"
+        f"- Difference strategy minus index  {edge:.2f} percent\n"
+        f"- Winning days (positive strategy return)  {wins} out of {days}\n"
+        f"- Number of BUY decisions  {buys}\n"
+        f"- Number of HOLD decisions  {holds}\n"
+        f"- Number of SELL decisions  {sells}\n"
+        f"- Daily win rate  {win_rate:.1f} percent\n\n"
+        "Write a reflection journal for this period. Do not include any dates or calendar references. Use only the numerical information provided."
+    )
+
+    try:
+        if DEBUG_SHOW_FULL_PROMPT:
+            debug_block = (
+                "===== JOURNAL SYSTEM PROMPT =====\n"
+                f"{JOURNAL_SYSTEM_PROMPT}\n\n"
+                "===== JOURNAL USER MESSAGE =====\n"
+                f"{user_message}\n"
+            )
+            print("\n==============================")
+            print(f"FULL JOURNAL PROMPT SENT TO MODEL {model_tag} :")
+            print("==============================")
+            print(debug_block)
+            print("=========== END JOURNAL PROMPT ===========\n")
+
+        response_text = call_openrouter(router_model, JOURNAL_SYSTEM_PROMPT, user_message)
+        clean = str(response_text).strip()
+
+        # Optional: small numeric recap so the memory always carries the hard data
+        if SHOW_DATE_TO_LLM:
+            period_id = f"{period_label} ending {end_date.strftime('%Y-%m-%d')}"
+        else:
+            period_id = f"{period_label} summary (date hidden)"
+
+        header = (
+            f"{period_id}\n"
+            f"Stats  strategy {strat_ret:.2f} percent, "
+            f"index {idx_ret:.2f} percent, "
+            f"edge (strategy minus index) {edge:.2f} percent, "
+            f"days {days}, wins {wins}, "
+            f"BUY {buys}, HOLD {holds}, SELL {sells}.\n\n"
+        )
+
+
+        wrapped = header + clean
+
+        print("\n===== JOURNAL MODEL OUTPUT =====")
+        print(wrapped)
+        print("================================\n")
+
+        return wrapped
+
+
+
+    except Exception as e:
+        print(f"\n[WARN] Failed to generate {period_label} journal with LLM for model {model_tag}: {e}")
+        # Fallback to simple template
+        win_rate = (wins / days) * 100.0 if days > 0 else 0.0
+
+        # Respect SHOW_DATE_TO_LLM setting in error fallback
+        if SHOW_DATE_TO_LLM:
+            period_header = f"{period_label} ending {end_date.strftime('%Y-%m-%d')}"
+            explanation_date = f"{period_label} ending {end_date.strftime('%Y-%m-%d')}. "
+        else:
+            period_header = f"{period_label} summary (date hidden)"
+            explanation_date = f"{period_label} summary. "
+
+        explanation = (
+            f"{explanation_date}"
+            f"Market total return  {idx_ret:.2f} percent. "
+            f"Strategy total return  {strat_ret:.2f} percent over {days} days."
+        )
+        journal = (
+            f"BUY {buys}, HOLD {holds}, SELL {sells}, win rate {win_rate:.1f} percent. "
+            "LLM journal generation failed, using fallback summary."
+        )
+        feeling = "Feeling neutral due to technical issues."
+
+        return (
+            f"{period_header}\n"
+            f"Explanation: {explanation}\n"
+            f"Strategic journal: {journal}\n"
+            f"Feeling log: {feeling}"
+        )
+
+
+def create_calibration_plot(parsed_df, model_tag: str, output_path: str):
+    """
+    Create a calibration plot showing predicted probability vs actual win rate.
+    
+    The plot bins predictions by probability and shows:
+    - Diagonal line (perfect calibration)
+    - Actual frequency of wins per bin
+    - Count of predictions in each bin
+    
+    parsed_df: DataFrame with columns 'prob' and 'strategy_return'
+    model_tag: name of the model for plot title
+    output_path: where to save the plot
+    """
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import pandas as pd
+    
+    df = parsed_df.copy()
+    
+    # Define if a prediction was a "win" (positive strategy return)
+    df['win'] = (df['strategy_return'] > 0).astype(int)
+    
+    # Create probability bins
+    bins = np.linspace(0, 1, 11)  # 10 bins: [0-0.1, 0.1-0.2, ..., 0.9-1.0]
+    df['prob_bin'] = pd.cut(df['prob'], bins=bins, include_lowest=True)
+    
+    # Calculate actual win rate per bin
+    calibration_data = df.groupby('prob_bin', observed=False).agg(
+        mean_predicted_prob=('prob', 'mean'),
+        actual_win_rate=('win', 'mean'),
+        count=('win', 'count')
+    ).reset_index()
+    
+    # Filter out bins with no data
+    calibration_data = calibration_data[calibration_data['count'] > 0]
+    
+    # Create the plot
+    fig, ax = plt.subplots(figsize=(10, 8))
+    
+    # Plot perfect calibration line
+    ax.plot([0, 1], [0, 1], 'k--', linewidth=2, label='Perfect Calibration', alpha=0.7)
+    
+    # Plot actual calibration
+    ax.scatter(
+        calibration_data['mean_predicted_prob'],
+        calibration_data['actual_win_rate'],
+        s=calibration_data['count'] * 10,  # Size proportional to count
+        alpha=0.6,
+        color='steelblue',
+        edgecolors='black',
+        linewidth=1.5,
+        label='Actual Win Rate'
+    )
+    
+    # Add count labels
+    for _, row in calibration_data.iterrows():
+        ax.annotate(
+            f"n={int(row['count'])}",
+            (row['mean_predicted_prob'], row['actual_win_rate']),
+            xytext=(5, 5),
+            textcoords='offset points',
+            fontsize=9,
+            alpha=0.8
+        )
+    
+    # Formatting
+    ax.set_xlabel('Predicted Probability', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Actual Win Rate', fontsize=12, fontweight='bold')
+    ax.set_title(f'Calibration Plot - {model_tag}\nPredicted Probability vs Actual Win Rate', 
+                 fontsize=14, fontweight='bold', pad=20)
+    ax.set_xlim(-0.05, 1.05)
+    ax.set_ylim(-0.05, 1.05)
+    ax.grid(True, alpha=0.3, linestyle='--')
+    ax.legend(loc='upper left', fontsize=10)
+    
+    # Add statistics text box
+    total_trades = len(df)
+    overall_win_rate = df['win'].mean()
+    mean_predicted = df['prob'].mean()
+    
+    stats_text = (
+        f'Total Trades: {total_trades}\n'
+        f'Overall Win Rate: {overall_win_rate:.2%}\n'
+        f'Mean Predicted Prob: {mean_predicted:.2%}'
+    )
+    
+    ax.text(
+        0.98, 0.02, stats_text,
+        transform=ax.transAxes,
+        fontsize=10,
+        verticalalignment='bottom',
+        horizontalalignment='right',
+        bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+    )
+    
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    
+    print(f"\n[INFO] Calibration plot saved to: {output_path}")
+    
+    return calibration_data
+
+
+def create_calibration_by_decision_plot(parsed_df, model_tag: str, output_path: str):
+    """
+    Separate calibration curves for BUY/HOLD/SELL decisions.
+    This reveals if the model is overconfident on specific action types.
+    """
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import pandas as pd
+
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+
+    for idx, decision in enumerate(["BUY", "HOLD", "SELL"]):
+        ax = axes[idx]
+        subset = parsed_df[parsed_df["decision"] == decision]
+
+        if len(subset) < 5:
+            ax.text(0.5, 0.5, f"Insufficient data\n(n={len(subset)})",
+                    ha='center', va='center', transform=ax.transAxes)
+            ax.set_title(f"{decision} Decisions")
+            continue
+
+        subset = subset.copy()
+        subset["win"] = (subset["strategy_return"] > 0).astype(int)
+
+        # Bin and plot
+        bins = np.linspace(0, 1, 6)
+        subset["prob_bin"] = pd.cut(subset["prob"], bins=bins, include_lowest=True)
+
+        calibration = subset.groupby("prob_bin", observed=False).agg(
+            mean_prob=("prob", "mean"),
+            win_rate=("win", "mean"),
+            count=("win", "count")
+        ).dropna()
+
+        ax.plot([0, 1], [0, 1], 'k--', alpha=0.5, label='Perfect')
+        ax.scatter(calibration["mean_prob"], calibration["win_rate"],
+                   s=calibration["count"]*5, alpha=0.7)
+        ax.set_title(f"{decision} Decisions (n={len(subset)})")
+        ax.set_xlabel("Predicted Probability")
+        ax.set_ylabel("Actual Win Rate")
+        ax.set_xlim(0, 1)
+        ax.set_ylim(0, 1)
+        ax.grid(alpha=0.3)
+
+    plt.suptitle(f"Calibration by Decision Type - {model_tag}", fontweight='bold')
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300)
+    plt.close()
+
+    print(f"\n[INFO] Calibration by decision plot saved to: {output_path}")
+
+
+def generate_calibration_analysis_report(calibration_data: pd.DataFrame, parsed_df: pd.DataFrame, model_tag: str, output_path: str):
+    """
+    Generate a comprehensive markdown report analyzing model calibration.
+
+    Args:
+        calibration_data: DataFrame from create_calibration_plot() with calibration statistics
+        parsed_df: Original parsed DataFrame with all decision data
+        model_tag: Name of the model
+        output_path: Path to save the markdown report
+    """
+    import numpy as np
+
+    # Calculate overall calibration metrics
+    total_trades = len(parsed_df)
+    overall_win_rate = (parsed_df['strategy_return'] > 0).mean()
+    mean_predicted = parsed_df['prob'].mean()
+
+    # Calculate calibration quality metrics
+    if len(calibration_data) > 0:
+        # Expected calibration error (ECE)
+        ece = np.sum(np.abs(calibration_data['mean_predicted_prob'] - calibration_data['actual_win_rate']) *
+                    calibration_data['count']) / total_trades
+
+        # Maximum calibration error
+        max_ce = np.max(np.abs(calibration_data['mean_predicted_prob'] - calibration_data['actual_win_rate']))
+
+        # Overconfidence score (predicted > actual for high confidence)
+        high_conf_data = calibration_data[calibration_data['mean_predicted_prob'] > 0.7]
+        if len(high_conf_data) > 0:
+            overconfidence = np.mean(high_conf_data['mean_predicted_prob'] - high_conf_data['actual_win_rate'])
+        else:
+            overconfidence = 0.0
+    else:
+        ece = max_ce = overconfidence = 0.0
+
+    # Decision-specific calibration
+    decision_calibration = {}
+    for decision in ['BUY', 'HOLD', 'SELL']:
+        subset = parsed_df[parsed_df['decision'] == decision].copy()
+        if len(subset) >= 5:
+            subset['win'] = (subset['strategy_return'] > 0).astype(int)
+            decision_calibration[decision] = {
+                'count': len(subset),
+                'win_rate': subset['win'].mean(),
+                'mean_prob': subset['prob'].mean(),
+                'overconfidence': subset['prob'].mean() - subset['win'].mean()
+            }
+        else:
+            decision_calibration[decision] = None
+
+    # Build report
+    report_lines = [
+        f"# Calibration Analysis Report - {model_tag}",
+        "",
+        "## Overview",
+        "",
+        f"This report analyzes the calibration quality of the **{model_tag}** model, ",
+        "measuring how well predicted probabilities match actual outcomes.",
+        "",
+        "---",
+        "",
+        "## Overall Calibration Metrics",
+        "",
+        f"**Total Trading Days:** {total_trades}",
+        f"**Overall Win Rate:** {overall_win_rate:.1%}",
+        f"**Mean Predicted Probability:** {mean_predicted:.1%}",
+        "",
+        "### Calibration Quality Indicators",
+        "",
+        f"- **Expected Calibration Error (ECE):** {ece:.1%}",
+        f"- **Maximum Calibration Error:** {max_ce:.1%}",
+        f"- **Overconfidence Score:** {overconfidence:.1%}",
+        "",
+    ]
+
+    # ECE interpretation
+    if ece < 0.05:
+        ece_quality = "**EXCELLENT** - Model is very well calibrated"
+    elif ece < 0.10:
+        ece_quality = "**GOOD** - Model shows reasonable calibration"
+    elif ece < 0.20:
+        ece_quality = "**FAIR** - Model has moderate calibration issues"
+    else:
+        ece_quality = "**POOR** - Model shows significant calibration problems"
+
+    report_lines.extend([
+        f"- **Calibration Quality:** {ece_quality}",
+        "",
+    ])
+
+    # Overconfidence interpretation
+    if overconfidence > 0.10:
+        conf_assessment = "**OVERCONFIDENT** - Model tends to be too optimistic about success probability"
+    elif overconfidence < -0.10:
+        conf_assessment = "**UNDERCONFIDENT** - Model tends to be too pessimistic about success probability"
+    else:
+        conf_assessment = "**WELL-CALIBRATED** - Model confidence matches reality"
+
+    report_lines.extend([
+        "### Confidence Assessment",
+        "",
+        f"- **Assessment:** {conf_assessment}",
+        "",
+    ])
+
+    # Decision-specific calibration
+    report_lines.extend([
+        "---",
+        "",
+        "## Calibration by Decision Type",
+        "",
+        "This analysis shows if the model has different calibration characteristics for BUY, HOLD, and SELL decisions.",
+        "",
+    ])
+
+    for decision in ['BUY', 'HOLD', 'SELL']:
+        calib = decision_calibration[decision]
+        if calib:
+            overconf = calib['overconfidence']
+            if overconf > 0.05:
+                conf_desc = "overconfident"
+            elif overconf < -0.05:
+                conf_desc = "underconfident"
+            else:
+                conf_desc = "well-calibrated"
+
+            report_lines.extend([
+                f"### {decision} Decisions",
+                "",
+                f"- **Count:** {calib['count']} decisions",
+                f"- **Actual Win Rate:** {calib['win_rate']:.1%}",
+                f"- **Mean Predicted Probability:** {calib['mean_prob']:.1%}",
+                f"- **Overconfidence:** {overconf:+.1%} ({conf_desc})",
+                "",
+            ])
+        else:
+            report_lines.extend([
+                f"### {decision} Decisions",
+                "",
+                f"- **Insufficient data** (n < 5)",
+                "",
+            ])
+
+    # Recommendations
+    report_lines.extend([
+        "---",
+        "",
+        "## Recommendations",
+        "",
+    ])
+
+    recommendations = []
+
+    if ece > 0.15:
+        recommendations.append("- **Calibration training needed:** Consider recalibrating the model using techniques like isotonic regression or Platt scaling")
+
+    if overconfidence > 0.10:
+        recommendations.append("- **Overconfidence detected:** Model predictions are too optimistic. Consider adjusting confidence thresholds or using ensemble methods")
+
+    if overconfidence < -0.10:
+        recommendations.append("- **Underconfidence detected:** Model predictions are too conservative. Consider boosting confidence for high-probability predictions")
+
+    # Check for decision-specific issues
+    overconfident_decisions = [d for d, c in decision_calibration.items()
+                              if c and c['overconfidence'] > 0.10]
+    underconfident_decisions = [d for d, c in decision_calibration.items()
+                               if c and c['overconfidence'] < -0.10]
+
+    if overconfident_decisions:
+        recommendations.append(f"- **Overconfidence in {', '.join(overconfident_decisions)} decisions:** Consider more conservative thresholds for these actions")
+
+    if underconfident_decisions:
+        recommendations.append(f"- **Underconfidence in {', '.join(underconfident_decisions)} decisions:** Consider being more aggressive with these actions")
+
+    if not recommendations:
+        recommendations.append("- **Calibration looks good:** No major issues detected. Continue monitoring calibration quality.")
+
+    for rec in recommendations:
+        report_lines.append(rec)
+
+    report_lines.extend([
+        "",
+        "---",
+        "",
+        "## Visualizations",
+        "",
+        f"![Calibration Plot](../plots/{model_tag}_calibration.png)",
+        "",
+        f"![Calibration by Decision](../plots/{model_tag}_calibration_by_decision.png)",
+    ])
+
+    # Write report
+    report_content = "\n".join(report_lines)
+    with open(output_path, 'w') as f:
+        f.write(report_content)
+
+    print(f"\n[INFO] Calibration analysis report saved to: {output_path}")
+
+    return {
+        'ece': ece,
+        'max_ce': max_ce,
+        'overconfidence': overconfidence,
+        'total_trades': total_trades,
+        'overall_win_rate': overall_win_rate,
+        'mean_predicted': mean_predicted,
+        'decision_calibration': decision_calibration
+    }

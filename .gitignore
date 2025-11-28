@@ -1,0 +1,56 @@
+# Results and generated files
+results/
+data/processed/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# API Keys and secrets
+.env
+.env.local
+.env.*.local
+*key*.txt
+*secret*.txt
+*_key.txt
+*_secret.txt
+openrouter_key.txt
+api_key.txt
+apikey.txt
+apikey*
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+
+# Build artifacts
+build/
+dist/
+*.egg
