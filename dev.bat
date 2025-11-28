@@ -10,6 +10,7 @@ if "%1"=="lint" goto lint
 if "%1"=="check" goto check
 if "%1"=="version" goto version
 if "%1"=="clean" goto clean
+if "%1"=="collab" goto collab
 goto help
 
 :help
@@ -21,6 +22,7 @@ echo   lint      - Run code quality checks
 echo   check     - Run full development check suite
 echo   version   - Version management (use: dev version [get^|bump^|tag])
 echo   clean     - Clean build artifacts
+echo   collab    - Collaboration tools (use: dev collab [setup^|sync^|branch^|pr^|status])
 echo.
 echo Examples:
 echo   dev setup
@@ -71,6 +73,14 @@ if exist .mypy_cache rmdir /s /q .mypy_cache
 for /d /r . %%d in (__pycache__) do @if exist "%%d" rmdir /s /q "%%d"
 for /r %%f in (*.pyc) do del "%%f"
 echo Clean complete.
+goto end
+
+:collab
+if "%2"=="" (
+    echo Usage: dev collab [setup^|sync^|branch^|pr^|status]
+    goto end
+)
+python scripts/collaborate.py %2 %3 %4 %5
 goto end
 
 :end
