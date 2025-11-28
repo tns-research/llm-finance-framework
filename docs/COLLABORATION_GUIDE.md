@@ -17,11 +17,18 @@ git remote add upstream https://github.com/ORIGINAL_OWNER/llm-finance-framework.
 
 ### **2. Development Setup**
 ```bash
-# Windows users
+# Modern installation (recommended) - includes all dependencies + dev tools
+pip install -e .[dev]
+
+# Traditional installation
+pip install -r requirements.txt
+pip install pytest black flake8 mypy isort  # Dev tools separately
+
+# Windows users can also use:
 dev setup
 
-# Or manually
-pip install -e .[dev]
+# Linux/Mac users can also use:
+make setup
 ```
 
 ### **3. Create Feature Branch**
@@ -39,6 +46,111 @@ git checkout -b fix/issue-number-description
 git checkout -b docs/update-contributing-guide
 ```
 
+## 🛠️ Available Development Tools
+
+### Automated Quality Checks
+```bash
+# Full development check suite
+python scripts/dev-workflow.py check
+# Includes: linting, testing, type checking, basic functionality
+
+# Individual checks
+python scripts/dev-workflow.py lint   # Code style (flake8, black, isort)
+python scripts/dev-workflow.py test   # Unit tests with coverage
+python scripts/dev-workflow.py types  # Type checking (mypy)
+```
+
+### Version Management
+```bash
+# Check current version
+python scripts/version.py get
+
+# Bump versions (semantic versioning)
+python scripts/version.py bump patch  # 0.1.0 → 0.1.1 (bug fixes)
+python scripts/version.py bump minor  # 0.1.1 → 0.2.0 (new features)
+python scripts/version.py bump major  # 0.2.0 → 1.0.0 (breaking changes)
+
+# Create git tag for releases
+python scripts/version.py tag
+```
+
+### Collaboration Helpers
+```bash
+# Repository status overview
+python scripts/collaborate.py status
+
+# Interactive branch creation
+python scripts/collaborate.py branch
+
+# Prepare for pull request submission
+python scripts/collaborate.py pr
+```
+
+### Windows-Specific Tools
+```batch
+dev setup     # Install all dependencies
+dev check     # Full quality check suite
+dev test      # Run tests only
+dev lint      # Code style checks
+dev clean     # Clean build artifacts
+dev collab    # Collaboration tools menu
+```
+
+### Linux/Mac Tools
+```bash
+make setup    # Install all dependencies
+make check    # Full quality check suite
+make test     # Run tests only
+make lint     # Code style checks
+make clean    # Clean build artifacts
+```
+
+## 🤖 Automated Quality Assurance
+
+### GitHub Actions CI/CD
+Every pull request and push to main automatically triggers our CI pipeline:
+
+#### Quality Gates
+- ✅ **Dependency Installation**: `pip install -e .[dev]`
+- ✅ **Code Linting**: flake8 (PEP 8), black (formatting), isort (imports)
+- ✅ **Type Checking**: mypy validation of type hints
+- ✅ **Test Execution**: pytest with coverage reporting
+- ✅ **Import Validation**: All dependencies properly declared
+- ✅ **Basic Functionality**: Core imports and basic operations tested
+
+#### CI Workflow Details
+```yaml
+# Runs on every push/PR to main
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# Checks performed:
+# 1. Python 3.8 environment setup
+# 2. Dependency caching for faster builds
+# 3. Code quality validation
+# 4. Test execution with coverage
+# 5. Automated feedback on PRs
+```
+
+#### Interpreting CI Results
+- **✅ Green Checkmark**: All quality gates passed
+- **❌ Red X**: Issues found - check the "Details" link for specifics
+- **🟡 Yellow Dot**: CI in progress
+
+#### Common CI Issues & Solutions
+- **Import Errors**: Check `pyproject.toml` dependencies
+- **Linting Failures**: Run `python scripts/dev-workflow.py lint` locally
+- **Test Failures**: Run `python scripts/dev-workflow.py test` locally
+- **Type Errors**: Run `python scripts/dev-workflow.py types` locally
+
+### Automated Dependency Management
+- **Dependabot**: Automatically creates PRs for dependency updates
+- **Security Updates**: Priority handling of security vulnerabilities
+- **Version Constraints**: Smart updating that avoids breaking changes
+
 ## 🔄 **Collaboration Workflow**
 
 ### **Daily Development Cycle**
@@ -48,32 +160,51 @@ git fetch upstream
 git rebase upstream/main
 
 # 2. Work on your feature
-# Make changes...
+# Make changes to code...
 
-# 3. Run quality checks
-dev check
+# 3. Run quality checks before committing
+python scripts/dev-workflow.py check
+# Or: dev check (Windows) / make check (Linux/Mac)
 
-# 4. Commit your work
+# 4. Fix any issues found by checks
+# Run individual checks if needed:
+python scripts/dev-workflow.py lint   # Fix code style
+python scripts/dev-workflow.py test   # Fix failing tests
+
+# 5. Commit your work with conventional format
 git add .
-git commit -m "feat: Add new baseline strategy"
+git commit -m "feat: Add new baseline strategy
 
-# 5. Push to your fork
+- Implement momentum-based strategy
+- Add configuration options
+- Include comprehensive tests"
+
+# 6. Push to your fork
 git push origin feature/your-feature-name
 ```
 
 ### **Pull Request Process**
 ```bash
 # 1. Ensure your branch is up-to-date
+git fetch upstream
 git rebase upstream/main
 
-# 2. Run final checks
-dev check
+# 2. Run comprehensive final checks
+python scripts/dev-workflow.py check
+# This ensures all quality gates pass before PR
 
-# 3. Push final version
+# 3. Use collaboration helper for final prep
+python scripts/collaborate.py pr
+# This provides guidance on PR readiness
+
+# 4. Push final version (force-with-lease for safety)
 git push origin feature/your-feature-name --force-with-lease
 
-# 4. Create PR on GitHub
-# Use the PR template and fill in all sections
+# 5. Create PR on GitHub
+# - Use the PR template (auto-filled)
+# - Fill in all required sections
+# - Request reviews from appropriate maintainers
+# - CI will automatically run quality checks
 ```
 
 ## 🎯 **Branch Types & Naming**

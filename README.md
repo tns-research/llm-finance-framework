@@ -66,15 +66,31 @@ The LLM receives technical indicators, can maintain a strategic journal, and may
 
 ## 🚀 Getting Started
 
-### Prerequisites
+### Modern Installation (Recommended)
 ```bash
-pip install pandas numpy scipy matplotlib requests
+# Install everything (core + development tools)
+pip install -e .[dev]
+
+# Or install core dependencies only
+pip install -e .
 ```
 
 ### Quick Test Run
 ```bash
 # Run with dummy model (no API key needed)
 python -m src.main
+```
+
+### Development Workflow
+```bash
+# Run quality checks (linting, testing, type checking)
+python scripts/dev-workflow.py check
+
+# Windows users can also use:
+dev check
+
+# Linux/Mac users can also use:
+make check
 ```
 
 ### Real LLM Experiment
@@ -93,6 +109,61 @@ ACTIVE_MODEL = "bert"  # or other models
 # 4. Run experiment
 python -m src.main
 ```
+
+### Traditional Installation (Alternative)
+```bash
+# Core dependencies
+pip install pandas numpy scipy matplotlib requests
+
+# Development dependencies (optional)
+pip install pytest black flake8 mypy isort
+```
+
+## 🛠️ Development Tools
+
+### Cross-Platform Commands
+```bash
+# Quality assurance
+python scripts/dev-workflow.py check    # Full check suite
+python scripts/dev-workflow.py test     # Run tests only
+python scripts/dev-workflow.py lint     # Code style checks
+
+# Version management
+python scripts/version.py get           # Current version
+python scripts/version.py bump patch    # Bump patch version
+python scripts/version.py tag           # Create git tag
+
+# Collaboration helpers
+python scripts/collaborate.py status    # Repository status
+python scripts/collaborate.py branch    # Create feature branch
+python scripts/collaborate.py pr        # Prepare for PR
+```
+
+### Windows Development
+```batch
+dev setup     # Install all dependencies
+dev check     # Run quality checks
+dev test      # Run tests
+dev lint      # Check code style
+dev clean     # Clean build artifacts
+dev collab    # Collaboration tools
+```
+
+### Linux/Mac Development
+```bash
+make setup    # Install all dependencies
+make check    # Run quality checks
+make test     # Run tests
+make lint     # Check code style
+make clean    # Clean build artifacts
+```
+
+### Automated Quality Assurance
+Every commit is automatically checked by our CI/CD pipeline:
+- ✅ **Code Linting**: flake8, black, isort
+- ✅ **Type Checking**: mypy validation
+- ✅ **Testing**: pytest with coverage reporting
+- ✅ **Import Validation**: All dependencies properly declared
 
 **⚠️ Important**: Set `TEST_MODE = False` in `src/config.py` for meaningful results, or adjust `DAYS_TO_RUN` if keeping test mode.
 
@@ -125,6 +196,14 @@ The framework is designed to work with any daily stock/index data. Modify `src/d
 ## 🏗️ Architecture
 
 ```
+📁 Root Level
+├── 📦 pyproject.toml          # Modern Python packaging & metadata
+├── 🪟 dev.bat                 # Windows development commands
+├── 🐧 Makefile               # Unix/Linux development commands
+├── 📝 CHANGELOG.md           # Version history & changes
+├── 🤝 CODE_OF_CONDUCT.md     # Community standards
+└── 📋 requirements.txt       # Traditional dependency list
+
 📁 src/
 ├── 🎯 main.py                 # Pipeline orchestrator
 ├── 🤖 openrouter_model.py     # LLM API integration (BERT primary)
@@ -132,13 +211,40 @@ The framework is designed to work with any daily stock/index data. Modify `src/d
 ├── 🧮 baselines.py           # 7 traditional quantitative strategies
 ├── 📈 statistical_validation.py # Bootstrap testing + out-of-sample
 ├── 📋 report_generator.py    # Automated research reports
-└── ⚙️ config.py              # 6 experimental configurations
+├── 📊 reporting.py           # Plotting & visualization
+├── ⚙️ config.py              # 6 experimental configurations
+├── 🔧 data_prep.py           # Data preprocessing utilities
+├── 🎯 decision_analysis.py   # Decision pattern analysis
+├── 🤖 dummy_model.py         # Mock model for testing
+├── 📋 prompts.py             # LLM prompt templates
+└── 🤖 trading_engine.py      # Main experiment orchestration
+
+📁 scripts/
+├── 🏷️ version.py             # Version management system
+├── 🔄 dev-workflow.py        # Development automation
+└── 🤝 collaborate.py         # Collaboration helpers
+
+📁 docs/
+├── 🤝 COLLABORATION_GUIDE.md # Detailed collaboration guide
+├── ⚙️ configuration.md       # Configuration reference
+├── 🔬 methodology.md         # Research methodology
+└── 📚 STRATEGIC_JOURNAL_FEATURE.md # Memory system details
+
+📁 .github/
+├── 🤖 workflows/ci.yml       # CI/CD pipeline
+├── 🔄 dependabot.yml         # Automated dependency updates
+├── 📋 PULL_REQUEST_TEMPLATE.md # PR guidelines
+└── 🐛 ISSUE_TEMPLATE/         # Issue templates
 
 📁 results/
 ├── 📊 analysis/              # Statistical validation JSON/CSV
 ├── 📈 plots/                 # Calibration, patterns, risk analysis
 ├── 📋 reports/               # Comprehensive experiment reports
 └── 📄 parsed/                # Processed trading decisions
+
+📁 tests/
+├── 🧪 test_calibration.py    # Calibration testing
+└── 🧪 test_strategic_journal_config.py # Configuration testing
 ```
 
 ---
