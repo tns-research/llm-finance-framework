@@ -32,7 +32,7 @@ We welcome contributions from researchers, developers, and financial practitione
 ### Prerequisites
 ```bash
 # Required
-pip install pandas numpy scipy matplotlib seaborn requests
+pip install pandas numpy scipy matplotlib requests
 
 # Optional (for development)
 pip install pytest black flake8 mypy

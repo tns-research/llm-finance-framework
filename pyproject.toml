@@ -26,7 +26,6 @@ dependencies = [
     "pandas",
     "scipy",
     "matplotlib",
-    "seaborn",
 ]
 
 [project.optional-dependencies]
@@ -94,6 +93,5 @@ strict_equality = true
 [[tool.mypy.overrides]]
 module = [
     "matplotlib.*",
-    "seaborn.*",
 ]
 ignore_missing_imports = true

@@ -68,7 +68,7 @@ The LLM receives technical indicators, can maintain a strategic journal, and may
 
 ### Prerequisites
 ```bash
-pip install pandas numpy scipy matplotlib seaborn requests
+pip install pandas numpy scipy matplotlib requests
 ```
 
 ### Quick Test Run
