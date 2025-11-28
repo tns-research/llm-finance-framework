@@ -8,8 +8,8 @@ import sys
 import os
 import argparse
 
-# Add src directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+# Add src directory to path (go up one level from scripts/)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from report_generator import generate_comprehensive_report
 
