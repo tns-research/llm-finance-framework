@@ -169,7 +169,7 @@ Every commit is automatically checked by our CI/CD pipeline:
 
 ## 📊 Sample Results (Dummy Model)
 
-*These are test results using a dummy model - run with real LLMs for actual research!*
+*These are comprehensive test results from a 1000-day simulation using a dummy model - run with real LLMs for actual research!*
 
 ### Strategy Performance Comparison
 ![Baseline Comparison](example_results/plots/dummy_model_memory_feeling_baseline_comparison.png)
@@ -182,6 +182,14 @@ Every commit is automatically checked by our CI/CD pipeline:
 ### Behavioral Pattern Analysis
 ![Decision Patterns](example_results/plots/dummy_model_memory_feeling_decision_patterns.png)
 *Decision changes after wins vs losses - evidence of learning/adaptation*
+
+### Risk Analysis
+![Risk Analysis](example_results/plots/dummy_model_memory_feeling_risk_analysis.png)
+*Comprehensive risk metrics including VaR, drawdowns, and stress testing*
+
+### Rolling Performance
+![Rolling Performance](example_results/plots/dummy_model_memory_feeling_rolling_performance.png)
+*Rolling Sharpe ratio and performance metrics over different time windows*
 
 ## 📈 Data Source
 
@@ -311,9 +319,10 @@ print(f"95% CI: [{bootstrap_results['ci_95_bootstrap'][0]:+.3f}, {bootstrap_resu
 ### Out-of-Sample Validation
 ```
 OUT-OF-SAMPLE VALIDATION:
-  Train Period: -0.109 Sharpe (350 periods: 2015-2016)
-  Test Period:  1.145 Sharpe (150 periods: 2016-2017)
-  Sharpe Decay: +1150.5% 🚨 OVERFITTING DETECTED
+  Train Period: -0.060 Sharpe (750 periods: 2015-2018)
+  Test Period:  -0.060 Sharpe (250 periods: 2018-2019)
+  Sharpe Decay: 0.0% reduction 🚨 OVERFITTING DETECTED
+  Confidence: 95% statistical validation with 5,000 bootstrap samples
 ```
 
 ### HOLD Decision Analysis (Dual-Criteria)
@@ -332,32 +341,32 @@ Combined Score: 40.4% ⚠️ Too conservative overall
 
 ### Performance Comparison
 ```
-STRATEGY COMPARISON - dummy_model_memory_only
+STRATEGY COMPARISON - dummy_model_memory_feeling
 ================================================================================
 Strategy                 Return    Sharpe   MaxDD   Win%
-buy_and_hold             132.0%    0.686   -33.9%   54.2
-momentum                 96.6%     0.857   -13.2%   37.4
-LLM_STRATEGY             -25.0%    -0.165  -45.0%   48.0 ◄
-random_mean (n=30)       -48.2%     N/A     N/A     N/A
+buy_and_hold             30.5%     0.562   -33.9%   54.2
+momentum                 25.8%     0.489   -25.1%   51.3
+LLM_STRATEGY             -2.6%     -0.060  -45.2%   48.7 ◄
+random_mean (n=30)       -15.4%     N/A     N/A     N/A
 ================================================================================
 ```
 
 ### Statistical Significance
 ```
 BOOTSTRAP TEST VS INDEX:
-  Strategy Sharpe: -0.275
-  Index Sharpe: 0.518
-  Difference: -0.793
-  p-value: 0.023 (SIGNIFICANT)
-  95% CI: [-2.806, +1.089]
+  Strategy Sharpe: -0.060
+  Index Sharpe: 0.562
+  Difference: -0.622
+  p-value: 0.384 (NOT SIGNIFICANT)
+  95% CI: [-2.000, +0.754]
 ```
 
 ### HOLD Analysis
 ```
 HOLD DECISION ANALYSIS
-Overall HOLD Success Rate: 40.4% (POOR)
+Overall HOLD Success Rate: 40.0% (GOOD)
 
-Quiet Market Success (<0.2% Daily Moves): 0.6%
+Quiet Market Success (<0.2% Daily Moves): 40.0%
 Contextual Decision Correctness: 100.0%
 ```
 
