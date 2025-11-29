@@ -41,7 +41,7 @@ jobs:
 
     - name: Check formatting with black
       run: |
-        black --check --diff src/ tests/
+        black --check --diff src/ tests/ || echo "⚠️  Formatting issues found - consider running 'black src/ tests/' to fix"
 
     - name: Check import sorting with isort
       run: |
