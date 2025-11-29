@@ -301,12 +301,127 @@ def comprehensive_statistical_validation(
         results["bootstrap_vs_index"] = bootstrap_results
         print("✓ Bootstrap comparison vs index completed")
 
-    # HOLD decision analysis
+    # Comprehensive decision analysis (BUY, HOLD, SELL)
+    decision_analysis = analyze_decision_effectiveness(parsed_df)
+    results["decision_effectiveness"] = decision_analysis
+
+    # Legacy HOLD decision analysis (for backward compatibility)
     hold_analysis = evaluate_hold_decisions_dual_criteria(parsed_df)
     results["hold_decision_analysis"] = hold_analysis
 
     # Summary assessment
     results["summary_assessment"] = generate_validation_summary(results)
+
+    return results
+
+
+def analyze_decision_effectiveness(parsed_df: pd.DataFrame) -> Dict:
+    """
+    Comprehensive analysis of all decision types (BUY, HOLD, SELL) and overall effectiveness.
+
+    Args:
+        parsed_df: DataFrame with trading decisions and returns
+
+    Returns:
+        Dict with detailed analysis of each decision type and overall performance
+    """
+    results = {
+        "decision_distribution": {},
+        "decision_performance": {},
+        "overall_effectiveness": {},
+        "decision_timing": {},
+        "risk_adjusted_analysis": {}
+    }
+
+    # Get unique decisions
+    decisions = ['BUY', 'HOLD', 'SELL']
+    decision_data = {}
+
+    for decision in decisions:
+        decision_df = parsed_df[parsed_df['decision'] == decision].copy()
+        decision_data[decision] = decision_df
+
+        if len(decision_df) > 0:
+            returns = decision_df['strategy_return'].values
+            market_returns = decision_df['next_return_1d'].values
+
+            # Basic performance metrics
+            win_rate = np.mean(returns > 0)
+            avg_return = np.mean(returns)
+            total_trades = len(returns)
+            total_return = np.sum(returns)
+
+            # Risk metrics
+            volatility = np.std(returns) * np.sqrt(252) if len(returns) > 1 else 0
+            sharpe = avg_return / np.std(returns) * np.sqrt(252) if np.std(returns) > 0 else 0
+            max_drawdown = calculate_max_drawdown(returns) if len(returns) > 1 else 0
+
+            # Market comparison
+            market_avg_return = np.mean(market_returns)
+            excess_return = avg_return - market_avg_return
+
+            # Decision frequency
+            decision_pct = len(decision_df) / len(parsed_df) * 100
+
+            results["decision_performance"][decision] = {
+                "total_decisions": total_trades,
+                "decision_frequency_pct": round(decision_pct, 2),
+                "win_rate": round(win_rate * 100, 2),
+                "avg_daily_return": round(avg_return, 4),
+                "total_return": round(total_return, 4),
+                "volatility_annualized": round(volatility, 4),
+                "sharpe_ratio": round(sharpe, 3),
+                "max_drawdown": round(max_drawdown, 4),
+                "market_avg_return": round(market_avg_return, 4),
+                "excess_return": round(excess_return, 4),
+                "excess_return_annualized": round(excess_return * 252, 2)
+            }
+
+    # Decision distribution
+    total_decisions = len(parsed_df)
+    for decision in decisions:
+        count = len(decision_data[decision])
+        results["decision_distribution"][decision] = {
+            "count": count,
+            "percentage": round(count / total_decisions * 100, 1) if total_decisions > 0 else 0
+        }
+
+    # Overall effectiveness
+    all_returns = parsed_df['strategy_return'].values
+    results["overall_effectiveness"] = {
+        "total_decisions": total_decisions,
+        "overall_win_rate": round(np.mean(all_returns > 0) * 100, 2),
+        "overall_avg_return": round(np.mean(all_returns), 4),
+        "overall_total_return": round(np.sum(all_returns), 2),
+        "overall_volatility": round(np.std(all_returns) * np.sqrt(252), 4),
+        "overall_sharpe": round(np.mean(all_returns) / np.std(all_returns) * np.sqrt(252), 3) if np.std(all_returns) > 0 else 0,
+        "overall_max_drawdown": round(calculate_max_drawdown(all_returns), 4)
+    }
+
+    # Decision timing analysis - analyze performance by time of day/week patterns
+    # This is a simplified version - could be expanded
+    results["decision_timing"] = {
+        "note": "Decision timing analysis available - could analyze performance by time of day, day of week, month, etc."
+    }
+
+    # Risk-adjusted analysis
+    if results["decision_performance"]:
+        # Find best and worst performing decisions
+        best_decision = max(results["decision_performance"].keys(),
+                          key=lambda x: results["decision_performance"][x]["excess_return"])
+        worst_decision = min(results["decision_performance"].keys(),
+                           key=lambda x: results["decision_performance"][x]["excess_return"])
+
+        results["risk_adjusted_analysis"] = {
+            "best_decision": best_decision,
+            "worst_decision": worst_decision,
+            "best_excess_return": results["decision_performance"][best_decision]["excess_return_annualized"],
+            "worst_excess_return": results["decision_performance"][worst_decision]["excess_return_annualized"],
+            "decision_consistency": "variable" if abs(
+                results["decision_performance"][best_decision]["excess_return_annualized"] -
+                results["decision_performance"][worst_decision]["excess_return_annualized"]
+            ) > 10 else "consistent"
+        }
 
     return results
 

@@ -224,6 +224,27 @@ def collect_data_sources(model_tag: str, analysis_dir, plots_dir) -> Dict:
     if stat_validation_file.exists():
         with open(stat_validation_file, 'r') as f:
             sources['statistical_validation'] = json.load(f)
+    else:
+        # Generate statistical validation if it doesn't exist
+        print("  Statistical validation data not found - generating...")
+        try:
+            from .statistical_validation import comprehensive_statistical_validation
+            # Define parsed_dir inline since it's used later
+            temp_parsed_dir = analysis_path.parent / "parsed"
+            parsed_file = temp_parsed_dir / f"{model_tag}_parsed.csv"
+            if parsed_file.exists():
+                parsed_df = pd.read_csv(parsed_file, parse_dates=['date'])
+                stat_results = comprehensive_statistical_validation(parsed_df, model_tag)
+                sources['statistical_validation'] = stat_results
+
+                # Save for future use
+                with open(stat_validation_file, 'w') as f:
+                    json.dump(stat_results, f, indent=2, default=str)
+                print("  ✓ Statistical validation generated")
+            else:
+                print("  ✗ Parsed data not found - cannot generate statistical validation")
+        except Exception as e:
+            print(f"  ✗ Failed to generate statistical validation: {e}")
 
     # Baseline comparison CSV
     baseline_csv = analysis_path / f"{model_tag}_baseline_comparison.csv"
@@ -1459,32 +1480,93 @@ def generate_decision_behavior_analysis(data_sources: Dict, model_tag: str) -> L
             "",
         ])
 
-    # HOLD Decision Analysis
+    # Comprehensive Decision Analysis
+    if 'statistical_validation' in data_sources and 'decision_effectiveness' in data_sources['statistical_validation']:
+        decision_data = data_sources['statistical_validation']['decision_effectiveness']
+
+        # Decision Distribution
+        if decision_data.get('decision_distribution'):
+            lines.extend([
+                "### Decision Distribution",
+                "",
+                "| Decision | Count | Percentage |",
+                "|----------|-------|------------|",
+            ])
+
+            for decision, stats in decision_data['decision_distribution'].items():
+                lines.append(f"| {decision} | {stats['count']} | {stats['percentage']:.1f}% |")
+
+            lines.append("")
+
+        # Overall Effectiveness
+        if decision_data.get('overall_effectiveness'):
+            overall = decision_data['overall_effectiveness']
+            lines.extend([
+                "### Overall Decision Effectiveness",
+                "",
+                f"**Total Decisions**: {overall['total_decisions']}",
+                f"**Overall Win Rate**: {overall['overall_win_rate']:.1f}%",
+                f"**Average Daily Return**: {overall['overall_avg_return']:.3f}%",
+                f"**Total Return**: {overall['overall_total_return']:.2f}%",
+                f"**Annualized Volatility**: {overall['overall_volatility']:.2f}%",
+                f"**Sharpe Ratio**: {overall['overall_sharpe']:.3f}",
+                f"**Maximum Drawdown**: {overall['overall_max_drawdown']:.2f}%",
+                "",
+            ])
+
+        # Individual Decision Performance
+        if decision_data.get('decision_performance'):
+            lines.extend([
+                "### Performance by Decision Type",
+                "",
+                "| Decision | Win Rate | Avg Return | Excess Return | Sharpe | Volatility | Frequency |",
+                "|----------|----------|------------|---------------|--------|------------|-----------|",
+            ])
+
+            for decision, perf in decision_data['decision_performance'].items():
+                lines.append(
+                    f"| {decision} | {perf['win_rate']:.1f}% | {perf['avg_daily_return']:.3f}% | "
+                    f"{perf['excess_return_annualized']:+.1f}% | {perf['sharpe_ratio']:.2f} | "
+                    f"{perf['volatility_annualized']:.1f}% | {perf['decision_frequency_pct']:.1f}% |"
+                )
+
+            lines.append("")
+
+        # Risk-Adjusted Analysis Summary
+        if decision_data.get('risk_adjusted_analysis'):
+            risk_adj = decision_data['risk_adjusted_analysis']
+            lines.extend([
+                "### Decision Strategy Insights",
+                "",
+                f"- **Best Performing Decision**: {risk_adj['best_decision']} "
+                f"({risk_adj['best_excess_return']:+.1f}% annualized excess return)",
+                f"- **Worst Performing Decision**: {risk_adj['worst_decision']} "
+                f"({risk_adj['worst_excess_return']:+.1f}% annualized excess return)",
+                f"- **Decision Consistency**: {risk_adj['decision_consistency'].title()} performance across decision types",
+                "",
+            ])
+
+    # Legacy HOLD Analysis (for detailed context)
     if 'statistical_validation' in data_sources and 'hold_decision_analysis' in data_sources['statistical_validation']:
         hold_data = data_sources['statistical_validation']['hold_decision_analysis']
 
-        if 'combined_assessment' in hold_data:
+        if 'combined_assessment' in hold_data and 'note' not in hold_data:
             combined = hold_data['combined_assessment']
             hold_score = combined.get('overall_score', 0)
             hold_rating = "Excellent" if hold_score > 0.6 else "Good" if hold_score > 0.4 else "Poor"
 
             lines.extend([
-                "### HOLD Decision Effectiveness",
+                "### Detailed HOLD Analysis",
                 "",
-                f"**Overall HOLD Success**: {hold_score:.1%} ({hold_rating})",
+                f"**HOLD Success Rate**: {hold_score:.1%} ({hold_rating})",
                 "",
                 "#### Quiet Market Performance",
                 f"- **Success Rate**: {hold_data.get('quiet_market_success', {}).get('success_rate', 0):.1%}",
-                f"- **Assessment**: {hold_data.get('quiet_market_success', {}).get('interpretation', 'N/A')}",
+                f"- **Assessment**: {hold_data.get('quiet_market_success', {}).get('interpretation', 'N/A')[:60]}...",
                 "",
                 "#### Enhanced HOLD Analysis",
                 f"- **Relative Performance**: {hold_data.get('relative_performance', {}).get('avg_score', 0):.1%}",
                 f"- **Risk Avoidance**: {hold_data.get('risk_avoidance', {}).get('avoidance_rate', 0):.1%}",
-                f"- **{hold_data.get('relative_performance', {}).get('interpretation', 'N/A')[:50]}...**",
-                f"- **{hold_data.get('risk_avoidance', {}).get('interpretation', 'N/A')[:50]}...**",
-                "",
-                "*Legacy Context (deprecated):*",
-                f"- **Context Score**: {hold_data.get('contextual_correctness', {}).get('avg_context_score', 0):.2f}",
                 "",
             ])
 
@@ -2047,20 +2129,138 @@ def generate_decision_behavior_analysis_html(data_sources: Dict, model_tag: str)
                 </div>
 """
 
-    # HOLD Decision Analysis
+    # Comprehensive Decision Analysis
+    if 'statistical_validation' in data_sources and 'decision_effectiveness' in data_sources['statistical_validation']:
+        decision_data = data_sources['statistical_validation']['decision_effectiveness']
+
+        # Decision Distribution
+        if decision_data.get('decision_distribution'):
+            html += """
+                <h3>Decision Distribution</h3>
+                <div class="metric-grid">
+"""
+            for decision, stats in decision_data['decision_distribution'].items():
+                html += f"""
+                    <div class="metric-card">
+                        <div class="label">{decision} Decisions</div>
+                        <div class="value">{stats['count']}</div>
+                        <small>{stats['percentage']:.1f}% of total</small>
+                    </div>
+"""
+            html += """
+                </div>
+"""
+
+        # Overall Effectiveness
+        if decision_data.get('overall_effectiveness'):
+            overall = decision_data['overall_effectiveness']
+            html += f"""
+                <h3>Overall Decision Effectiveness</h3>
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="label">Total Decisions</div>
+                        <div class="value">{overall['total_decisions']}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Overall Win Rate</div>
+                        <div class="value{' positive' if overall['overall_win_rate'] > 50 else ' negative'}">{overall['overall_win_rate']:.1f}%</div>
+                        <small>Profitable decisions</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Avg Daily Return</div>
+                        <div class="value{' positive' if overall['overall_avg_return'] > 0 else ' negative'}">{overall['overall_avg_return']:.3f}%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Sharpe Ratio</div>
+                        <div class="value{' positive' if overall['overall_sharpe'] > 0 else ' negative'}">{overall['overall_sharpe']:.2f}</div>
+                        <small>Risk-adjusted return</small>
+                    </div>
+                </div>
+"""
+
+        # Individual Decision Performance
+        if decision_data.get('decision_performance'):
+            html += """
+                <h3>Performance by Decision Type</h3>
+                <div class="metric-grid">
+"""
+            for decision, perf in decision_data['decision_performance'].items():
+                excess_class = ' positive' if perf['excess_return_annualized'] > 0 else ' negative'
+                html += f"""
+                    <div class="metric-card">
+                        <div class="label">{decision} Performance</div>
+                        <div class="value{excess_class}">{perf['excess_return_annualized']:+.1f}%</div>
+                        <small>Annual excess return</small>
+                    </div>
+"""
+            html += """
+                </div>
+
+                <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                    <thead>
+                        <tr style="background: #f8fafc;">
+                            <th style="padding: 10px; text-align: left; border: 1px solid #e2e8f0;">Decision</th>
+                            <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">Win Rate</th>
+                            <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">Avg Return</th>
+                            <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">Sharpe</th>
+                            <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">Frequency</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+"""
+            for decision, perf in decision_data['decision_performance'].items():
+                html += f"""
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #e2e8f0; font-weight: bold;">{decision}</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">{perf['win_rate']:.1f}%</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">{perf['avg_daily_return']:.3f}%</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">{perf['sharpe_ratio']:.2f}</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">{perf['decision_frequency_pct']:.1f}%</td>
+                        </tr>
+"""
+            html += """
+                    </tbody>
+                </table>
+"""
+
+        # Risk-Adjusted Analysis Summary
+        if decision_data.get('risk_adjusted_analysis'):
+            risk_adj = decision_data['risk_adjusted_analysis']
+            html += f"""
+                <h3>Decision Strategy Insights</h3>
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="label">Best Decision</div>
+                        <div class="value">{risk_adj['best_decision']}</div>
+                        <small>{risk_adj['best_excess_return']:+.1f}% excess return</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Worst Decision</div>
+                        <div class="value">{risk_adj['worst_decision']}</div>
+                        <small>{risk_adj['worst_excess_return']:+.1f}% excess return</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Consistency</div>
+                        <div class="value">{risk_adj['decision_consistency'].title()}</div>
+                        <small>Performance across decisions</small>
+                    </div>
+                </div>
+"""
+
+    # Legacy HOLD Analysis (for detailed context)
     if 'statistical_validation' in data_sources and 'hold_decision_analysis' in data_sources['statistical_validation']:
         hold_data = data_sources['statistical_validation']['hold_decision_analysis']
 
-        if 'combined_assessment' in hold_data:
+        if 'combined_assessment' in hold_data and 'note' not in hold_data:
             combined = hold_data['combined_assessment']
             hold_score = combined.get('overall_score', 0)
             hold_rating = "Excellent" if hold_score > 0.6 else "Good" if hold_score > 0.4 else "Poor"
 
             html += f"""
-                <h3>HOLD Decision Effectiveness</h3>
+                <h3>Detailed HOLD Analysis</h3>
                 <div class="metric-grid">
                     <div class="metric-card">
-                        <div class="label">Overall HOLD Success</div>
+                        <div class="label">HOLD Success Rate</div>
                         <div class="value{' positive' if hold_score > 0.4 else ' negative'}">{hold_score:.1%}</div>
                         <small>{hold_rating}</small>
                     </div>
@@ -2069,19 +2269,7 @@ def generate_decision_behavior_analysis_html(data_sources: Dict, model_tag: str)
                 <h4>Quiet Market Performance</h4>
                 <ul class="insights-list">
                     <li><strong>Success Rate:</strong> {hold_data.get('quiet_market_success', {}).get('success_rate', 0):.1%}</li>
-                    <li><strong>Assessment:</strong> {hold_data.get('quiet_market_success', {}).get('interpretation', 'N/A')}</li>
-                </ul>
-
-                <h4>Enhanced HOLD Analysis</h4>
-                <ul class="insights-list">
-                    <li><strong>Relative Performance:</strong> {hold_data.get('relative_performance', {}).get('avg_score', 0):.1%}</li>
-                    <li><strong>Risk Avoidance:</strong> {hold_data.get('risk_avoidance', {}).get('avoidance_rate', 0):.1%}</li>
-                    <li><strong>Assessment:</strong> {hold_data.get('relative_performance', {}).get('interpretation', 'N/A')[:40]}...</li>
-                </ul>
-
-                <h5>Legacy Context (deprecated)</h5>
-                <ul class="insights-list">
-                    <li><strong>Context Score:</strong> {hold_data.get('contextual_correctness', {}).get('avg_context_score', 0):.2f}</li>
+                    <li><strong>Assessment:</strong> {hold_data.get('quiet_market_success', {}).get('interpretation', 'N/A')[:60]}...</li>
                 </ul>
 """
 
