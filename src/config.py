@@ -43,7 +43,7 @@ DATA_END = "2023-12-31"    # End date for historical data
 # TEST vs FULL RUN
 # ----------------
 TEST_MODE = True       # Set to True for quick tests, False for full experiments
-TEST_LIMIT = 500         # Number of days to run when TEST_MODE = True
+TEST_LIMIT = 2500         # Number of days to run when TEST_MODE = True
                        # Set TEST_MODE = False for complete ~2700 day analysis
 
 # LLM MODELS TO TEST

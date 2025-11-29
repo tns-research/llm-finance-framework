@@ -330,6 +330,78 @@ def create_decision_pattern_plots(parsed_df: pd.DataFrame, model_tag: str, outpu
     print(f"\n[INFO] Decision pattern plots saved to: {output_path}")
 
 
+def analyze_market_regimes_for_decisions(parsed_df: pd.DataFrame) -> Dict:
+    """
+    Analyze how decision-making performs across different market regimes.
+    This complements the statistical risk analysis with decision-specific insights.
+
+    Args:
+        parsed_df: Parsed trading data with decisions and returns
+
+    Returns:
+        Dict with regime-specific decision analysis
+    """
+    if 'decision' not in parsed_df.columns or 'next_return_1d' not in parsed_df.columns:
+        return {}
+
+    # First get the basic regime classification
+    from .statistical_validation import analyze_market_regimes
+    regime_analysis = analyze_market_regimes(parsed_df)
+
+    if not regime_analysis:
+        return {}
+
+    # Now analyze decisions within each regime
+    decisions = parsed_df['decision'].values
+    regime_decisions = {}
+
+    # Classify market regimes (duplicate logic for now - could be refactored)
+    market_returns = parsed_df['next_return_1d'].values
+    rolling_vol = pd.Series(market_returns).rolling(20).std() * np.sqrt(252)
+    vol_median = rolling_vol.median()
+    vol_high = rolling_vol.quantile(0.75)
+
+    regimes = []
+    for vol in rolling_vol:
+        if pd.isna(vol):
+            regimes.append('unknown')
+        elif vol > vol_high:
+            regimes.append('high_volatility')
+        elif vol > vol_median:
+            regimes.append('moderate_volatility')
+        else:
+            regimes.append('low_volatility')
+
+    # Decision analysis by regime
+    for regime in ['low_volatility', 'moderate_volatility', 'high_volatility']:
+        regime_mask = np.array(regimes) == regime
+        if np.any(regime_mask):
+            regime_decisions_list = decisions[regime_mask]
+
+            buy_count = np.sum(regime_decisions_list == 'BUY')
+            hold_count = np.sum(regime_decisions_list == 'HOLD')
+            sell_count = np.sum(regime_decisions_list == 'SELL')
+            total_decisions = len(regime_decisions_list)
+
+            regime_decisions[regime] = {
+                'decision_distribution': {
+                    'BUY': int(buy_count),
+                    'HOLD': int(hold_count),
+                    'SELL': int(sell_count)
+                },
+                'decision_percentages': {
+                    'BUY': float(buy_count / total_decisions * 100),
+                    'HOLD': float(hold_count / total_decisions * 100),
+                    'SELL': float(sell_count / total_decisions * 100)
+                }
+            }
+
+    return {
+        'regime_performance': regime_analysis,
+        'regime_decisions': regime_decisions
+    }
+
+
 def generate_pattern_analysis_report(parsed_df: pd.DataFrame, model_tag: str, output_path: str):
     """
     Generate comprehensive markdown report combining all analyses.

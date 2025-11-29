@@ -1,6 +1,8 @@
 # src/reporting.py
 
 import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
 
 from .config import (
     USE_DUMMY_MODEL,
@@ -401,6 +403,163 @@ def create_calibration_by_decision_plot(parsed_df, model_tag: str, output_path: 
     plt.close()
 
     print(f"\n[INFO] Calibration by decision plot saved to: {output_path}")
+
+
+def create_risk_analysis_chart(parsed_df: pd.DataFrame, model_tag: str, output_path: str):
+    """
+    Create comprehensive risk analysis chart with VaR and stress tests.
+
+    Args:
+        parsed_df: Parsed trading data
+        model_tag: Model identifier for chart title
+        output_path: Path to save the chart
+    """
+    from .statistical_validation import calculate_var_and_stress_tests
+
+    if 'strategy_return' not in parsed_df.columns:
+        print(f"Warning: No strategy returns found for risk analysis chart")
+        return
+
+    returns = parsed_df['strategy_return'].values
+    dates = parsed_df['date'] if 'date' in parsed_df.columns else None
+
+    # Get risk analysis data
+    risk_data = calculate_var_and_stress_tests(returns, dates)
+
+    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+    fig.suptitle(f'Risk Analysis - {model_tag}', fontsize=16, fontweight='bold')
+
+    # 1. Returns Distribution
+    ax1 = axes[0, 0]
+    ax1.hist(returns, bins=50, alpha=0.7, density=True, label='Strategy Returns')
+    ax1.axvline(np.mean(returns), color='red', linestyle='--', label=f'Mean: {np.mean(returns):.3f}%')
+    ax1.set_title('Returns Distribution', fontweight='bold')
+    ax1.set_xlabel('Daily Return (%)')
+    ax1.set_ylabel('Density')
+    ax1.legend()
+    ax1.grid(alpha=0.3)
+
+    # 2. Value at Risk (VaR) Over Time
+    ax2 = axes[0, 1]
+    if 'var_95' in risk_data and len(risk_data['var_95']) > 0:
+        var_dates = risk_data.get('var_dates', list(range(len(risk_data['var_95']))))
+        ax2.plot(var_dates, risk_data['var_95'], label='VaR 95%', color='orange', alpha=0.8)
+        ax2.plot(var_dates, risk_data['var_99'], label='VaR 99%', color='red', alpha=0.8)
+        ax2.fill_between(var_dates, risk_data['var_99'], risk_data['var_95'],
+                        alpha=0.2, color='red', label='Tail Risk Zone')
+
+    ax2.set_title('Rolling Value at Risk', fontweight='bold')
+    ax2.set_ylabel('VaR (%)')
+    ax2.legend()
+    ax2.grid(alpha=0.3)
+
+    # 3. Drawdown Analysis
+    ax3 = axes[1, 0]
+    cumulative = np.cumsum(returns)
+    running_max = np.maximum.accumulate(cumulative)
+    drawdowns = cumulative - running_max
+
+    ax3.fill_between(range(len(drawdowns)), 0, drawdowns, color='red', alpha=0.3)
+    ax3.plot(drawdowns, color='red', linewidth=1)
+    ax3.set_title('Drawdown Analysis', fontweight='bold')
+    ax3.set_ylabel('Drawdown (%)')
+    ax3.grid(alpha=0.3)
+
+    # 4. Stress Test Scenarios
+    ax4 = axes[1, 1]
+    if 'stress_tests' in risk_data:
+        for scenario_name, scenario_data in risk_data['stress_tests'].items():
+            if scenario_name != 'base_case':  # Skip base case to avoid clutter
+                ax4.plot(scenario_data['cumulative'], label=scenario_name.replace('_', ' ').title(), alpha=0.8)
+
+    ax4.set_title('Stress Test Scenarios', fontweight='bold')
+    ax4.set_ylabel('Cumulative Return (%)')
+    ax4.legend()
+    ax4.grid(alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"✓ Risk analysis chart saved: {output_path}")
+
+
+def create_rolling_performance_chart(parsed_df: pd.DataFrame, model_tag: str, output_path: str):
+    """
+    Create rolling performance analysis chart.
+
+    Args:
+        parsed_df: Parsed trading data
+        model_tag: Model identifier for chart title
+        output_path: Path to save the chart
+    """
+    if 'strategy_return' not in parsed_df.columns or 'date' not in parsed_df.columns:
+        print(f"Warning: Missing required columns for rolling performance chart")
+        return
+
+    df = parsed_df.sort_values('date').copy()
+    window_sizes = [63, 126, 252]  # ~3, 6, 12 months
+
+    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+    fig.suptitle(f'Rolling Performance Analysis - {model_tag}', fontsize=16, fontweight='bold')
+
+    # 1. Rolling Sharpe Ratio
+    ax1 = axes[0, 0]
+    for window in window_sizes:
+        if len(df) > window:
+            rolling_sharpe = df['strategy_return'].rolling(window).apply(
+                lambda x: x.mean() / x.std() * np.sqrt(252) if x.std() > 0 else 0
+            )
+            ax1.plot(df['date'], rolling_sharpe, label=f'{window//21}M Window', alpha=0.8)
+
+    ax1.set_title('Rolling Sharpe Ratio', fontweight='bold')
+    ax1.set_ylabel('Annualized Sharpe Ratio')
+    ax1.legend()
+    ax1.grid(alpha=0.3)
+
+    # 2. Rolling Returns
+    ax2 = axes[0, 1]
+    for window in window_sizes:
+        if len(df) > window:
+            rolling_returns = df['strategy_return'].rolling(window).sum()
+            ax2.plot(df['date'], rolling_returns, label=f'{window//21}M Window', alpha=0.8)
+
+    ax2.set_title('Rolling Total Returns', fontweight='bold')
+    ax2.set_ylabel('Total Return (%)')
+    ax2.legend()
+    ax2.grid(alpha=0.3)
+
+    # 3. Rolling Maximum Drawdown
+    ax3 = axes[1, 0]
+    for window in window_sizes:
+        if len(df) > window:
+            rolling_cumulative = df['strategy_return'].rolling(window).sum()
+            rolling_max = rolling_cumulative.rolling(window, min_periods=1).max()
+            rolling_dd = rolling_cumulative - rolling_max
+            ax3.plot(df['date'], rolling_dd, label=f'{window//21}M Window', alpha=0.8)
+
+    ax3.set_title('Rolling Maximum Drawdown', fontweight='bold')
+    ax3.set_ylabel('Drawdown (%)')
+    ax3.legend()
+    ax3.grid(alpha=0.3)
+
+    # 4. Rolling Win Rate
+    ax4 = axes[1, 1]
+    for window in window_sizes:
+        if len(df) > window:
+            rolling_wins = (df['strategy_return'] > 0).rolling(window).sum()
+            rolling_win_rate = rolling_wins / window * 100
+            ax4.plot(df['date'], rolling_win_rate, label=f'{window//21}M Window', alpha=0.8)
+
+    ax4.set_title('Rolling Win Rate', fontweight='bold')
+    ax4.set_ylabel('Win Rate (%)')
+    ax4.axhline(y=50, color='red', linestyle='--', alpha=0.7, label='50% Line')
+    ax4.legend()
+    ax4.grid(alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"✓ Rolling performance chart saved: {output_path}")
 
 
 def generate_calibration_analysis_report(calibration_data: pd.DataFrame, parsed_df: pd.DataFrame, model_tag: str, output_path: str):

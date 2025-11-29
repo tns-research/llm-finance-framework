@@ -211,37 +211,39 @@ Error: {str(e)}
         return str(error_path)
 
 
-def collect_data_sources(model_tag: str, analysis_dir: Path, plots_dir: Path) -> Dict:
+def collect_data_sources(model_tag: str, analysis_dir, plots_dir) -> Dict:
     """
     Collect all available data sources for the model.
     """
+    analysis_path = Path(analysis_dir)
+    plots_path = Path(plots_dir)
     sources = {}
 
     # Statistical validation JSON
-    stat_validation_file = analysis_dir / f"{model_tag}_statistical_validation.json"
+    stat_validation_file = analysis_path / f"{model_tag}_statistical_validation.json"
     if stat_validation_file.exists():
         with open(stat_validation_file, 'r') as f:
             sources['statistical_validation'] = json.load(f)
 
     # Baseline comparison CSV
-    baseline_csv = analysis_dir / f"{model_tag}_baseline_comparison.csv"
+    baseline_csv = analysis_path / f"{model_tag}_baseline_comparison.csv"
     if baseline_csv.exists():
         sources['baseline_comparison'] = pd.read_csv(baseline_csv)
 
     # Calibration analysis markdown
-    calibration_md = analysis_dir / f"{model_tag}_calibration_analysis.md"
+    calibration_md = analysis_path / f"{model_tag}_calibration_analysis.md"
     if calibration_md.exists():
         with open(calibration_md, 'r') as f:
             sources['calibration_analysis'] = f.read()
 
     # Pattern analysis markdown
-    pattern_md = analysis_dir / f"{model_tag}_pattern_analysis.md"
+    pattern_md = analysis_path / f"{model_tag}_pattern_analysis.md"
     if pattern_md.exists():
         with open(pattern_md, 'r') as f:
             sources['pattern_analysis'] = f.read()
 
     # Parsed results CSV (for additional analysis)
-    parsed_dir = analysis_dir.parent.parent / "parsed"  # Go up to results, then to parsed
+    parsed_dir = analysis_path.parent / "parsed"  # results/parsed from results/analysis
     parsed_csv = parsed_dir / f"{model_tag}_parsed.csv"
     if parsed_csv.exists():
         sources['parsed_data'] = pd.read_csv(parsed_csv, parse_dates=['date'])
@@ -251,7 +253,7 @@ def collect_data_sources(model_tag: str, analysis_dir: Path, plots_dir: Path) ->
     plot_extensions = ['.png', '.jpg', '.jpeg']
 
     for ext in plot_extensions:
-        for plot_file in plots_dir.glob(f"{model_tag}*{ext}"):
+        for plot_file in plots_path.glob(f"{model_tag}*{ext}"):
             plot_name = plot_file.stem.replace(f"{model_tag}_", "")
             # Path from reports/ to plots/ is ../plots/filename.png
             sources['plots'][plot_name] = f"../plots/{plot_file.name}"
@@ -270,15 +272,26 @@ def generate_additional_charts(data_sources: Dict, model_tag: str, plots_dir: Pa
 
     parsed_df = data_sources['parsed_data']
 
-    # Rolling performance charts
-    additional_charts['rolling_performance_plots'] = create_rolling_performance_charts(
-        parsed_df, model_tag, plots_dir
-    )
+    # Import chart generation functions from reporting module
+    try:
+        from .reporting import create_rolling_performance_chart, create_risk_analysis_chart
 
-    # Risk analysis charts
-    additional_charts['risk_analysis_plots'] = create_risk_analysis_charts(
-        parsed_df, model_tag, plots_dir
-    )
+        # Rolling performance charts
+        rolling_chart_path = plots_dir / f"{model_tag}_rolling_performance.png"
+        create_rolling_performance_chart(parsed_df, model_tag, str(rolling_chart_path))
+        additional_charts['rolling_performance_plots'] = {
+            'rolling_performance': f"../plots/{rolling_chart_path.name}"
+        }
+
+        # Risk analysis charts
+        risk_chart_path = plots_dir / f"{model_tag}_risk_analysis.png"
+        create_risk_analysis_chart(parsed_df, model_tag, str(risk_chart_path))
+        additional_charts['risk_analysis_plots'] = {
+            'risk_analysis': f"../plots/{risk_chart_path.name}"
+        }
+
+    except ImportError as e:
+        print(f"Warning: Could not import chart functions: {e}")
 
     # Statistical visualizations (if validation data available)
     if 'statistical_validation' in data_sources:
@@ -369,7 +382,7 @@ def create_rolling_performance_charts(parsed_df: pd.DataFrame, model_tag: str, p
     plt.savefig(chart_path, dpi=300, bbox_inches='tight')
     plt.close()
 
-    charts['rolling_performance'] = str(chart_path.relative_to(plots_dir.parent))
+    charts['rolling_performance'] = f"../plots/{chart_path.name}"
     print(f"✓ Rolling performance chart saved: {chart_path}")
 
     return charts
@@ -462,7 +475,7 @@ def create_risk_analysis_charts(parsed_df: pd.DataFrame, model_tag: str, plots_d
     plt.savefig(chart_path, dpi=300, bbox_inches='tight')
     plt.close()
 
-    charts['risk_analysis'] = str(chart_path.relative_to(plots_dir.parent))
+    charts['risk_analysis'] = f"../plots/{chart_path.name}"
     print(f"✓ Risk analysis chart saved: {chart_path}")
 
     return charts
@@ -518,7 +531,7 @@ def create_statistical_visualizations(validation_results: Dict, model_tag: str, 
             plt.savefig(chart_path, dpi=300, bbox_inches='tight')
             plt.close()
 
-            charts['statistical_validation'] = str(chart_path.relative_to(plots_dir.parent))
+            charts['statistical_validation'] = f"../plots/{chart_path.name}"
             print(f"✓ Statistical validation visualization saved: {chart_path}")
 
     return charts
@@ -544,52 +557,31 @@ def generate_master_report(
         ""
     ])
 
-    # Debug: Add data sources summary
-    report_lines.extend([
-        f"## Data Sources Summary",
-        f"",
-        f"- Total data sources collected: {len(data_sources)}",
-    ])
-
-    for key, value in data_sources.items():
-        if key == 'plots':
-            report_lines.append(f"- {key}: {len(value)} plot files")
-        elif hasattr(value, '__len__') and not isinstance(value, str):
-            report_lines.append(f"- {key}: {len(value)} items")
-        else:
-            report_lines.append(f"- {key}: available")
-
-    report_lines.extend([
-        "",
-        "---",
-        ""
-    ])
-
-    # Executive Summary
+    # Executive Summary - Start with key takeaways
     report_lines.extend(generate_executive_summary(data_sources, model_tag))
 
-    # Performance Overview
+    # Performance Overview - Visual summary of results
     report_lines.extend(generate_performance_overview(data_sources, model_tag))
 
-    # Statistical Validation
+    # Comprehensive Risk Analysis - Combine risk attribution and risk analysis
+    report_lines.extend(generate_comprehensive_risk_analysis(data_sources, model_tag))
+
+    # Market Environment Analysis - How strategy performs in different conditions
+    report_lines.extend(generate_market_regime_analysis(data_sources, model_tag))
+
+    # Statistical Rigor - Validation and confidence assessment
     report_lines.extend(generate_statistical_validation_section(data_sources, model_tag))
 
-    # Decision Analysis
-    report_lines.extend(generate_decision_analysis_section(data_sources, model_tag))
+    # Decision Behavior Analysis - LLM decision-making patterns
+    report_lines.extend(generate_decision_behavior_analysis(data_sources, model_tag))
 
-    # Risk Analysis
-    report_lines.extend(generate_risk_analysis_section(data_sources, model_tag))
+    # Practical Implementation - Real-world deployment considerations
+    report_lines.extend(generate_practical_considerations(data_sources, model_tag))
 
-    # HOLD Decision Analysis
-    report_lines.extend(generate_hold_analysis_section(data_sources, model_tag))
-
-    # Additional Charts
-    report_lines.extend(generate_additional_charts_section(data_sources, model_tag))
-
-    # Key Insights & Recommendations
+    # Key Insights & Strategic Recommendations
     report_lines.extend(generate_insights_recommendations(data_sources, model_tag))
 
-    # Technical Details
+    # Technical Appendix - Data sources and methodology
     report_lines.extend(generate_technical_details(data_sources, model_tag))
 
     return "\n".join(report_lines)
@@ -844,25 +836,25 @@ def generate_master_report_html(
     # Performance Overview Section
     html_parts.append(generate_performance_overview_html(data_sources, model_tag))
 
-    # Statistical Validation Section
+    # Comprehensive Risk Analysis Section
+    html_parts.append(generate_comprehensive_risk_analysis_html(data_sources, model_tag))
+
+    # Market Environment Analysis Section
+    html_parts.append(generate_market_regime_analysis_html(data_sources, model_tag))
+
+    # Statistical Rigor Section
     html_parts.append(generate_statistical_validation_section_html(data_sources, model_tag))
 
-    # Decision Analysis Section
-    html_parts.append(generate_decision_analysis_section_html(data_sources, model_tag))
+    # Decision Behavior Analysis Section
+    html_parts.append(generate_decision_behavior_analysis_html(data_sources, model_tag))
 
-    # Risk Analysis Section
-    html_parts.append(generate_risk_analysis_section_html(data_sources, model_tag))
+    # Practical Implementation Section
+    html_parts.append(generate_practical_considerations_html(data_sources, model_tag))
 
-    # HOLD Decision Analysis Section
-    html_parts.append(generate_hold_analysis_section_html(data_sources, model_tag))
-
-    # Additional Charts Section
-    html_parts.append(generate_additional_charts_section_html(data_sources, model_tag))
-
-    # Key Insights & Recommendations Section
+    # Key Insights & Strategic Recommendations Section
     html_parts.append(generate_insights_recommendations_html(data_sources, model_tag))
 
-    # Technical Details Section
+    # Technical Appendix Section
     html_parts.append(generate_technical_details_html(data_sources, model_tag))
 
     # Close HTML
@@ -881,41 +873,622 @@ def generate_master_report_html(
 
 
 def generate_executive_summary(data_sources: Dict, model_tag: str) -> List[str]:
-    """Generate executive summary section."""
+    """Generate comprehensive executive summary with key takeaways."""
     lines = [
         "## 📈 Executive Summary",
         "",
+        "### Key Performance Metrics",
+        "",
     ]
 
-    # Extract key metrics from statistical validation
+    # Extract and analyze key metrics
     if 'statistical_validation' in data_sources:
         sv = data_sources['statistical_validation']
         dataset = sv.get('dataset_info', {})
 
+        total_return = dataset.get('total_strategy_return', 0)
+        index_return = dataset.get('total_index_return', 0)
+        n_periods = dataset.get('n_periods', 0)
+
+        # Performance assessment
+        performance_rating = "Excellent" if total_return > index_return + 5 else \
+                           "Good" if total_return > index_return else \
+                           "Underperforming" if total_return < index_return - 5 else "Neutral"
+
         lines.extend([
-            f"- **Total Return**: {dataset.get('total_strategy_return', 'N/A'):.2f}% "
-            f"(vs Index: {dataset.get('total_index_return', 'N/A'):.2f}%)",
-            f"- **Period**: {dataset.get('n_periods', 'N/A')} trading days",
+            f"| Metric | Strategy | Index | Difference |",
+            "|--------|----------|-------|------------|",
+            f"| Total Return | {total_return:.2f}% | {index_return:.2f}% | {total_return - index_return:+.2f}% |",
+            f"| Sharpe Ratio | {sv.get('bootstrap_vs_index', {}).get('strategy_sharpe', 'N/A'):.3f} | {sv.get('bootstrap_vs_index', {}).get('benchmark_sharpe', 'N/A'):.3f} | {sv.get('bootstrap_vs_index', {}).get('sharpe_difference', 0):+.3f} |",
+            f"| Trading Days | {n_periods} | {n_periods} | - |",
+            "",
+            f"**Overall Assessment**: {performance_rating} performance vs market index",
+            "",
         ])
 
-        # Bootstrap results
+        # Statistical significance
         if 'bootstrap_vs_index' in sv:
             bs = sv['bootstrap_vs_index']
-            sig_status = "✓ Significant" if bs.get('significant_difference_5pct') else "❌ Not significant"
+            sig_status = "✅ Statistically Significant" if bs.get('significant_difference_5pct') else "❌ Not Statistically Significant"
+            effect_size = bs.get('effect_size', 0)
+            effect_magnitude = "Large" if abs(effect_size) > 0.8 else "Medium" if abs(effect_size) > 0.5 else "Small" if abs(effect_size) > 0.2 else "Negligible"
+
             lines.extend([
-                f"- **Statistical Significance**: {sig_status} vs index (p={bs.get('p_value_two_sided', 'N/A'):.4f})",
-                f"- **Effect Size**: {bs.get('effect_size', 'N/A'):.3f} (Cohen's d)",
+                "### Statistical Confidence",
+                "",
+                f"- **Significance vs Index**: {sig_status} (p = {bs.get('p_value_two_sided', 'N/A'):.4f})",
+                f"- **Effect Size**: {effect_size:.3f} ({effect_magnitude})",
+                f"- **Confidence Interval**: [{bs.get('ci_95_bootstrap', [0, 0])[0]:+.3f}, {bs.get('ci_95_bootstrap', [0, 0])[1]:+.3f}] Sharpe ratio difference",
             ])
 
         # Out-of-sample validation
         if 'out_of_sample_validation' in sv:
             oos = sv['out_of_sample_validation']
             if 'error' not in oos:
-                overfitting = "🚨 Detected" if oos.get('overfitting_detection', {}).get('overall_overfitting_detected') else "✅ None detected"
-                lines.append(f"- **Overfitting**: {overfitting}")
+                overfitting_detected = oos.get('overfitting_detection', {}).get('overall_overfitting_detected', False)
+                overfitting_status = "🚨 Overfitting Detected" if overfitting_detected else "✅ No Overfitting Detected"
+
+                lines.extend([
+                    "",
+                    "### Validation Results",
+                    "",
+                    f"- **Out-of-Sample Test**: {overfitting_status}",
+                ])
+
+                if overfitting_detected:
+                    decay = oos.get('overfitting_detection', {}).get('sharpe_decay_pct', 0)
+                    lines.append(f"- **Performance Decay**: {decay:.1f}% reduction in Sharpe ratio out-of-sample")
+
+        # Decision quality assessment
+        if 'hold_decision_analysis' in sv:
+            hold_data = sv['hold_decision_analysis']
+            if 'combined_assessment' in hold_data:
+                combined = hold_data['combined_assessment']
+                hold_score = combined.get('overall_score', 0)
+                hold_rating = "Excellent" if hold_score > 0.6 else "Good" if hold_score > 0.4 else "Poor"
+
+                lines.extend([
+                    "",
+                    "### Decision Quality",
+                    "",
+                    f"- **HOLD Decision Success**: {hold_score:.1%} ({hold_rating})",
+                    f"- **Contextual Accuracy**: {hold_data.get('contextual_correctness', {}).get('context_success_rate', 0):.1%}",
+                ])
+
+    # Key takeaways and implications
+    lines.extend([
+        "",
+        "### Key Takeaways & Implications",
+        "",
+        "**For This LLM Configuration:**",
+    ])
+
+    # Dynamic takeaways based on performance
+    if 'statistical_validation' in data_sources:
+        sv = data_sources['statistical_validation']
+        bs = sv.get('bootstrap_vs_index', {})
+
+        if bs.get('significant_difference_5pct', False):
+            if bs.get('sharpe_difference', 0) > 0:
+                lines.append("- ✅ **Outperforms market index** with statistical significance")
+                lines.append("- 🎯 Shows potential for AI-driven alpha generation")
+            else:
+                lines.append("- ❌ **Underperforms market index** significantly")
+                lines.append("- ⚠️ May require strategy refinement or different LLM approach")
+        else:
+            lines.append("- ❓ **Performance not significantly different** from market index")
+            lines.append("- 🔄 Results may vary with different market conditions or time periods")
+
+        # Overfitting assessment
+        if 'out_of_sample_validation' in sv:
+            oos = sv['out_of_sample_validation']
+            if oos.get('overfitting_detection', {}).get('overall_overfitting_detected'):
+                lines.append("- 🚨 **Overfitting risk detected** - strategy may not generalize")
+                lines.append("- 🧪 Requires additional testing across different market regimes")
+
+        # Decision quality insights
+        if 'hold_decision_analysis' in sv:
+            hold_data = sv['hold_decision_analysis']
+            if hold_data.get('combined_assessment', {}).get('overall_score', 0) > 0.5:
+                lines.append("- ✅ **Strong decision-making** in HOLD scenarios")
+            else:
+                lines.append("- ⚠️ **Conservative HOLD usage** - may miss opportunities")
 
     lines.extend([
         "",
+        "**Research Implications:**",
+        "- 🤖 Demonstrates LLM capability for financial decision-making",
+        "- 📊 Provides baseline for comparing different AI approaches",
+        "- 🔬 Highlights importance of rigorous statistical validation",
+        "",
+        "---",
+        ""
+    ])
+
+    return lines
+
+
+def generate_market_regime_analysis(data_sources: Dict, model_tag: str) -> List[str]:
+    """Generate market regime analysis section."""
+    lines = [
+        "## 📊 Market Regime Analysis",
+        "",
+        "Performance breakdown by market conditions reveals how the strategy adapts to different environments.",
+        "",
+    ]
+
+    if 'parsed_data' not in data_sources:
+        lines.extend([
+            "Market regime analysis requires parsed trading data.",
+            "",
+            "---",
+            ""
+        ])
+        return lines
+
+    parsed_df = data_sources['parsed_data']
+
+    # Calculate market regimes based on volatility and returns
+    if 'next_return_1d' in parsed_df.columns and 'strategy_return' in parsed_df.columns:
+        # Calculate rolling volatility (20-day window)
+        market_returns = parsed_df['next_return_1d']
+        rolling_vol = market_returns.rolling(20).std() * np.sqrt(252)  # Annualized
+
+        # Define regimes based on volatility percentiles
+        vol_median = rolling_vol.median()
+        vol_high = rolling_vol.quantile(0.75)
+
+        # Create regime labels
+        regimes = []
+        for vol in rolling_vol:
+            if pd.isna(vol):
+                regimes.append('Unknown')
+            elif vol > vol_high:
+                regimes.append('High Volatility')
+            elif vol > vol_median:
+                regimes.append('Moderate Volatility')
+            else:
+                regimes.append('Low Volatility')
+
+        parsed_df = parsed_df.copy()
+        parsed_df['regime'] = regimes
+
+        # Performance by regime
+        regime_performance = []
+        for regime in ['Low Volatility', 'Moderate Volatility', 'High Volatility']:
+            regime_data = parsed_df[parsed_df['regime'] == regime]
+            if len(regime_data) > 0:
+                strategy_return = regime_data['strategy_return'].mean() * 252  # Annualized
+                market_return = regime_data['next_return_1d'].mean() * 252
+                win_rate = (regime_data['strategy_return'] > 0).mean() * 100
+                days = len(regime_data)
+
+                regime_performance.append({
+                    'regime': regime,
+                    'strategy_return': strategy_return,
+                    'market_return': market_return,
+                    'excess_return': strategy_return - market_return,
+                    'win_rate': win_rate,
+                    'days': days
+                })
+
+        if regime_performance:
+            lines.extend([
+                "| Market Regime | Strategy Return | Market Return | Excess Return | Win Rate | Days |",
+                "|---------------|-----------------|---------------|---------------|----------|------|",
+            ])
+
+            for perf in regime_performance:
+                lines.append(
+                    f"| {perf['regime']} | {perf['strategy_return']:.2f}% | {perf['market_return']:.2f}% | {perf['excess_return']:+.2f}% | {perf['win_rate']:.1f}% | {perf['days']} |"
+                )
+
+            lines.extend([
+                "",
+                "### Key Regime Insights",
+                "",
+            ])
+
+            # Analyze regime performance
+            best_regime = max(regime_performance, key=lambda x: x['excess_return'])
+            worst_regime = min(regime_performance, key=lambda x: x['excess_return'])
+
+            lines.extend([
+                f"- **Best Performance**: {best_regime['regime']} regime ({best_regime['excess_return']:+.2f}% excess return)",
+                f"- **Worst Performance**: {worst_regime['regime']} regime ({worst_regime['excess_return']:+.2f}% excess return)",
+                f"- **Strategy Adaptation**: {'✅ Adapts well to changing conditions' if abs(best_regime['excess_return'] - worst_regime['excess_return']) < 5 else '⚠️ Performance varies significantly by regime'}",
+                "",
+                "### Practical Implications",
+                "",
+                "- **Portfolio Integration**: Consider regime-based allocation adjustments",
+                "- **Risk Management**: Higher volatility periods may require position size reduction",
+                "- **Strategy Optimization**: Focus improvement efforts on worst-performing regimes",
+                "",
+            ])
+
+    lines.extend([
+        "---",
+        ""
+    ])
+
+    return lines
+
+
+def generate_risk_attribution(data_sources: Dict, model_tag: str) -> List[str]:
+    """Generate risk attribution and decomposition section."""
+    lines = [
+        "## 🔍 Risk Attribution Analysis",
+        "",
+        "Understanding the sources of returns and risk helps identify strategy strengths and weaknesses.",
+        "",
+    ]
+
+    if 'parsed_data' not in data_sources:
+        lines.extend([
+            "Risk attribution analysis requires parsed trading data.",
+            "",
+            "---",
+            ""
+        ])
+        return lines
+
+    parsed_df = data_sources['parsed_data']
+
+    if 'strategy_return' in parsed_df.columns and 'next_return_1d' in parsed_df.columns:
+        strategy_returns = parsed_df['strategy_return']
+        market_returns = parsed_df['next_return_1d']
+
+        # Basic risk metrics
+        strategy_vol = strategy_returns.std() * np.sqrt(252)
+        market_vol = market_returns.std() * np.sqrt(252)
+        correlation = strategy_returns.corr(market_returns)
+
+        # Calculate beta and alpha (simplified CAPM)
+        if market_vol > 0:
+            beta = correlation * (strategy_vol / market_vol)
+            alpha = (strategy_returns.mean() - beta * market_returns.mean()) * 252
+
+            # Risk decomposition
+            systematic_risk = beta ** 2 * market_vol ** 2
+            idiosyncratic_risk = strategy_vol ** 2 - systematic_risk
+
+            lines.extend([
+                "### Risk Decomposition",
+                "",
+                "| Risk Component | Annualized Value | % of Total Risk |",
+                "|---------------|------------------|-----------------|",
+                f"| Total Strategy Risk | {strategy_vol:.2f}% | 100.0% |",
+                f"| Systematic Risk (Beta-related) | {np.sqrt(systematic_risk):.2f}% | {systematic_risk/strategy_vol**2*100:.1f}% |",
+                f"| Idiosyncratic Risk | {np.sqrt(idiosyncratic_risk):.2f}% | {idiosyncratic_risk/strategy_vol**2*100:.1f}% |",
+                "",
+                "### Risk-Adjusted Performance",
+                "",
+                f"- **Beta**: {beta:.3f} ({'High systematic risk' if beta > 1.2 else 'Moderate systematic risk' if beta > 0.8 else 'Low systematic risk'})",
+                f"- **Alpha**: {alpha:.2f}% ({'Positive alpha generated' if alpha > 0 else 'Negative alpha'})",
+                f"- **Correlation to Market**: {correlation:.3f} ({'Highly correlated' if abs(correlation) > 0.7 else 'Moderately correlated' if abs(correlation) > 0.3 else 'Low correlation'})",
+                "",
+            ])
+
+            # Win/loss analysis
+            winning_days = strategy_returns > 0
+            losing_days = strategy_returns < 0
+
+            avg_win = strategy_returns[winning_days].mean()
+            avg_loss = strategy_returns[losing_days].mean()
+            win_rate = winning_days.mean()
+
+            # Profitability assessment
+            profit_ratio = abs(avg_win / avg_loss) if avg_loss != 0 else float('inf')
+            expectancy = (win_rate * avg_win) + ((1 - win_rate) * avg_loss)
+
+            lines.extend([
+                "### Profitability Analysis",
+                "",
+                "| Metric | Value | Interpretation |",
+                "|--------|-------|----------------|",
+                f"| Win Rate | {win_rate:.1%} | {'Good' if win_rate > 0.55 else 'Fair' if win_rate > 0.45 else 'Poor'} |",
+                f"| Average Win | {avg_win:.3f}% | Daily return when profitable |",
+                f"| Average Loss | {avg_loss:.3f}% | Daily return when unprofitable |",
+                f"| Profit/Loss Ratio | {profit_ratio:.2f} | {'Good' if profit_ratio > 1.5 else 'Fair' if profit_ratio > 1.0 else 'Poor'} |",
+                f"| Expectancy | {expectancy:.3f}% | Expected daily return |",
+                "",
+                "### Risk Management Insights",
+                "",
+                "- **Return Distribution**: Strategy shows " +
+                ("favorable skew" if expectancy > 0 and profit_ratio > 1.2 else "mixed characteristics"),
+                "- **Risk Profile**: " +
+                ("Aggressive" if strategy_vol > market_vol * 1.5 else "Conservative" if strategy_vol < market_vol * 0.7 else "Market-like"),
+                "- **Diversification**: " +
+                ("Low correlation provides diversification benefits" if abs(correlation) < 0.5 else "High correlation suggests limited diversification"),
+                "",
+            ])
+
+    lines.extend([
+        "---",
+        ""
+    ])
+
+    return lines
+
+
+def generate_practical_considerations(data_sources: Dict, model_tag: str) -> List[str]:
+    """Generate practical implementation considerations section."""
+    lines = [
+        "## 🛠️ Practical Implementation Considerations",
+        "",
+        "Real-world deployment requires addressing transaction costs, liquidity, and operational factors.",
+        "",
+    ]
+
+    # Transaction costs analysis
+    if 'parsed_data' in data_sources:
+        parsed_df = data_sources['parsed_data']
+
+        # Analyze trading frequency (assuming position changes indicate trades)
+        if 'decision' in parsed_df.columns:
+            decisions = parsed_df['decision']
+
+            # Count position changes (simplified trade detection)
+            position_changes = 0
+            prev_decision = None
+
+            for decision in decisions:
+                if prev_decision is not None and decision != prev_decision:
+                    position_changes += 1
+                prev_decision = decision
+
+            trading_frequency = position_changes / len(parsed_df) * 100
+            annual_trades = position_changes * (252 / len(parsed_df))  # Approximate
+
+            lines.extend([
+                "### Transaction Costs Impact",
+                "",
+                f"- **Trading Frequency**: {trading_frequency:.1f}% of days involve position changes",
+                f"- **Estimated Annual Trades**: {annual_trades:.0f} round trips",
+            ])
+
+            # Estimate costs (rough assumptions)
+            avg_commission = 0.001  # 0.1% per trade
+            avg_spread = 0.0005     # 0.05% spread cost
+            total_cost_per_trade = avg_commission + avg_spread
+
+            annual_cost_bps = annual_trades * total_cost_per_trade * 10000  # Convert to bps
+
+            lines.extend([
+                f"- **Estimated Trading Costs**: {annual_cost_bps:.0f} basis points annually",
+                f"- **Cost Impact**: {'Significant' if annual_cost_bps > 50 else 'Moderate' if annual_cost_bps > 20 else 'Minimal'} impact on performance",
+                "",
+            ])
+
+    # Operational considerations
+    lines.extend([
+        "### Operational Considerations",
+        "",
+        "#### Technical Infrastructure",
+        "- **API Reliability**: LLM responses must be consistent and available during market hours",
+        "- **Response Time**: Decision latency should be under 100ms for real-time trading",
+        "- **Fallback Mechanisms**: Alternative decision rules when LLM unavailable",
+        "- **Monitoring**: Real-time performance tracking and automated alerts",
+        "",
+        "#### Risk Management",
+        "- **Position Limits**: Maximum exposure per asset/sector",
+        "- **Drawdown Controls**: Automatic reduction during losing streaks",
+        "- **Liquidity Checks**: Ensure sufficient volume for position sizing",
+        "- **Market Impact**: Consider price impact of larger orders",
+        "",
+        "#### Regulatory & Compliance",
+        "- **Audit Trail**: Complete record of decision-making process",
+        "- **Explainability**: Ability to explain AI-driven trades to regulators",
+        "- **Bias Monitoring**: Regular checks for systematic biases",
+        "- **Testing Requirements**: Validation across multiple market scenarios",
+        "",
+        "### Scaling Considerations",
+        "",
+        "- **Cost Efficiency**: LLM API costs vs traditional strategy development",
+        "- **Performance Consistency**: Stability across different market conditions",
+        "- **Portfolio Size**: Impact of strategy capacity and market impact",
+        "- **Multi-Asset Extension**: Applicability beyond single-asset strategies",
+        "",
+    ])
+
+    # Performance expectations
+    if 'statistical_validation' in data_sources:
+        sv = data_sources['statistical_validation']
+        bs = sv.get('bootstrap_vs_index', {})
+
+        if bs.get('significant_difference_5pct', False):
+            if bs.get('sharpe_difference', 0) > 0:
+                lines.extend([
+                    "### Deployment Recommendations",
+                    "",
+                    "✅ **Recommended for live deployment** with proper risk controls",
+                    "- Implement position sizing based on confidence scores",
+                    "- Monitor for overfitting in live performance",
+                    "- Consider hybrid approach combining AI with traditional rules",
+                    "",
+                ])
+            else:
+                lines.extend([
+                    "### Deployment Recommendations",
+                    "",
+                    "⚠️ **Not recommended for live deployment** in current form",
+                    "- Requires significant strategy refinement",
+                    "- Consider as research baseline rather than production strategy",
+                    "- May be suitable for specialized market conditions",
+                    "",
+                ])
+        else:
+            lines.extend([
+                "### Deployment Recommendations",
+                "",
+                "🔄 **Further testing required** before deployment decision",
+                "- Results not statistically significant from market index",
+                "- Additional validation across different time periods needed",
+                "- Consider as experimental approach rather than primary strategy",
+                "",
+            ])
+
+    lines.extend([
+        "---",
+        ""
+    ])
+
+    return lines
+
+
+def generate_comprehensive_risk_analysis(data_sources: Dict, model_tag: str) -> List[str]:
+    """Generate comprehensive risk analysis combining attribution and risk metrics."""
+    lines = [
+        "## 📊 Comprehensive Risk Analysis",
+        "",
+        "Complete assessment of strategy risk profile, including attribution, VaR, and stress testing.",
+        "",
+    ]
+
+    # Risk Attribution Analysis
+    if 'parsed_data' in data_sources:
+        parsed_df = data_sources['parsed_data']
+
+        try:
+            from .statistical_validation import calculate_risk_attribution
+            risk_metrics = calculate_risk_attribution(
+                parsed_df['strategy_return'].values,
+                parsed_df['next_return_1d'].values
+            )
+
+            lines.extend([
+                "### Risk Attribution & Decomposition",
+                "",
+                "| Risk Component | Value | Interpretation |",
+                "|---------------|-------|----------------|",
+                f"| Beta (Market Sensitivity) | {risk_metrics['beta']:.3f} | {'High' if abs(risk_metrics['beta']) > 1.2 else 'Moderate' if abs(risk_metrics['beta']) > 0.8 else 'Low'} systematic risk |",
+                f"| Alpha (Excess Return) | {risk_metrics['alpha']:.2f}% | {'Positive' if risk_metrics['alpha'] > 0 else 'Negative'} risk-adjusted performance |",
+                f"| Correlation to Market | {risk_metrics['correlation']:.3f} | {'Highly' if abs(risk_metrics['correlation']) > 0.7 else 'Moderately' if abs(risk_metrics['correlation']) > 0.3 else 'Low'} correlated |",
+                f"| Total Volatility | {risk_metrics['total_risk']:.2f}% | Annualized strategy volatility |",
+                "",
+                f"**Risk Decomposition**: {risk_metrics['systematic_risk_pct']:.1f}% systematic risk, {risk_metrics['idiosyncratic_risk_pct']:.1f}% idiosyncratic risk",
+                "",
+            ])
+
+        except ImportError as e:
+            lines.extend([
+                "Risk attribution analysis not available.",
+                "",
+            ])
+
+    # Include Risk Analysis Chart
+    if 'risk_analysis_plots' in data_sources and 'risk_analysis' in data_sources['risk_analysis_plots']:
+        lines.extend([
+            "### Risk Metrics Visualization",
+            "",
+            f"![Risk Analysis]({data_sources['risk_analysis_plots']['risk_analysis']})",
+            "*Figure: Comprehensive risk analysis including VaR, drawdowns, and stress tests*",
+            "",
+        ])
+
+    # Rolling Performance Analysis
+    if 'rolling_performance_plots' in data_sources and 'rolling_performance' in data_sources['rolling_performance_plots']:
+        lines.extend([
+            "### Rolling Performance Analysis",
+            "",
+            f"![Rolling Performance]({data_sources['rolling_performance_plots']['rolling_performance']})",
+            "*Figure: Rolling Sharpe ratio, returns, drawdowns, and win rates over time*",
+            "",
+        ])
+
+    lines.extend([
+        "---",
+        ""
+    ])
+
+    return lines
+
+
+def generate_decision_behavior_analysis(data_sources: Dict, model_tag: str) -> List[str]:
+    """Generate comprehensive decision behavior analysis combining calibration and HOLD analysis."""
+    lines = [
+        "## 🎯 Decision Behavior Analysis",
+        "",
+        "Analysis of LLM decision-making patterns, calibration quality, and behavioral biases.",
+        "",
+    ]
+
+    # Calibration Analysis
+    if 'plots' in data_sources:
+        if 'calibration' in data_sources['plots']:
+            lines.extend([
+                "### Prediction Calibration",
+                "",
+                f"![Calibration Plot]({data_sources['plots']['calibration']})",
+                "*Figure: How well predicted confidence matches actual performance*",
+                "",
+            ])
+
+        if 'calibration_by_decision' in data_sources['plots']:
+            lines.extend([
+                f"![Calibration by Decision]({data_sources['plots']['calibration_by_decision']})",
+                "*Figure: Calibration analysis by decision type (BUY/HOLD/SELL)*",
+                "",
+            ])
+
+    # Include calibration analysis text
+    if 'calibration_analysis' in data_sources:
+        cal_text = data_sources['calibration_analysis']
+        # Extract key insights from calibration analysis
+        lines.extend([
+            "### Calibration Insights",
+            "",
+        ])
+
+        # Look for key metrics in the calibration text
+        if "Overall Win Rate:" in cal_text:
+            lines.append("**Overall Performance**: " + cal_text.split("Overall Win Rate:")[1].split("\n")[0].strip())
+
+        if "Mean Predicted Probability:" in cal_text:
+            lines.append("**Average Confidence**: " + cal_text.split("Mean Predicted Probability:")[1].split("\n")[0].strip())
+
+        lines.append("")
+
+    # Decision Patterns
+    if 'plots' in data_sources and 'decision_patterns' in data_sources['plots']:
+        lines.extend([
+            "### Decision Pattern Analysis",
+            "",
+            f"![Decision Patterns]({data_sources['plots']['decision_patterns']})",
+            "*Figure: Decision changes after wins vs losses - evidence of learning/adaptation*",
+            "",
+        ])
+
+    # HOLD Decision Analysis
+    if 'statistical_validation' in data_sources and 'hold_decision_analysis' in data_sources['statistical_validation']:
+        hold_data = data_sources['statistical_validation']['hold_decision_analysis']
+
+        if 'combined_assessment' in hold_data:
+            combined = hold_data['combined_assessment']
+            hold_score = combined.get('overall_score', 0)
+            hold_rating = "Excellent" if hold_score > 0.6 else "Good" if hold_score > 0.4 else "Poor"
+
+            lines.extend([
+                "### HOLD Decision Effectiveness",
+                "",
+                f"**Overall HOLD Success**: {hold_score:.1%} ({hold_rating})",
+                "",
+                "#### Quiet Market Performance",
+                f"- **Success Rate**: {hold_data.get('quiet_market_success', {}).get('success_rate', 0):.1%}",
+                f"- **Assessment**: {hold_data.get('quiet_market_success', {}).get('interpretation', 'N/A')}",
+                "",
+                "#### Enhanced HOLD Analysis",
+                f"- **Relative Performance**: {hold_data.get('relative_performance', {}).get('avg_score', 0):.1%}",
+                f"- **Risk Avoidance**: {hold_data.get('risk_avoidance', {}).get('avoidance_rate', 0):.1%}",
+                f"- **{hold_data.get('relative_performance', {}).get('interpretation', 'N/A')[:50]}...**",
+                f"- **{hold_data.get('risk_avoidance', {}).get('interpretation', 'N/A')[:50]}...**",
+                "",
+                "*Legacy Context (deprecated):*",
+                f"- **Context Score**: {hold_data.get('contextual_correctness', {}).get('avg_context_score', 0):.2f}",
+                "",
+            ])
+
+    lines.extend([
         "---",
         ""
     ])
@@ -1361,6 +1934,161 @@ def generate_executive_summary_html(data_sources: Dict, model_tag: str) -> str:
     return html
 
 
+def generate_comprehensive_risk_analysis_html(data_sources: Dict, model_tag: str) -> str:
+    """Generate comprehensive risk analysis section in HTML."""
+    html = """            <div class="section">
+                <h2>📊 Comprehensive Risk Analysis</h2>
+                <p>Complete assessment of strategy risk profile, including attribution, VaR, and stress testing.</p>
+"""
+
+    # Risk Attribution Analysis
+    if 'parsed_data' in data_sources:
+        parsed_df = data_sources['parsed_data']
+
+        try:
+            from .statistical_validation import calculate_risk_attribution
+            risk_metrics = calculate_risk_attribution(
+                parsed_df['strategy_return'].values,
+                parsed_df['next_return_1d'].values
+            )
+
+            html += f"""
+                <h3>Risk Attribution & Decomposition</h3>
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="label">Beta (Market Sensitivity)</div>
+                        <div class="value">{risk_metrics['beta']:.3f}</div>
+                        <small>{'High' if abs(risk_metrics['beta']) > 1.2 else 'Moderate' if abs(risk_metrics['beta']) > 0.8 else 'Low'} systematic risk</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Alpha (Excess Return)</div>
+                        <div class="value{' positive' if risk_metrics['alpha'] > 0 else ' negative'}">{risk_metrics['alpha']:.2f}%</div>
+                        <small>Risk-adjusted performance</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Market Correlation</div>
+                        <div class="value">{risk_metrics['correlation']:.3f}</div>
+                        <small>{'Highly' if abs(risk_metrics['correlation']) > 0.7 else 'Moderately' if abs(risk_metrics['correlation']) > 0.3 else 'Low'} correlated</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Total Volatility</div>
+                        <div class="value">{risk_metrics['total_risk']:.2f}%</div>
+                        <small>Annualized strategy volatility</small>
+                    </div>
+                </div>
+
+                <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                    <strong>Risk Decomposition:</strong> {risk_metrics['systematic_risk_pct']:.1f}% systematic risk, {risk_metrics['idiosyncratic_risk_pct']:.1f}% idiosyncratic risk
+                </div>
+"""
+
+        except ImportError as e:
+            html += """
+                <p>Risk attribution analysis not available.</p>
+"""
+
+    # Include Risk Analysis Chart
+    if 'risk_analysis_plots' in data_sources and 'risk_analysis' in data_sources['risk_analysis_plots']:
+        html += f"""
+                <h3>Risk Metrics Visualization</h3>
+                <div class="chart-container">
+                    <img src="{data_sources['risk_analysis_plots']['risk_analysis']}" alt="Risk Analysis">
+                    <div class="chart-caption">Figure: Comprehensive risk analysis including VaR, drawdowns, and stress tests</div>
+                </div>
+"""
+
+    # Rolling Performance Analysis
+    if 'rolling_performance_plots' in data_sources and 'rolling_performance' in data_sources['rolling_performance_plots']:
+        html += f"""
+                <h3>Rolling Performance Analysis</h3>
+                <div class="chart-container">
+                    <img src="{data_sources['rolling_performance_plots']['rolling_performance']}" alt="Rolling Performance">
+                    <div class="chart-caption">Figure: Rolling Sharpe ratio, returns, drawdowns, and win rates over time</div>
+                </div>
+"""
+
+    html += "            </div>\n"
+    return html
+
+
+def generate_decision_behavior_analysis_html(data_sources: Dict, model_tag: str) -> str:
+    """Generate comprehensive decision behavior analysis section in HTML."""
+    html = """            <div class="section">
+                <h2>🎯 Decision Behavior Analysis</h2>
+                <p>Analysis of LLM decision-making patterns, calibration quality, and behavioral biases.</p>
+"""
+
+    # Calibration Analysis
+    if 'plots' in data_sources:
+        if 'calibration' in data_sources['plots']:
+            html += f"""
+                <h3>Prediction Calibration</h3>
+                <div class="chart-container">
+                    <img src="{data_sources['plots']['calibration']}" alt="Calibration Plot">
+                    <div class="chart-caption">Figure: How well predicted confidence matches actual performance</div>
+                </div>
+"""
+
+        if 'calibration_by_decision' in data_sources['plots']:
+            html += f"""
+                <div class="chart-container">
+                    <img src="{data_sources['plots']['calibration_by_decision']}" alt="Calibration by Decision">
+                    <div class="chart-caption">Figure: Calibration analysis by decision type (BUY/HOLD/SELL)</div>
+                </div>
+"""
+
+    # Decision Patterns
+    if 'plots' in data_sources and 'decision_patterns' in data_sources['plots']:
+        html += f"""
+                <h3>Decision Pattern Analysis</h3>
+                <div class="chart-container">
+                    <img src="{data_sources['plots']['decision_patterns']}" alt="Decision Patterns">
+                    <div class="chart-caption">Figure: Decision changes after wins vs losses - evidence of learning/adaptation</div>
+                </div>
+"""
+
+    # HOLD Decision Analysis
+    if 'statistical_validation' in data_sources and 'hold_decision_analysis' in data_sources['statistical_validation']:
+        hold_data = data_sources['statistical_validation']['hold_decision_analysis']
+
+        if 'combined_assessment' in hold_data:
+            combined = hold_data['combined_assessment']
+            hold_score = combined.get('overall_score', 0)
+            hold_rating = "Excellent" if hold_score > 0.6 else "Good" if hold_score > 0.4 else "Poor"
+
+            html += f"""
+                <h3>HOLD Decision Effectiveness</h3>
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="label">Overall HOLD Success</div>
+                        <div class="value{' positive' if hold_score > 0.4 else ' negative'}">{hold_score:.1%}</div>
+                        <small>{hold_rating}</small>
+                    </div>
+                </div>
+
+                <h4>Quiet Market Performance</h4>
+                <ul class="insights-list">
+                    <li><strong>Success Rate:</strong> {hold_data.get('quiet_market_success', {}).get('success_rate', 0):.1%}</li>
+                    <li><strong>Assessment:</strong> {hold_data.get('quiet_market_success', {}).get('interpretation', 'N/A')}</li>
+                </ul>
+
+                <h4>Enhanced HOLD Analysis</h4>
+                <ul class="insights-list">
+                    <li><strong>Relative Performance:</strong> {hold_data.get('relative_performance', {}).get('avg_score', 0):.1%}</li>
+                    <li><strong>Risk Avoidance:</strong> {hold_data.get('risk_avoidance', {}).get('avoidance_rate', 0):.1%}</li>
+                    <li><strong>Assessment:</strong> {hold_data.get('relative_performance', {}).get('interpretation', 'N/A')[:40]}...</li>
+                </ul>
+
+                <h5>Legacy Context (deprecated)</h5>
+                <ul class="insights-list">
+                    <li><strong>Context Score:</strong> {hold_data.get('contextual_correctness', {}).get('avg_context_score', 0):.2f}</li>
+                </ul>
+"""
+
+    html += "            </div>\n"
+    return html
+
+
 def generate_performance_overview_html(data_sources: Dict, model_tag: str) -> str:
     """Generate performance overview section in HTML."""
     html = """            <div class="section">
@@ -1672,6 +2400,365 @@ def generate_insights_recommendations_html(data_sources: Dict, model_tag: str) -
             </div>
 """
 
+    return html
+
+
+def generate_market_regime_analysis_html(data_sources: Dict, model_tag: str) -> str:
+    """Generate market regime analysis section in HTML."""
+    html = """            <div class="section">
+                <h2>📊 Market Regime Analysis</h2>
+                <p>Performance breakdown by market conditions reveals how the strategy adapts to different environments.</p>
+"""
+
+    if 'parsed_data' not in data_sources:
+        html += """
+                <p>Market regime analysis requires parsed trading data.</p>
+"""
+        html += "            </div>\n"
+        return html
+
+    parsed_df = data_sources['parsed_data']
+
+    if 'next_return_1d' in parsed_df.columns and 'strategy_return' in parsed_df.columns:
+        market_returns = parsed_df['next_return_1d']
+        rolling_vol = market_returns.rolling(20).std() * np.sqrt(252)
+
+        vol_median = rolling_vol.median()
+        vol_high = rolling_vol.quantile(0.75)
+
+        regimes = []
+        for vol in rolling_vol:
+            if pd.isna(vol):
+                regimes.append('Unknown')
+            elif vol > vol_high:
+                regimes.append('High Volatility')
+            elif vol > vol_median:
+                regimes.append('Moderate Volatility')
+            else:
+                regimes.append('Low Volatility')
+
+        parsed_df = parsed_df.copy()
+        parsed_df['regime'] = regimes
+
+        regime_performance = []
+        for regime in ['Low Volatility', 'Moderate Volatility', 'High Volatility']:
+            regime_data = parsed_df[parsed_df['regime'] == regime]
+            if len(regime_data) > 0:
+                strategy_return = regime_data['strategy_return'].mean() * 252
+                market_return = regime_data['next_return_1d'].mean() * 252
+                win_rate = (regime_data['strategy_return'] > 0).mean() * 100
+                days = len(regime_data)
+
+                regime_performance.append({
+                    'regime': regime,
+                    'strategy_return': strategy_return,
+                    'market_return': market_return,
+                    'excess_return': strategy_return - market_return,
+                    'win_rate': win_rate,
+                    'days': days
+                })
+
+        if regime_performance:
+            html += """
+                <div class="metric-grid">
+"""
+            for perf in regime_performance:
+                html += f"""
+                    <div class="metric-card">
+                        <div class="label">{perf['regime']}</div>
+                        <div class="value{' positive' if perf['excess_return'] > 0 else ' negative'}">{perf['excess_return']:+.2f}%</div>
+                        <small>Excess Return</small>
+                    </div>
+"""
+
+            html += """
+                </div>
+
+                <h3>Key Regime Insights</h3>
+                <ul class="insights-list">
+"""
+
+            best_regime = max(regime_performance, key=lambda x: x['excess_return'])
+            worst_regime = min(regime_performance, key=lambda x: x['excess_return'])
+
+            adaptation_quality = "✅ Adapts well to changing conditions" if abs(best_regime['excess_return'] - worst_regime['excess_return']) < 5 else "⚠️ Performance varies significantly by regime"
+
+            html += f"""
+                    <li><strong>Best Performance:</strong> {best_regime['regime']} regime ({best_regime['excess_return']:+.2f}% excess return)</li>
+                    <li><strong>Worst Performance:</strong> {worst_regime['regime']} regime ({worst_regime['excess_return']:+.2f}% excess return)</li>
+                    <li><strong>Strategy Adaptation:</strong> {adaptation_quality}</li>
+                </ul>
+
+                <h3>Practical Implications</h3>
+                <ul class="insights-list">
+                    <li><strong>Portfolio Integration:</strong> Consider regime-based allocation adjustments</li>
+                    <li><strong>Risk Management:</strong> Higher volatility periods may require position size reduction</li>
+                    <li><strong>Strategy Optimization:</strong> Focus improvement efforts on worst-performing regimes</li>
+                </ul>
+"""
+
+    html += "            </div>\n"
+    return html
+
+
+def generate_risk_attribution_html(data_sources: Dict, model_tag: str) -> str:
+    """Generate risk attribution analysis section in HTML."""
+    html = """            <div class="section">
+                <h2>🔍 Risk Attribution Analysis</h2>
+                <p>Understanding the sources of returns and risk helps identify strategy strengths and weaknesses.</p>
+"""
+
+    if 'parsed_data' not in data_sources:
+        html += """
+                <p>Risk attribution analysis requires parsed trading data.</p>
+"""
+        html += "            </div>\n"
+        return html
+
+    parsed_df = data_sources['parsed_data']
+
+    if 'strategy_return' in parsed_df.columns and 'next_return_1d' in parsed_df.columns:
+        strategy_returns = parsed_df['strategy_return']
+        market_returns = parsed_df['next_return_1d']
+
+        strategy_vol = strategy_returns.std() * np.sqrt(252)
+        market_vol = market_returns.std() * np.sqrt(252)
+        correlation = strategy_returns.corr(market_returns)
+
+        if market_vol > 0:
+            beta = correlation * (strategy_vol / market_vol)
+            alpha = (strategy_returns.mean() - beta * market_returns.mean()) * 252
+
+            systematic_risk = beta ** 2 * market_vol ** 2
+            idiosyncratic_risk = strategy_vol ** 2 - systematic_risk
+
+            html += f"""
+                <h3>Risk Decomposition</h3>
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="label">Total Strategy Risk</div>
+                        <div class="value">{strategy_vol:.2f}%</div>
+                        <small>Annualized Volatility</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Systematic Risk</div>
+                        <div class="value">{np.sqrt(systematic_risk):.2f}%</div>
+                        <small>Beta-related</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Idiosyncratic Risk</div>
+                        <div class="value">{np.sqrt(idiosyncratic_risk):.2f}%</div>
+                        <small>Strategy-specific</small>
+                    </div>
+                </div>
+
+                <h3>Risk-Adjusted Performance</h3>
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="label">Beta</div>
+                        <div class="value">{beta:.3f}</div>
+                        <small>{'High systematic risk' if beta > 1.2 else 'Moderate systematic risk' if beta > 0.8 else 'Low systematic risk'}</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Alpha</div>
+                        <div class="value{' positive' if alpha > 0 else ' negative'}">{alpha:.2f}%</div>
+                        <small>Annualized excess return</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Market Correlation</div>
+                        <div class="value">{correlation:.3f}</div>
+                        <small>{'Highly correlated' if abs(correlation) > 0.7 else 'Moderately correlated' if abs(correlation) > 0.3 else 'Low correlation'}</small>
+                    </div>
+                </div>
+"""
+
+            winning_days = strategy_returns > 0
+            losing_days = strategy_returns < 0
+
+            avg_win = strategy_returns[winning_days].mean()
+            avg_loss = strategy_returns[losing_days].mean()
+            win_rate = winning_days.mean()
+
+            profit_ratio = abs(avg_win / avg_loss) if avg_loss != 0 else float('inf')
+            expectancy = (win_rate * avg_win) + ((1 - win_rate) * avg_loss)
+
+            win_rate_desc = 'Good' if win_rate > 0.55 else 'Fair' if win_rate > 0.45 else 'Poor'
+            profit_ratio_desc = 'Good' if profit_ratio > 1.5 else 'Fair' if profit_ratio > 1.0 else 'Poor'
+
+            html += f"""
+                <h3>Profitability Analysis</h3>
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="label">Win Rate</div>
+                        <div class="value">{win_rate:.1%}</div>
+                        <small>{win_rate_desc}</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Profit/Loss Ratio</div>
+                        <div class="value">{profit_ratio:.2f}</div>
+                        <small>{profit_ratio_desc}</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Expectancy</div>
+                        <div class="value{' positive' if expectancy > 0 else ' negative'}">{expectancy:.3f}%</div>
+                        <small>Expected daily return</small>
+                    </div>
+                </div>
+
+                <h3>Risk Management Insights</h3>
+                <ul class="insights-list">
+"""
+
+            return_skew = "favorable skew" if expectancy > 0 and profit_ratio > 1.2 else "mixed characteristics"
+            risk_profile = "Aggressive" if strategy_vol > market_vol * 1.5 else "Conservative" if strategy_vol < market_vol * 0.7 else "Market-like"
+            diversification = "Low correlation provides diversification benefits" if abs(correlation) < 0.5 else "High correlation suggests limited diversification"
+
+            html += f"""
+                    <li><strong>Return Distribution:</strong> Strategy shows {return_skew}</li>
+                    <li><strong>Risk Profile:</strong> {risk_profile}</li>
+                    <li><strong>Diversification:</strong> {diversification}</li>
+                </ul>
+"""
+
+    html += "            </div>\n"
+    return html
+
+
+def generate_practical_considerations_html(data_sources: Dict, model_tag: str) -> str:
+    """Generate practical implementation considerations section in HTML."""
+    html = """            <div class="section">
+                <h2>🛠️ Practical Implementation Considerations</h2>
+                <p>Real-world deployment requires addressing transaction costs, liquidity, and operational factors.</p>
+"""
+
+    # Transaction costs analysis
+    if 'parsed_data' in data_sources:
+        parsed_df = data_sources['parsed_data']
+
+        if 'decision' in parsed_df.columns:
+            decisions = parsed_df['decision']
+
+            position_changes = 0
+            prev_decision = None
+
+            for decision in decisions:
+                if prev_decision is not None and decision != prev_decision:
+                    position_changes += 1
+                prev_decision = decision
+
+            trading_frequency = position_changes / len(parsed_df) * 100
+            annual_trades = position_changes * (252 / len(parsed_df))
+
+            avg_commission = 0.001
+            avg_spread = 0.0005
+            total_cost_per_trade = avg_commission + avg_spread
+
+            annual_cost_bps = annual_trades * total_cost_per_trade * 10000
+
+            cost_impact = 'Significant' if annual_cost_bps > 50 else 'Moderate' if annual_cost_bps > 20 else 'Minimal'
+
+            html += f"""
+                <h3>Transaction Costs Impact</h3>
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="label">Trading Frequency</div>
+                        <div class="value">{trading_frequency:.1f}%</div>
+                        <small>Days with position changes</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Annual Trades</div>
+                        <div class="value">{annual_trades:.0f}</div>
+                        <small>Round trip trades</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Trading Costs</div>
+                        <div class="value">{annual_cost_bps:.0f} bps</div>
+                        <small>{cost_impact} impact</small>
+                    </div>
+                </div>
+"""
+
+    html += """
+                <h3>Operational Considerations</h3>
+
+                <h4>Technical Infrastructure</h4>
+                <ul class="insights-list">
+                    <li><strong>API Reliability:</strong> LLM responses must be consistent and available during market hours</li>
+                    <li><strong>Response Time:</strong> Decision latency should be under 100ms for real-time trading</li>
+                    <li><strong>Fallback Mechanisms:</strong> Alternative decision rules when LLM unavailable</li>
+                    <li><strong>Monitoring:</strong> Real-time performance tracking and automated alerts</li>
+                </ul>
+
+                <h4>Risk Management</h4>
+                <ul class="insights-list">
+                    <li><strong>Position Limits:</strong> Maximum exposure per asset/sector</li>
+                    <li><strong>Drawdown Controls:</strong> Automatic reduction during losing streaks</li>
+                    <li><strong>Liquidity Checks:</strong> Ensure sufficient volume for position sizing</li>
+                    <li><strong>Market Impact:</strong> Consider price impact of larger orders</li>
+                </ul>
+
+                <h4>Regulatory & Compliance</h4>
+                <ul class="insights-list">
+                    <li><strong>Audit Trail:</strong> Complete record of decision-making process</li>
+                    <li><strong>Explainability:</strong> Ability to explain AI-driven trades to regulators</li>
+                    <li><strong>Bias Monitoring:</strong> Regular checks for systematic biases</li>
+                    <li><strong>Testing Requirements:</strong> Validation across multiple market scenarios</li>
+                </ul>
+
+                <h3>Scaling Considerations</h3>
+                <ul class="insights-list">
+                    <li><strong>Cost Efficiency:</strong> LLM API costs vs traditional strategy development</li>
+                    <li><strong>Performance Consistency:</strong> Stability across different market conditions</li>
+                    <li><strong>Portfolio Size:</strong> Impact of strategy capacity and market impact</li>
+                    <li><strong>Multi-Asset Extension:</strong> Applicability beyond single-asset strategies</li>
+                </ul>
+"""
+
+    # Performance expectations and deployment recommendations
+    if 'statistical_validation' in data_sources:
+        sv = data_sources['statistical_validation']
+        bs = sv.get('bootstrap_vs_index', {})
+
+        html += """
+                <h3>Deployment Recommendations</h3>
+"""
+
+        if bs.get('significant_difference_5pct', False):
+            if bs.get('sharpe_difference', 0) > 0:
+                html += """
+                <div style="background: #dcfce7; padding: 20px; border-radius: 8px; border-left: 4px solid #16a34a; margin: 20px 0;">
+                    <strong>✅ Recommended for live deployment</strong> with proper risk controls
+                    <ul style="margin-top: 10px;">
+                        <li>Implement position sizing based on confidence scores</li>
+                        <li>Monitor for overfitting in live performance</li>
+                        <li>Consider hybrid approach combining AI with traditional rules</li>
+                    </ul>
+                </div>
+"""
+            else:
+                html += """
+                <div style="background: #fef3c7; padding: 20px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 20px 0;">
+                    <strong>⚠️ Not recommended for live deployment</strong> in current form
+                    <ul style="margin-top: 10px;">
+                        <li>Requires significant strategy refinement</li>
+                        <li>Consider as research baseline rather than production strategy</li>
+                        <li>May be suitable for specialized market conditions</li>
+                    </ul>
+                </div>
+"""
+        else:
+            html += """
+                <div style="background: #e0f2fe; padding: 20px; border-radius: 8px; border-left: 4px solid #0284c7; margin: 20px 0;">
+                    <strong>🔄 Further testing required</strong> before deployment decision
+                    <ul style="margin-top: 10px;">
+                        <li>Results not statistically significant from market index</li>
+                        <li>Additional validation across different time periods needed</li>
+                        <li>Consider as experimental approach rather than primary strategy</li>
+                    </ul>
+                </div>
+"""
+
+    html += "            </div>\n"
     return html
 
 

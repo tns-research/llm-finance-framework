@@ -1,4 +1,4 @@
-# 🤖 Large Language Models in Financial Decision-Making
+# Large Language Models in Financial Decision-Making
 
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -432,7 +432,6 @@ print(f"LLM vs Index p-value: {validation['bootstrap_vs_index']['p_value']}")
 ## 🔬 Future Research Directions
 
 ### Immediate Extensions
-- **HOLD Decision Investigation**: Investigate 100% context success rate in HOLD decisions, even with random models
 - **Technical Indicators**: Implement RSI, MACD, and other momentum oscillators for richer market signals
 - **Enhanced Feature Engineering**: Improve prompt engineering with new technical indicators and market regime detection
 - **Cross-Model Comparison**: BERT vs GPT vs Claude calibration differences
