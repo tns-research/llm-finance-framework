@@ -230,15 +230,13 @@ Technical indicators available include:
 Rules for decision making:
 
 1) Use only the information in the input. Do not use any knowledge about what happens after the input date.
-2) RSI values above 70 typically indicate overbought conditions (potential reversal down).
-3) RSI values below 30 typically indicate oversold conditions (potential reversal up).
-4) RSI between 30-70 is considered neutral territory.
-5) Choose exactly one of the following actions:
+2) RSI measures the speed and change of price movements, with higher values indicating stronger recent upward momentum.
+3) Choose exactly one of the following actions:
    BUY  take a long position for the next day
    HOLD stay in cash for the next day, out of the market
    SELL take a short position for the next day
-6) Evaluate both expected return and risk. Do not take actions that imply extreme risk seeking.
-7) If the information is very unclear, HOLD is acceptable for that day, but you should avoid staying in HOLD for many consecutive days if the recent data shows strong and persistent directional signals."""
+4) Evaluate both expected return and risk. Do not take actions that imply extreme risk seeking.
+5) If the information is very unclear, HOLD is acceptable for that day, but you should avoid staying in HOLD for many consecutive days if the recent data shows strong and persistent directional signals."""
 
     strategic_journal_rule = """
 5) You will also receive a section called "Strategic journal". This contains notes about your past decisions, the outcome of these decisions, and the evolution of your cumulative performance. Use this historical feedback to refine your decision making and improve your discipline over time. Become more careful after sequences of losses, and more critical of patterns that have not worked, but do not assume that any trend will always continue.
