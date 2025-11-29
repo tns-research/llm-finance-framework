@@ -9,30 +9,30 @@ focusing on how the model behaves after wins versus losses, and how long it hold
 
 ## Decision Patterns After Wins vs Losses
 
-**Total Decisions Analyzed:** 499
-- After Wins: 174
-- After Losses: 170
-- After Neutral: 155
+**Total Decisions Analyzed:** 999
+- After Wins: 350
+- After Losses: 316
+- After Neutral: 333
 
 ### Decisions After Wins
 
-- **BUY:** 35.1%
-- **HOLD:** 32.2%
-- **SELL:** 32.8%
-- **Mean Confidence:** 0.649 (±0.146)
+- **BUY:** 34.6%
+- **HOLD:** 30.6%
+- **SELL:** 34.9%
+- **Mean Confidence:** 0.651 (±0.148)
 
 ### Decisions After Losses
 
-- **BUY:** 35.3%
-- **HOLD:** 27.1%
-- **SELL:** 37.6%
-- **Mean Confidence:** 0.653 (±0.148)
+- **BUY:** 32.6%
+- **HOLD:** 34.8%
+- **SELL:** 32.6%
+- **Mean Confidence:** 0.653 (±0.149)
 
 ### Statistical Independence Test
 
 Chi-square test for independence between previous outcome and next decision:
-- **χ² statistic:** 1.3473
-- **p-value:** 0.5098
+- **χ² statistic:** 1.3602
+- **p-value:** 0.5066
 - **Degrees of freedom:** 2
 - **Result:** The relationship is not statistically significant (α=0.05)
 
@@ -44,31 +44,31 @@ Chi-square test for independence between previous outcome and next decision:
 
 ## Position Duration Analysis
 
-**Total Position Changes:** 324
-**Average Position Duration:** 1.56 days
+**Total Position Changes:** 651
+**Average Position Duration:** 1.57 days
 **Median Position Duration:** 1 days
 **Maximum Position Duration:** 7 days
 
 ### BUY Positions
 
-- **Count:** 108
-- **Mean Duration:** 1.56 days
+- **Count:** 224
+- **Mean Duration:** 1.51 days
 - **Median Duration:** 1 days
-- **Max Duration:** 5 days
+- **Max Duration:** 7 days
 
 ### HOLD Positions
 
-- **Count:** 103
-- **Mean Duration:** 1.50 days
+- **Count:** 217
+- **Mean Duration:** 1.53 days
 - **Median Duration:** 1 days
 - **Max Duration:** 7 days
 
 ### SELL Positions
 
-- **Count:** 114
-- **Mean Duration:** 1.54 days
+- **Count:** 211
+- **Mean Duration:** 1.55 days
 - **Median Duration:** 1 days
-- **Max Duration:** 6 days
+- **Max Duration:** 7 days
 
 ### Longest Position Streak
 

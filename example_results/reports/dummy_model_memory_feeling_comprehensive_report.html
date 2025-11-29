@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Trading Strategy Report - dummy_model_memory_feeling</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 50px;
+            padding: 30px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border-left: 4px solid #4f46e5;
+        }
+
+        .section h2 {
+            color: #1e293b;
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section h3 {
+            color: #334155;
+            font-size: 1.4rem;
+            font-weight: 500;
+            margin: 25px 0 15px 0;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        .metric-card .label {
+            font-size: 0.9rem;
+            color: #64748b;
+            margin-bottom: 5px;
+        }
+
+        .metric-card .value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .metric-card .value.positive {
+            color: #10b981;
+        }
+
+        .metric-card .value.negative {
+            color: #ef4444;
+        }
+
+        .chart-container {
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .chart-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+        }
+
+        .chart-caption {
+            font-style: italic;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .data-sources {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .data-source-item {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .data-source-item::before {
+            content: "📊";
+            font-size: 1.2rem;
+        }
+
+        .code-block {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 20px 0;
+            white-space: pre-wrap;
+        }
+
+        .insights-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .insights-list li {
+            padding: 12px 0;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .insights-list li::before {
+            content: "💡";
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .insights-list li:last-child {
+            border-bottom: none;
+        }
+
+        .footer {
+            background: #f1f5f9;
+            padding: 30px;
+            text-align: center;
+            color: #64748b;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .footer p {
+            margin: 5px 0;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .section {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 LLM Trading Strategy Experiment Report</h1>
+            <div class="subtitle">Model: dummy_model_memory_feeling | Generated: 2025-11-29 03:27</div>
+        </div>
+        <div class="content">
+            <div class="section">
+                <h2>📈 Executive Summary</h2>
+                <div class="metric-grid">
+
+                    <div class="metric-card">
+                        <div class="label">Total Return</div>
+                        <div class="value">-2.62%</div>
+                        <small>vs Index: 30.45%</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Trading Period</div>
+                        <div class="value">1000 days</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="label">Statistical Significance</div>
+                        <div class="value">❌ Not significant</div>
+                        <small>p-value: 0.3844</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Effect Size</div>
+                        <div class="value">-0.882</div>
+                        <small>Cohen's d</small>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="label">Overfitting</div>
+                        <div class="value">🚨 Detected</div>
+                    </div>
+
+                </div>
+            </div>
+            <div class="section">
+                <h2>🎯 Performance Overview</h2>
+
+                <div class="chart-container">
+                    <img src="../plots/dummy_model_memory_feeling_baseline_comparison.png" alt="Baseline Comparison">
+                    <div class="chart-caption">Figure 1: Strategy performance vs baseline strategies</div>
+                </div>
+
+                <div class="chart-container">
+                    <img src="../plots/dummy_model_memory_feeling_equity_curves.png" alt="Equity Curves">
+                    <div class="chart-caption">Figure 2: Equity curves over time</div>
+                </div>
+            </div>
+            <div class="section">
+                <h2>📊 Comprehensive Risk Analysis</h2>
+                <p>Complete assessment of strategy risk profile, including attribution, VaR, and stress testing.</p>
+
+                <h3>Risk Attribution & Decomposition</h3>
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="label">Beta (Market Sensitivity)</div>
+                        <div class="value">0.052</div>
+                        <small>Low systematic risk</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Alpha (Excess Return)</div>
+                        <div class="value negative">-1.06%</div>
+                        <small>Risk-adjusted performance</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Market Correlation</div>
+                        <div class="value">0.065</div>
+                        <small>Low correlated</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Total Volatility</div>
+                        <div class="value">11.03%</div>
+                        <small>Annualized strategy volatility</small>
+                    </div>
+                </div>
+
+                <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                    <strong>Risk Decomposition:</strong> 0.4% systematic risk, 99.6% idiosyncratic risk
+                </div>
+
+                <h3>Risk Metrics Visualization</h3>
+                <div class="chart-container">
+                    <img src="../plots/dummy_model_memory_feeling_risk_analysis.png" alt="Risk Analysis">
+                    <div class="chart-caption">Figure: Comprehensive risk analysis including VaR, drawdowns, and stress tests</div>
+                </div>
+
+                <h3>Rolling Performance Analysis</h3>
+                <div class="chart-container">
+                    <img src="../plots/dummy_model_memory_feeling_rolling_performance.png" alt="Rolling Performance">
+                    <div class="chart-caption">Figure: Rolling Sharpe ratio, returns, drawdowns, and win rates over time</div>
+                </div>
+            </div>
+            <div class="section">
+                <h2>📊 Market Regime Analysis</h2>
+                <p>Performance breakdown by market conditions reveals how the strategy adapts to different environments.</p>
+
+                <div class="metric-grid">
+
+                    <div class="metric-card">
+                        <div class="label">Low Volatility</div>
+                        <div class="value negative">-9.54%</div>
+                        <small>Excess Return</small>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="label">Moderate Volatility</div>
+                        <div class="value positive">+10.04%</div>
+                        <small>Excess Return</small>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="label">High Volatility</div>
+                        <div class="value negative">-20.28%</div>
+                        <small>Excess Return</small>
+                    </div>
+
+                </div>
+
+                <h3>Key Regime Insights</h3>
+                <ul class="insights-list">
+
+                    <li><strong>Best Performance:</strong> Moderate Volatility regime (+10.04% excess return)</li>
+                    <li><strong>Worst Performance:</strong> High Volatility regime (-20.28% excess return)</li>
+                    <li><strong>Strategy Adaptation:</strong> ⚠️ Performance varies significantly by regime</li>
+                </ul>
+
+                <h3>Practical Implications</h3>
+                <ul class="insights-list">
+                    <li><strong>Portfolio Integration:</strong> Consider regime-based allocation adjustments</li>
+                    <li><strong>Risk Management:</strong> Higher volatility periods may require position size reduction</li>
+                    <li><strong>Strategy Optimization:</strong> Focus improvement efforts on worst-performing regimes</li>
+                </ul>
+            </div>
+            <div class="section">
+                <h2>📊 Statistical Validation</h2>
+
+                <div class="code-block">
+================================================================================
+STATISTICAL VALIDATION REPORT - dummy_model_memory_feeling
+================================================================================
+
+Dataset: 1000 periods (2015-03-18 00:00:00 to 2019-03-07 00:00:00)
+Strategy Return: -2.62% | Index Return: 30.45%
+
+OUT-OF-SAMPLE VALIDATION:
+  Train Period: -0.029 Sharpe (700 periods)
+  Test Period:  -0.116 Sharpe (300 periods)
+  Sharpe Decay: -300.0%
+  Overfitting Detected: YES
+  Generalizes Well: NO
+
+BOOTSTRAP TEST VS INDEX:
+  Strategy Sharpe: -0.060
+  Index Sharpe: 0.562
+  Difference: -0.622
+  p-value (two-sided): 0.3844
+  95% CI: [-2.000, +0.754]
+  RESULT: No significant difference detected 🤔
+
+SUMMARY ASSESSMENT:
+  Overall: CONCERNING
+  Confidence: LOW
+  Key Findings:
+    ⚠️  Strategy shows signs of overfitting or poor generalization
+    🚨 Moderate overfitting detected
+    🤔 Strategy performance vs index is not statistically significant
+    📈 Large effect size indicates substantial performance difference
+  Recommendations:
+    • Consider model regularization or simpler strategy
+================================================================================
+
+</div>
+            </div>
+            <div class="section">
+                <h2>🎯 Decision Behavior Analysis</h2>
+                <p>Analysis of LLM decision-making patterns, calibration quality, and behavioral biases.</p>
+
+                <h3>Prediction Calibration</h3>
+                <div class="chart-container">
+                    <img src="../plots/dummy_model_memory_feeling_calibration.png" alt="Calibration Plot">
+                    <div class="chart-caption">Figure: How well predicted confidence matches actual performance</div>
+                </div>
+
+                <div class="chart-container">
+                    <img src="../plots/dummy_model_memory_feeling_calibration_by_decision.png" alt="Calibration by Decision">
+                    <div class="chart-caption">Figure: Calibration analysis by decision type (BUY/HOLD/SELL)</div>
+                </div>
+
+                <h3>Decision Pattern Analysis</h3>
+                <div class="chart-container">
+                    <img src="../plots/dummy_model_memory_feeling_decision_patterns.png" alt="Decision Patterns">
+                    <div class="chart-caption">Figure: Decision changes after wins vs losses - evidence of learning/adaptation</div>
+                </div>
+
+                <h3>Decision Distribution</h3>
+                <div class="metric-grid">
+
+                    <div class="metric-card">
+                        <div class="label">BUY Decisions</div>
+                        <div class="value">339</div>
+                        <small>33.9% of total</small>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="label">HOLD Decisions</div>
+                        <div class="value">333</div>
+                        <small>33.3% of total</small>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="label">SELL Decisions</div>
+                        <div class="value">328</div>
+                        <small>32.8% of total</small>
+                    </div>
+
+                </div>
+
+                <h3>Overall Decision Effectiveness</h3>
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="label">Total Decisions</div>
+                        <div class="value">1000</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Overall Win Rate</div>
+                        <div class="value negative">35.0%</div>
+                        <small>Profitable decisions</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Avg Daily Return</div>
+                        <div class="value negative">-0.003%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Sharpe Ratio</div>
+                        <div class="value negative">-0.06</div>
+                        <small>Risk-adjusted return</small>
+                    </div>
+                </div>
+
+                <h3>Performance by Decision Type</h3>
+                <div class="metric-grid">
+
+                    <div class="metric-card">
+                        <div class="label">BUY Performance</div>
+                        <div class="value negative">+0.0%</div>
+                        <small>Annual excess return</small>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="label">HOLD Performance</div>
+                        <div class="value negative">-7.3%</div>
+                        <small>Annual excess return</small>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="label">SELL Performance</div>
+                        <div class="value negative">-18.0%</div>
+                        <small>Annual excess return</small>
+                    </div>
+
+                </div>
+
+                <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                    <thead>
+                        <tr style="background: #f8fafc;">
+                            <th style="padding: 10px; text-align: left; border: 1px solid #e2e8f0;">Decision</th>
+                            <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">Win Rate</th>
+                            <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">Avg Return</th>
+                            <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">Sharpe</th>
+                            <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">Frequency</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #e2e8f0; font-weight: bold;">BUY</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">55.5%</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">0.027%</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">0.48</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">33.9%</td>
+                        </tr>
+
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #e2e8f0; font-weight: bold;">HOLD</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">0.0%</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">0.000%</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">0.00</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">33.3%</td>
+                        </tr>
+
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #e2e8f0; font-weight: bold;">SELL</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">49.4%</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">-0.036%</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">-0.69</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">32.8%</td>
+                        </tr>
+
+                    </tbody>
+                </table>
+
+                <h3>Decision Strategy Insights</h3>
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="label">Best Decision</div>
+                        <div class="value">BUY</div>
+                        <small>+0.0% excess return</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Worst Decision</div>
+                        <div class="value">SELL</div>
+                        <small>-18.0% excess return</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Consistency</div>
+                        <div class="value">Variable</div>
+                        <small>Performance across decisions</small>
+                    </div>
+                </div>
+
+                <h3>Detailed HOLD Analysis</h3>
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="label">HOLD Success Rate</div>
+                        <div class="value negative">40.0%</div>
+                        <small>Poor</small>
+                    </div>
+                </div>
+
+                <h4>Quiet Market Performance</h4>
+                <ul class="insights-list">
+                    <li><strong>Success Rate:</strong> 0.0%</li>
+                    <li><strong>Assessment:</strong> HOLD succeeded in 0.0% of very quiet markets (<0.2% daily mo...</li>
+                </ul>
+            </div>
+            <div class="section">
+                <h2>🛠️ Practical Implementation Considerations</h2>
+                <p>Real-world deployment requires addressing transaction costs, liquidity, and operational factors.</p>
+
+                <h3>Transaction Costs Impact</h3>
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="label">Trading Frequency</div>
+                        <div class="value">65.1%</div>
+                        <small>Days with position changes</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Annual Trades</div>
+                        <div class="value">164</div>
+                        <small>Round trip trades</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Trading Costs</div>
+                        <div class="value">2461 bps</div>
+                        <small>Significant impact</small>
+                    </div>
+                </div>
+
+                <h3>Operational Considerations</h3>
+
+                <h4>Technical Infrastructure</h4>
+                <ul class="insights-list">
+                    <li><strong>API Reliability:</strong> LLM responses must be consistent and available during market hours</li>
+                    <li><strong>Response Time:</strong> Decision latency should be under 100ms for real-time trading</li>
+                    <li><strong>Fallback Mechanisms:</strong> Alternative decision rules when LLM unavailable</li>
+                    <li><strong>Monitoring:</strong> Real-time performance tracking and automated alerts</li>
+                </ul>
+
+                <h4>Risk Management</h4>
+                <ul class="insights-list">
+                    <li><strong>Position Limits:</strong> Maximum exposure per asset/sector</li>
+                    <li><strong>Drawdown Controls:</strong> Automatic reduction during losing streaks</li>
+                    <li><strong>Liquidity Checks:</strong> Ensure sufficient volume for position sizing</li>
+                    <li><strong>Market Impact:</strong> Consider price impact of larger orders</li>
+                </ul>
+
+                <h4>Regulatory & Compliance</h4>
+                <ul class="insights-list">
+                    <li><strong>Audit Trail:</strong> Complete record of decision-making process</li>
+                    <li><strong>Explainability:</strong> Ability to explain AI-driven trades to regulators</li>
+                    <li><strong>Bias Monitoring:</strong> Regular checks for systematic biases</li>
+                    <li><strong>Testing Requirements:</strong> Validation across multiple market scenarios</li>
+                </ul>
+
+                <h3>Scaling Considerations</h3>
+                <ul class="insights-list">
+                    <li><strong>Cost Efficiency:</strong> LLM API costs vs traditional strategy development</li>
+                    <li><strong>Performance Consistency:</strong> Stability across different market conditions</li>
+                    <li><strong>Portfolio Size:</strong> Impact of strategy capacity and market impact</li>
+                    <li><strong>Multi-Asset Extension:</strong> Applicability beyond single-asset strategies</li>
+                </ul>
+
+                <h3>Deployment Recommendations</h3>
+
+                <div style="background: #e0f2fe; padding: 20px; border-radius: 8px; border-left: 4px solid #0284c7; margin: 20px 0;">
+                    <strong>🔄 Further testing required</strong> before deployment decision
+                    <ul style="margin-top: 10px;">
+                        <li>Results not statistically significant from market index</li>
+                        <li>Additional validation across different time periods needed</li>
+                        <li>Consider as experimental approach rather than primary strategy</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="section">
+                <h2>💡 Key Insights & Recommendations</h2>
+
+                <h3>Key Findings</h3>
+                <ul class="insights-list">
+                    <li>⚠️  Strategy shows signs of overfitting or poor generalization</li>
+                    <li>🚨 Moderate overfitting detected</li>
+                    <li>🤔 Strategy performance vs index is not statistically significant</li>
+                    <li>📈 Large effect size indicates substantial performance difference</li>
+                </ul>
+
+                <h3>Recommendations</h3>
+                <ul class="insights-list">
+                    <li>Consider model regularization or simpler strategy</li>
+                </ul>
+
+                <h3>Overall Assessment</h3>
+                <div class="metric-grid">
+
+                    <div class="metric-card">
+                        <div class="label">Assessment</div>
+                        <div class="value">CONCERNING</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Confidence Level</div>
+                        <div class="value">LOW</div>
+                    </div>
+
+                </div>
+            </div>
+            <div class="section">
+                <h2>📁 Technical Details</h2>
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="label">Model Tag</div>
+                        <div class="value">dummy_model_memory_feeling</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Generated</div>
+                        <div class="value">2025-11-29 03:27:12</div>
+                    </div>
+                </div>
+
+                <h3>Data Sources</h3>
+                <div class="data-sources">
+                    <div class="data-source-item">Statistical Validation: Bootstrap analysis and out-of-sample testing</div>
+                    <div class="data-source-item">Baseline Comparison: Performance vs multiple strategies</div>
+                    <div class="data-source-item">Calibration Analysis: Available</div>
+                    <div class="data-source-item">Pattern Analysis: Available</div>
+                    <div class="data-source-item">Parsed Data: 1000 trading periods</div>
+                    <div class="data-source-item">Plots: 7 chart files</div>
+                    <div class="data-source-item">Rolling Performance Plots: Available</div>
+                    <div class="data-source-item">Risk Analysis Plots: Available</div>
+                    <div class="data-source-item">Statistical Plots: Available</div>
+                </div>
+
+                <h3>Analysis Components</h3>
+                <ul class="insights-list">
+                    <li>Statistical significance testing (bootstrap)</li>
+                    <li>Out-of-sample validation</li>
+                    <li>Risk-adjusted performance metrics</li>
+                    <li>Decision calibration analysis</li>
+                    <li>Baseline strategy comparisons</li>
+                    <li>Rolling performance analysis</li>
+                </ul>
+            </div>
+
+        </div>
+        <div class="footer">
+            <p><strong>LLM Finance Experiment Framework</strong></p>
+            <p>This report was automatically generated. For questions about methodology or results, refer to the technical documentation.</p>
+            <p>Generated on 2025-11-29 at 03:27:12</p>
+        </div>
+    </div>
+</body>
+</html>

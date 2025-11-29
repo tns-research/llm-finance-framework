@@ -1,136 +1,216 @@
 {
   "model": "dummy_model_memory_feeling",
-  "validation_timestamp": "2025-11-28 03:30:35.488210",
+  "validation_timestamp": "2025-11-29 03:27:03.192521",
   "dataset_info": {
-    "n_periods": 500,
+    "n_periods": 1000,
     "date_range": {
       "start": "2015-03-18 00:00:00",
-      "end": "2017-03-10 00:00:00"
+      "end": "2019-03-07 00:00:00"
     },
-    "total_strategy_return": 3.53,
-    "total_index_return": 14.15
+    "total_strategy_return": -2.62,
+    "total_index_return": 30.45
   },
   "out_of_sample_validation": {
     "train_period": {
-      "total_return_pct": 3.48,
-      "mean_daily_return_pct": 0.0099,
-      "volatility_pct": 0.8275,
-      "sharpe_ratio": 0.191,
-      "win_rate_pct": 37.14,
-      "max_drawdown_pct": -16.47,
-      "skewness": -0.234,
-      "kurtosis": 3.005,
-      "var_95_pct": -1.49,
-      "n_periods": 350,
+      "total_return_pct": -0.82,
+      "mean_daily_return_pct": -0.0012,
+      "volatility_pct": 0.6358,
+      "sharpe_ratio": -0.029,
+      "win_rate_pct": 35.0,
+      "max_drawdown_pct": -31.25,
+      "skewness": -0.635,
+      "kurtosis": 7.594,
+      "var_95_pct": -1.09,
+      "n_periods": 700,
       "date_range": {
         "start": "2015-03-18 00:00:00",
-        "end": "2016-08-04 00:00:00"
+        "end": "2017-12-22 00:00:00"
       }
     },
     "test_period": {
-      "total_return_pct": 0.05,
-      "mean_daily_return_pct": 0.0003,
-      "volatility_pct": 0.4442,
-      "sharpe_ratio": 0.011,
-      "win_rate_pct": 29.33,
-      "max_drawdown_pct": -4.32,
-      "skewness": 1.202,
-      "kurtosis": 4.92,
-      "var_95_pct": -0.6,
-      "n_periods": 150,
+      "total_return_pct": -1.79,
+      "mean_daily_return_pct": -0.006,
+      "volatility_pct": 0.8161,
+      "sharpe_ratio": -0.116,
+      "win_rate_pct": 35.0,
+      "max_drawdown_pct": -18.34,
+      "skewness": -0.713,
+      "kurtosis": 4.626,
+      "var_95_pct": -1.5,
+      "n_periods": 300,
       "date_range": {
-        "start": "2016-08-05 00:00:00",
-        "end": "2017-03-10 00:00:00"
+        "start": "2017-12-26 00:00:00",
+        "end": "2019-03-07 00:00:00"
       }
     },
     "comparative_analysis": {
-      "sharpe_decay": 0.942,
-      "return_decay": 0.986,
-      "sharpe_decay_pct": 94.2,
-      "return_decay_pct": 98.6
+      "sharpe_decay": -3.0,
+      "return_decay": 1.183,
+      "sharpe_decay_pct": -300.0,
+      "return_decay_pct": 118.3
     },
     "overfitting_detection": {
-      "sharpe_decay_severe": true,
+      "sharpe_decay_severe": false,
       "return_decay_severe": true,
       "test_performance_poor": false,
       "high_train_overfitting": false,
       "overall_overfitting_detected": true,
-      "overfitting_severity": "high"
+      "overfitting_severity": "moderate"
     },
     "generalization_assessment": {
       "generalizes_well": false,
-      "test_performance_adequate": true,
+      "test_performance_adequate": false,
       "consistent_performance": false
     },
-    "split_date": "2016-08-05 00:00:00",
+    "split_date": "2017-12-26 00:00:00",
     "data_split": {
       "train_pct": 70.0,
       "test_pct": 30.0
     }
   },
   "bootstrap_vs_index": {
-    "strategy_sharpe": 0.153,
-    "benchmark_sharpe": 0.518,
-    "sharpe_difference": -0.365,
-    "p_value_two_sided": 0.7352,
-    "p_value_strategy_better": 0.6324,
-    "p_value_strategy_worse": 0.3676,
+    "strategy_sharpe": -0.06,
+    "benchmark_sharpe": 0.562,
+    "sharpe_difference": -0.622,
+    "p_value_two_sided": 0.3844,
+    "p_value_strategy_better": 0.8078,
+    "p_value_strategy_worse": 0.1922,
     "significant_difference_5pct": false,
     "strategy_significantly_better_5pct": false,
     "strategy_significantly_worse_5pct": false,
     "ci_95_bootstrap": [
-      -2.394,
-      1.664
+      -2.0,
+      0.754
     ],
-    "bootstrap_mean_diff": -0.375,
-    "bootstrap_std_diff": 1.041,
-    "effect_size": -0.351,
+    "bootstrap_mean_diff": -0.624,
+    "bootstrap_std_diff": 0.705,
+    "effect_size": -0.882,
     "n_bootstrap": 5000,
-    "n_observations": 500
+    "n_observations": 1000
+  },
+  "decision_effectiveness": {
+    "decision_distribution": {
+      "BUY": {
+        "count": 339,
+        "percentage": 33.9
+      },
+      "HOLD": {
+        "count": 333,
+        "percentage": 33.3
+      },
+      "SELL": {
+        "count": 328,
+        "percentage": 32.8
+      }
+    },
+    "decision_performance": {
+      "BUY": {
+        "total_decisions": 339,
+        "decision_frequency_pct": 33.9,
+        "win_rate": 55.46,
+        "avg_daily_return": 0.0268,
+        "total_return": 9.0743,
+        "volatility_annualized": 13.915,
+        "sharpe_ratio": 0.485,
+        "max_drawdown": -13.8576,
+        "market_avg_return": 0.0268,
+        "excess_return": 0.0,
+        "excess_return_annualized": 0.0
+      },
+      "HOLD": {
+        "total_decisions": 333,
+        "decision_frequency_pct": 33.3,
+        "win_rate": 0.0,
+        "avg_daily_return": 0.0,
+        "total_return": 0.0,
+        "volatility_annualized": 0.0,
+        "sharpe_ratio": 0,
+        "max_drawdown": 0.0,
+        "market_avg_return": 0.0291,
+        "excess_return": -0.0291,
+        "excess_return_annualized": -7.32
+      },
+      "SELL": {
+        "total_decisions": 328,
+        "decision_frequency_pct": 32.8,
+        "win_rate": 49.39,
+        "avg_daily_return": -0.0356,
+        "total_return": -11.6931,
+        "volatility_annualized": 13.0493,
+        "sharpe_ratio": -0.688,
+        "max_drawdown": -25.6306,
+        "market_avg_return": 0.0356,
+        "excess_return": -0.0713,
+        "excess_return_annualized": -17.97
+      }
+    },
+    "overall_effectiveness": {
+      "total_decisions": 1000,
+      "overall_win_rate": 35.0,
+      "overall_avg_return": -0.0026,
+      "overall_total_return": -2.62,
+      "overall_volatility": 11.0298,
+      "overall_sharpe": -0.06,
+      "overall_max_drawdown": -31.251
+    },
+    "decision_timing": {
+      "note": "Decision timing analysis available - could analyze performance by time of day, day of week, month, etc."
+    },
+    "risk_adjusted_analysis": {
+      "best_decision": "BUY",
+      "worst_decision": "SELL",
+      "best_excess_return": 0.0,
+      "worst_excess_return": -17.97,
+      "decision_consistency": "variable"
+    }
   },
   "hold_decision_analysis": {
-    "overall_hold_success_rate": 0.4038709677419354,
+    "overall_hold_success_rate": 0.39999999999999997,
     "quiet_market_success": {
-      "success_rate": 0.0064516129032258064,
+      "success_rate": 0.0,
       "threshold": 0.002,
-      "successful_holds": 1,
-      "total_holds": 155,
-      "interpretation": "HOLD succeeded in 0.6% of very quiet markets (<0.2% daily moves)"
+      "successful_holds": 0,
+      "total_holds": 333,
+      "interpretation": "HOLD succeeded in 0.0% of very quiet markets (<0.2% daily moves)"
+    },
+    "relative_performance": {
+      "avg_score": 0.23903903903903903,
+      "interpretation": "HOLD achieved 23.9% relative performance score vs directional bets"
+    },
+    "risk_avoidance": {
+      "avoidance_rate": 0.996996996996997,
+      "interpretation": "HOLD avoided losses that directional bets would have incurred in 99.7% of cases"
     },
     "contextual_correctness": {
-      "avg_context_score": 1.5741935483870968,
+      "avg_context_score": 1.0,
       "context_success_rate": 1.0,
-      "reason_breakdown": {
-        "decision_uncertainty": 1,
-        "extreme_conditions": 155,
-        "regime_change": 148,
-        "high_volatility": 33
-      },
-      "interpretation": "HOLD was contextually appropriate in 100.0% of cases"
+      "reason_breakdown": {},
+      "interpretation": "Legacy context evaluation: 100.0% success rate"
     },
     "combined_assessment": {
       "quiet_weight": 0.6,
       "context_weight": 0.4,
-      "overall_score": 0.4038709677419354,
-      "performance_category": "poor"
+      "overall_score": 0.39999999999999997,
+      "performance_category": "very_poor"
     },
     "hold_statistics": {
-      "total_hold_decisions": 155,
-      "hold_percentage": 0.31,
-      "avg_market_move_during_hold": 0.5239842412025629,
-      "hold_during_quiet_pct": 0.0064516129032258064
+      "total_hold_decisions": 333,
+      "hold_percentage": 0.333,
+      "avg_market_move_during_hold": 0.5795026875025269,
+      "hold_during_quiet_pct": 0.0
     },
     "summary": {
-      "hold_effectiveness": "POOR (40.4% success rate)",
-      "key_insight": "HOLD decisions were most successful during quiet markets (0.6%) and appropriate contexts (100.0%)"
+      "hold_effectiveness": "VERY_POOR (40.0% combined success rate)",
+      "key_insight": "HOLD decisions achieved 23.9% relative performance and avoided losses in 99.7% of cases. Quiet market success: 0.0%"
     }
   },
   "summary_assessment": {
     "overall_assessment": "concerning",
     "key_findings": [
       "\u26a0\ufe0f  Strategy shows signs of overfitting or poor generalization",
-      "\ud83d\udea8 High overfitting detected",
-      "\ud83e\udd14 Strategy performance vs index is not statistically significant"
+      "\ud83d\udea8 Moderate overfitting detected",
+      "\ud83e\udd14 Strategy performance vs index is not statistically significant",
+      "\ud83d\udcc8 Large effect size indicates substantial performance difference"
     ],
     "recommendations": [
       "Consider model regularization or simpler strategy"

@@ -1,36 +1,110 @@
 # LLM Trading Strategy Experiment Report
-## Model: dummy_model_memory_feeling | Generated: 2025-11-28 03:30
-
----
-
-## Data Sources Summary
-
-- Total data sources collected: 5
-- statistical_validation: 7 items
-- baseline_comparison: 8 items
-- calibration_analysis: available
-- pattern_analysis: available
-- plots: 5 plot files
+## Model: dummy_model_memory_feeling | Generated: 2025-11-29 03:27
 
 ---
 
 ## 📈 Executive Summary
 
-- **Total Return**: 3.53% (vs Index: 14.15%)
-- **Period**: 500 trading days
-- **Statistical Significance**: ❌ Not significant vs index (p=0.7352)
-- **Effect Size**: -0.351 (Cohen's d)
-- **Overfitting**: 🚨 Detected
+### Key Performance Metrics
+
+| Metric | Strategy | Index | Difference |
+|--------|----------|-------|------------|
+| Total Return | -2.62% | 30.45% | -33.07% |
+| Sharpe Ratio | -0.060 | 0.562 | -0.622 |
+| Trading Days | 1000 | 1000 | - |
+
+**Overall Assessment**: Underperforming performance vs market index
+
+### Statistical Confidence
+
+- **Significance vs Index**: ❌ Not Statistically Significant (p = 0.3844)
+- **Effect Size**: -0.882 (Large)
+- **Confidence Interval**: [-2.000, +0.754] Sharpe ratio difference
+
+### Validation Results
+
+- **Out-of-Sample Test**: 🚨 Overfitting Detected
+- **Performance Decay**: 0.0% reduction in Sharpe ratio out-of-sample
+
+### Decision Quality
+
+- **HOLD Decision Success**: 40.0% (Poor)
+- **Contextual Accuracy**: 100.0%
+
+### Key Takeaways & Implications
+
+**For This LLM Configuration:**
+- ❓ **Performance not significantly different** from market index
+- 🔄 Results may vary with different market conditions or time periods
+- 🚨 **Overfitting risk detected** - strategy may not generalize
+- 🧪 Requires additional testing across different market regimes
+- ⚠️ **Conservative HOLD usage** - may miss opportunities
+
+**Research Implications:**
+- 🤖 Demonstrates LLM capability for financial decision-making
+- 📊 Provides baseline for comparing different AI approaches
+- 🔬 Highlights importance of rigorous statistical validation
 
 ---
 
 ## 🎯 Performance Overview
 
-![Baseline Comparison](plots\dummy_model_memory_feeling_baseline_comparison.png)
+![Baseline Comparison](../plots/dummy_model_memory_feeling_baseline_comparison.png)
 *Figure 1: Strategy performance vs baseline strategies*
 
-![Equity Curves](plots\dummy_model_memory_feeling_equity_curves.png)
+![Equity Curves](../plots/dummy_model_memory_feeling_equity_curves.png)
 *Figure 2: Equity curves over time*
+
+---
+
+## 📊 Comprehensive Risk Analysis
+
+Complete assessment of strategy risk profile, including attribution, VaR, and stress testing.
+
+### Risk Attribution & Decomposition
+
+| Risk Component | Value | Interpretation |
+|---------------|-------|----------------|
+| Beta (Market Sensitivity) | 0.052 | Low systematic risk |
+| Alpha (Excess Return) | -1.06% | Negative risk-adjusted performance |
+| Correlation to Market | 0.065 | Low correlated |
+| Total Volatility | 11.03% | Annualized strategy volatility |
+
+**Risk Decomposition**: 0.4% systematic risk, 99.6% idiosyncratic risk
+
+### Risk Metrics Visualization
+
+![Risk Analysis](../plots/dummy_model_memory_feeling_risk_analysis.png)
+*Figure: Comprehensive risk analysis including VaR, drawdowns, and stress tests*
+
+### Rolling Performance Analysis
+
+![Rolling Performance](../plots/dummy_model_memory_feeling_rolling_performance.png)
+*Figure: Rolling Sharpe ratio, returns, drawdowns, and win rates over time*
+
+---
+
+## 📊 Market Regime Analysis
+
+Performance breakdown by market conditions reveals how the strategy adapts to different environments.
+
+| Market Regime | Strategy Return | Market Return | Excess Return | Win Rate | Days |
+|---------------|-----------------|---------------|---------------|----------|------|
+| Low Volatility | 3.55% | 13.09% | -9.54% | 33.4% | 491 |
+| Moderate Volatility | 10.80% | 0.76% | +10.04% | 39.2% | 245 |
+| High Volatility | -16.34% | 3.93% | -20.28% | 35.5% | 245 |
+
+### Key Regime Insights
+
+- **Best Performance**: Moderate Volatility regime (+10.04% excess return)
+- **Worst Performance**: High Volatility regime (-20.28% excess return)
+- **Strategy Adaptation**: ⚠️ Performance varies significantly by regime
+
+### Practical Implications
+
+- **Portfolio Integration**: Consider regime-based allocation adjustments
+- **Risk Management**: Higher volatility periods may require position size reduction
+- **Strategy Optimization**: Focus improvement efforts on worst-performing regimes
 
 ---
 
@@ -41,22 +115,22 @@
 STATISTICAL VALIDATION REPORT - dummy_model_memory_feeling
 ================================================================================
 
-Dataset: 500 periods (2015-03-18 00:00:00 to 2017-03-10 00:00:00)
-Strategy Return: 3.53% | Index Return: 14.15%
+Dataset: 1000 periods (2015-03-18 00:00:00 to 2019-03-07 00:00:00)
+Strategy Return: -2.62% | Index Return: 30.45%
 
 OUT-OF-SAMPLE VALIDATION:
-  Train Period: 0.191 Sharpe (350 periods)
-  Test Period:  0.011 Sharpe (150 periods)
-  Sharpe Decay: +94.2%
+  Train Period: -0.029 Sharpe (700 periods)
+  Test Period:  -0.116 Sharpe (300 periods)
+  Sharpe Decay: -300.0%
   Overfitting Detected: YES
   Generalizes Well: NO
 
 BOOTSTRAP TEST VS INDEX:
-  Strategy Sharpe: 0.153
-  Index Sharpe: 0.518
-  Difference: -0.365
-  p-value (two-sided): 0.7352
-  95% CI: [-2.394, +1.664]
+  Strategy Sharpe: -0.060
+  Index Sharpe: 0.562
+  Difference: -0.622
+  p-value (two-sided): 0.3844
+  95% CI: [-2.000, +0.754]
   RESULT: No significant difference detected 🤔
 
 SUMMARY ASSESSMENT:
@@ -64,8 +138,9 @@ SUMMARY ASSESSMENT:
   Confidence: LOW
   Key Findings:
     ⚠️  Strategy shows signs of overfitting or poor generalization
-    🚨 High overfitting detected
+    🚨 Moderate overfitting detected
     🤔 Strategy performance vs index is not statistically significant
+    📈 Large effect size indicates substantial performance difference
   Recommendations:
     • Consider model regularization or simpler strategy
 ================================================================================
@@ -74,138 +149,118 @@ SUMMARY ASSESSMENT:
 
 ---
 
-## 🎪 Decision Analysis
+## 🎯 Decision Behavior Analysis
 
-![Calibration Plot](plots\dummy_model_memory_feeling_calibration.png)
-*Figure 4: Prediction confidence vs actual performance*
+Analysis of LLM decision-making patterns, calibration quality, and behavioral biases.
 
-![Calibration by Decision](plots\dummy_model_memory_feeling_calibration_by_decision.png)
-*Figure 5: Calibration analysis by decision type (BUY/HOLD/SELL)*
-
-### Detailed Calibration Analysis
-
-```markdown
-# Calibration Analysis Report - dummy_model_memory_feeling
-
-## Overview
-
-This report analyzes the calibration quality of the **dummy_model_memory_feeling** model, 
-measuring how well predicted probabilities match actual outcomes.
-
----
-
-## Overall Calibration Metrics
-
-**Total Trading Days:** 500
-**Overall Win Rate:** 34.8%
-**Mean Predicted Probability:** 65.1%
-
-### Calibration Quality Indicators
-
-- **Expected Calibration Error (ECE):** 30.4%
-- **Maximum Calibration Error:** 50.1%
-- **Overconfidence Score:** 43.6%
-
-- **Calibration Quality:** **POOR** - Model shows significant calibration problems
-
-### Confidence Assessment
-
-- **Assessment:** **OVERCONFIDENT** - Model tends to be too optimistic about success probability
-
----
-
-## Calibration by Decision Type
-
-This analysis shows if the model has different calibration characteristics for BUY, HOLD, and SELL decisions.
-
-### BUY Decisions
-
-- **Count:** 169 decisions
-- **Actual Win Rate:** 52.1%
-- **Mean Predicted Probability:** 66.2%
-- **Overconfidence:** +14.1% (overconfident)
-
-### HOLD Decisions
-
-- **Count:** 155 decisions
-- **Actual Win Rate:** 0.0%
-- **Mean Predicted Probability:** 65.0%
-- **Overconfidence:** +65.0% (overconfident)
-
-### SELL Decisions
-
-- **Count:** 176 decisions
-- **Actual Win Rate:** 48.9%
-- **Mean Predicted Probability:** 64.1%
-- **Overconfidence:** +15.2% (overconfident)
-
----
-
-## Recommendations
-
-- **Calibration training needed:** Consider recalibrating the model using techniques like isotonic regression or Platt scaling
-- **Overconfidence detected:** Model predictions are too optimistic. Consider adjusting confidence thresholds or using ensemble methods
-- **Overconfidence in BUY, HOLD, SELL decisions:** Consider more conservative thresholds for these actions
-
----
-
-## Visualizations
+### Prediction Calibration
 
 ![Calibration Plot](../plots/dummy_model_memory_feeling_calibration.png)
+*Figure: How well predicted confidence matches actual performance*
 
 ![Calibration by Decision](../plots/dummy_model_memory_feeling_calibration_by_decision.png)
-```
+*Figure: Calibration analysis by decision type (BUY/HOLD/SELL)*
 
-![Decision Patterns](plots\dummy_model_memory_feeling_decision_patterns.png)
-*Figure 6: Decision patterns after wins vs losses*
+### Calibration Insights
+
+**Overall Performance**: ** 35.0%
+**Average Confidence**: ** 65.2%
+
+### Decision Pattern Analysis
+
+![Decision Patterns](../plots/dummy_model_memory_feeling_decision_patterns.png)
+*Figure: Decision changes after wins vs losses - evidence of learning/adaptation*
+
+### Decision Distribution
+
+| Decision | Count | Percentage |
+|----------|-------|------------|
+| BUY | 339 | 33.9% |
+| HOLD | 333 | 33.3% |
+| SELL | 328 | 32.8% |
+
+### Overall Decision Effectiveness
+
+**Total Decisions**: 1000
+**Overall Win Rate**: 35.0%
+**Average Daily Return**: -0.003%
+**Total Return**: -2.62%
+**Annualized Volatility**: 11.03%
+**Sharpe Ratio**: -0.060
+**Maximum Drawdown**: -31.25%
+
+### Performance by Decision Type
+
+| Decision | Win Rate | Avg Return | Excess Return | Sharpe | Volatility | Frequency |
+|----------|----------|------------|---------------|--------|------------|-----------|
+| BUY | 55.5% | 0.027% | +0.0% | 0.48 | 13.9% | 33.9% |
+| HOLD | 0.0% | 0.000% | -7.3% | 0.00 | 0.0% | 33.3% |
+| SELL | 49.4% | -0.036% | -18.0% | -0.69 | 13.0% | 32.8% |
+
+### Decision Strategy Insights
+
+- **Best Performing Decision**: BUY (+0.0% annualized excess return)
+- **Worst Performing Decision**: SELL (-18.0% annualized excess return)
+- **Decision Consistency**: Variable performance across decision types
+
+### Detailed HOLD Analysis
+
+**HOLD Success Rate**: 40.0% (Poor)
+
+#### Quiet Market Performance
+- **Success Rate**: 0.0%
+- **Assessment**: HOLD succeeded in 0.0% of very quiet markets (<0.2% daily mo...
+
+#### Enhanced HOLD Analysis
+- **Relative Performance**: 23.9%
+- **Risk Avoidance**: 99.7%
 
 ---
 
-## 📉 Risk Analysis
+## 🛠️ Practical Implementation Considerations
 
----
+Real-world deployment requires addressing transaction costs, liquidity, and operational factors.
 
-## 🛡️ HOLD Decision Analysis
+### Transaction Costs Impact
 
-**Overall HOLD Success Rate:** 40.4% (POOR)
+- **Trading Frequency**: 65.1% of days involve position changes
+- **Estimated Annual Trades**: 164 round trips
+- **Estimated Trading Costs**: 2461 basis points annually
+- **Cost Impact**: Significant impact on performance
 
-### Quiet Market Success (<0.2% Daily Moves)
+### Operational Considerations
 
-- **Success Rate:** 0.6%
-- **Successful HOLDs:** 1/155
-- **HOLD succeeded in 0.6% of very quiet markets (<0.2% daily moves)**
+#### Technical Infrastructure
+- **API Reliability**: LLM responses must be consistent and available during market hours
+- **Response Time**: Decision latency should be under 100ms for real-time trading
+- **Fallback Mechanisms**: Alternative decision rules when LLM unavailable
+- **Monitoring**: Real-time performance tracking and automated alerts
 
-### Contextual Decision Correctness
+#### Risk Management
+- **Position Limits**: Maximum exposure per asset/sector
+- **Drawdown Controls**: Automatic reduction during losing streaks
+- **Liquidity Checks**: Ensure sufficient volume for position sizing
+- **Market Impact**: Consider price impact of larger orders
 
-- **Average Context Score:** 1.57
-- **Context Success Rate:** 100.0%
-- **HOLD was contextually appropriate in 100.0% of cases**
+#### Regulatory & Compliance
+- **Audit Trail**: Complete record of decision-making process
+- **Explainability**: Ability to explain AI-driven trades to regulators
+- **Bias Monitoring**: Regular checks for systematic biases
+- **Testing Requirements**: Validation across multiple market scenarios
 
-**Top Context Reasons:**
+### Scaling Considerations
 
-- Extreme Conditions: 155 decisions
-- Regime Change: 148 decisions
-- High Volatility: 33 decisions
-- Decision Uncertainty: 1 decisions
+- **Cost Efficiency**: LLM API costs vs traditional strategy development
+- **Performance Consistency**: Stability across different market conditions
+- **Portfolio Size**: Impact of strategy capacity and market impact
+- **Multi-Asset Extension**: Applicability beyond single-asset strategies
 
-### Combined Assessment
+### Deployment Recommendations
 
-- **Quiet Market Weight:** 60%
-- **Context Weight:** 40%
-- **Overall Score:** 40.4%
-
-### HOLD Usage Statistics
-
-- **Total HOLD Decisions:** 155
-- **HOLD Usage Rate:** 31.0%
-- **Avg Market Move During HOLD:** 52.40%
-- **HOLD During Quiet Markets:** 0.6%
-
-**Key Insight:** HOLD decisions were most successful during quiet markets (0.6%) and appropriate contexts (100.0%)
-
----
-
-## 📈 Additional Performance Analysis
+🔄 **Further testing required** before deployment decision
+- Results not statistically significant from market index
+- Additional validation across different time periods needed
+- Consider as experimental approach rather than primary strategy
 
 ---
 
@@ -213,8 +268,9 @@ This analysis shows if the model has different calibration characteristics for B
 
 ### Key Findings
 - ⚠️  Strategy shows signs of overfitting or poor generalization
-- 🚨 High overfitting detected
+- 🚨 Moderate overfitting detected
 - 🤔 Strategy performance vs index is not statistically significant
+- 📈 Large effect size indicates substantial performance difference
 
 ### Recommendations
 - Consider model regularization or simpler strategy
@@ -228,14 +284,18 @@ This analysis shows if the model has different calibration characteristics for B
 ## 📁 Technical Details
 
 - **Model Tag**: dummy_model_memory_feeling
-- **Generated**: 2025-11-28 03:30:38
+- **Generated**: 2025-11-29 03:27:09
 
 ### Data Sources
 - **Statistical Validation**: Bootstrap analysis and out-of-sample testing
 - **Baseline Comparison**: Performance vs multiple strategies
 - **Calibration Analysis**: Available
 - **Pattern Analysis**: Available
-- **Plots**: 5 chart files
+- **Parsed Data**: 1000 trading periods
+- **Plots**: 7 chart files
+- **Rolling Performance Plots**: Available
+- **Risk Analysis Plots**: Available
+- **Statistical Plots**: Available
 
 ### Analysis Components
 - Statistical significance testing (bootstrap)
