@@ -17,8 +17,18 @@ from .config import (
 from .backtest import parse_response_text, backtest_model, save_parsed_results
 from .dummy_model import dummy_call_model
 from .openrouter_model import call_openrouter
-from .reporting import make_empty_stats, generate_llm_period_summary, create_calibration_plot, create_calibration_by_decision_plot, generate_calibration_analysis_report
-from .statistical_validation import comprehensive_statistical_validation, print_validation_report, save_validation_report
+from .reporting import (
+    make_empty_stats,
+    generate_llm_period_summary,
+    create_calibration_plot,
+    create_calibration_by_decision_plot,
+    generate_calibration_analysis_report,
+)
+from .statistical_validation import (
+    comprehensive_statistical_validation,
+    print_validation_report,
+    save_validation_report,
+)
 from .report_generator import generate_comprehensive_report
 from .decision_analysis import (
     analyze_decisions_after_outcomes,
@@ -89,7 +99,7 @@ def format_journal_entry(trade_data, current_date, show_dates):
         entry_prefix = f"Date {trade_data['date'].strftime('%Y-%m-%d')}: "
     else:
         # Use relative time in 'no date' mode
-        relative_label = get_relative_time_label(trade_data['date'], current_date)
+        relative_label = get_relative_time_label(trade_data["date"], current_date)
         entry_prefix = f"{relative_label}: "
 
     return (
@@ -105,7 +115,9 @@ def format_journal_entry(trade_data, current_date, show_dates):
     )
 
 
-def run_single_model(model_tag: str, router_model: str, prompts: pd.DataFrame, raw_path: str):
+def run_single_model(
+    model_tag: str, router_model: str, prompts: pd.DataFrame, raw_path: str
+):
     """
     Run one model over all prompts with its own strategic journal,
     save results, backtest, and print final performance summary.
@@ -152,7 +164,9 @@ def run_single_model(model_tag: str, router_model: str, prompts: pd.DataFrame, r
     for idx, row in prompts.iterrows():
 
         if TEST_MODE and idx >= TEST_LIMIT:
-            print(f"\nTEST MODE ACTIVE  stopping after {TEST_LIMIT} rows for model {model_tag}.\n")
+            print(
+                f"\nTEST MODE ACTIVE  stopping after {TEST_LIMIT} rows for model {model_tag}.\n"
+            )
             break
 
         current_date = row["date"]
@@ -185,7 +199,7 @@ def run_single_model(model_tag: str, router_model: str, prompts: pd.DataFrame, r
             prev_month = last_date.month
             prev_quarter = (prev_month - 1) // 3 + 1
 
-               # Week boundary
+            # Week boundary
             if iso_week != prev_iso_week or iso_year != prev_iso_year:
                 if week_stats["days"] > 0:
                     summary = generate_llm_period_summary(
@@ -241,7 +255,6 @@ def run_single_model(model_tag: str, router_model: str, prompts: pd.DataFrame, r
                     yearly_memory = yearly_memory[-5:]
                     year_stats = make_empty_stats()
 
-
         base_prompt = row["prompt_text"]
 
         # Short term journal based on past daily trades
@@ -252,7 +265,9 @@ def run_single_model(model_tag: str, router_model: str, prompts: pd.DataFrame, r
                 format_journal_entry(entry, current_date, SHOW_DATE_TO_LLM)
                 for entry in recent_entries
             ]
-            journal_text = "Past trades and results so far:\n" + "\n".join(formatted_entries)
+            journal_text = "Past trades and results so far:\n" + "\n".join(
+                formatted_entries
+            )
         else:
             journal_text = "No past trades yet. You are starting your strategy."
 
@@ -283,56 +298,72 @@ def run_single_model(model_tag: str, router_model: str, prompts: pd.DataFrame, r
         if weekly_memory:
             # Add relative time labels to weekly summaries (most recent first)
             labeled_weekly = []
-            for i, summary in enumerate(weekly_memory[::-1]):  # Reverse to get most recent first
+            for i, summary in enumerate(
+                weekly_memory[::-1]
+            ):  # Reverse to get most recent first
                 weeks_ago = i + 1
                 if weeks_ago == 1:
                     label = "1 week ago"
                 else:
                     label = f"{weeks_ago} weeks ago"
                 labeled_weekly.append(f"{label}:\n{summary}")
-            weekly_block = "Weekly memory (most recent first)\n" + "\n\n".join(labeled_weekly)
+            weekly_block = "Weekly memory (most recent first)\n" + "\n\n".join(
+                labeled_weekly
+            )
         else:
             weekly_block = "No weekly summaries yet."
 
         if monthly_memory:
             # Add relative time labels to monthly summaries (most recent first)
             labeled_monthly = []
-            for i, summary in enumerate(monthly_memory[::-1]):  # Reverse to get most recent first
+            for i, summary in enumerate(
+                monthly_memory[::-1]
+            ):  # Reverse to get most recent first
                 months_ago = i + 1
                 if months_ago == 1:
                     label = "1 month ago"
                 else:
                     label = f"{months_ago} months ago"
                 labeled_monthly.append(f"{label}:\n{summary}")
-            monthly_block = "Monthly memory (most recent first)\n" + "\n\n".join(labeled_monthly)
+            monthly_block = "Monthly memory (most recent first)\n" + "\n\n".join(
+                labeled_monthly
+            )
         else:
             monthly_block = "No monthly summaries yet."
 
         if quarterly_memory:
             # Add relative time labels to quarterly summaries (most recent first)
             labeled_quarterly = []
-            for i, summary in enumerate(quarterly_memory[::-1]):  # Reverse to get most recent first
+            for i, summary in enumerate(
+                quarterly_memory[::-1]
+            ):  # Reverse to get most recent first
                 quarters_ago = i + 1
                 if quarters_ago == 1:
                     label = "1 quarter ago"
                 else:
                     label = f"{quarters_ago} quarters ago"
                 labeled_quarterly.append(f"{label}:\n{summary}")
-            quarterly_block = "Quarterly memory (most recent first)\n" + "\n\n".join(labeled_quarterly)
+            quarterly_block = "Quarterly memory (most recent first)\n" + "\n\n".join(
+                labeled_quarterly
+            )
         else:
             quarterly_block = "No quarterly summaries yet."
 
         if yearly_memory:
             # Add relative time labels to yearly summaries (most recent first)
             labeled_yearly = []
-            for i, summary in enumerate(yearly_memory[::-1]):  # Reverse to get most recent first
+            for i, summary in enumerate(
+                yearly_memory[::-1]
+            ):  # Reverse to get most recent first
                 years_ago = i + 1
                 if years_ago == 1:
                     label = "1 year ago"
                 else:
                     label = f"{years_ago} years ago"
                 labeled_yearly.append(f"{label}:\n{summary}")
-            yearly_block = "Yearly memory (most recent first)\n" + "\n\n".join(labeled_yearly)
+            yearly_block = "Yearly memory (most recent first)\n" + "\n\n".join(
+                labeled_yearly
+            )
         else:
             yearly_block = "No yearly summaries yet."
 
@@ -342,12 +373,16 @@ def run_single_model(model_tag: str, router_model: str, prompts: pd.DataFrame, r
                 # Include dates when date mode is enabled
                 history_lines = ["date,decision,position,result"]
                 for entry in trading_history:
-                    history_lines.append(f"{entry['date']},{entry['decision']},{entry['position']},{entry['result']}")
+                    history_lines.append(
+                        f"{entry['date']},{entry['decision']},{entry['position']},{entry['result']}"
+                    )
             else:
                 # Omit dates in anonymized mode
                 history_lines = ["trade_id,decision,position,result"]
                 for entry in trading_history:
-                    history_lines.append(f"{entry['trade_id']},{entry['decision']},{entry['position']},{entry['result']}")
+                    history_lines.append(
+                        f"{entry['trade_id']},{entry['decision']},{entry['position']},{entry['result']}"
+                    )
             trading_history_block = "TRADING_HISTORY:\n" + "\n".join(history_lines)
         else:
             trading_history_block = "TRADING_HISTORY:\nNo trading history yet."
@@ -373,11 +408,7 @@ def run_single_model(model_tag: str, router_model: str, prompts: pd.DataFrame, r
             )
         else:
             # Without strategic journal section
-            user_prompt = (
-                base_prompt
-                + "\n\n"
-                + trading_history_block
-            )
+            user_prompt = base_prompt + "\n\n" + trading_history_block
 
         # Show full prompt for debugging if enabled
         if DEBUG_SHOW_FULL_PROMPT:
@@ -403,7 +434,9 @@ def run_single_model(model_tag: str, router_model: str, prompts: pd.DataFrame, r
 
         # Parse the model response
         try:
-            decision, prob, explanation, strategic_journal, feeling_log = parse_response_text(response)
+            decision, prob, explanation, strategic_journal, feeling_log = (
+                parse_response_text(response)
+            )
         except Exception as e:
             print(f"\n[WARN] Malformed response for model {model_tag}: {e}")
             print("Raw response:")
@@ -419,9 +452,7 @@ def run_single_model(model_tag: str, router_model: str, prompts: pd.DataFrame, r
                 "Model produced an invalid output format. Strategy remains neutral "
                 "while awaiting consistent behavior."
             )
-            feeling_log = (
-                "Feeling cautious about reliability and focused on stability."
-            )
+            feeling_log = "Feeling cautious about reliability and focused on stability."
 
         position = POSITION_MAP[decision]
 
@@ -511,16 +542,16 @@ def run_single_model(model_tag: str, router_model: str, prompts: pd.DataFrame, r
 
         # Store trade data for dynamic journal formatting
         trade_data = {
-            'date': row['date'],
-            'decision': decision,
-            'prob': prob,
-            'next_return_1d': row['next_return_1d'],
-            'strategy_return': daily_return,
-            'cumulative_return': cumulative_return,
-            'index_cumulative_return': index_cumulative_return,
-            'explanation': explanation,
-            'strategic_journal': strategic_journal,
-            'feeling_log': feeling_log,
+            "date": row["date"],
+            "decision": decision,
+            "prob": prob,
+            "next_return_1d": row["next_return_1d"],
+            "strategy_return": daily_return,
+            "cumulative_return": cumulative_return,
+            "index_cumulative_return": index_cumulative_return,
+            "explanation": explanation,
+            "strategic_journal": strategic_journal,
+            "feeling_log": feeling_log,
         }
 
         journal_entries.append(trade_data)
@@ -530,10 +561,14 @@ def run_single_model(model_tag: str, router_model: str, prompts: pd.DataFrame, r
             if SHOW_DATE_TO_LLM:
                 # Include actual dates when date mode is enabled
                 history_entry = {
-                    "date": str(row["date"].date()),  # Convert to string for JSON serialization
+                    "date": str(
+                        row["date"].date()
+                    ),  # Convert to string for JSON serialization
                     "decision": decision,
                     "position": position,
-                    "result": round(float(daily_return), 6)  # Strategy return for this trade
+                    "result": round(
+                        float(daily_return), 6
+                    ),  # Strategy return for this trade
                 }
             else:
                 # Omit dates in anonymized mode to prevent data leakage
@@ -541,7 +576,9 @@ def run_single_model(model_tag: str, router_model: str, prompts: pd.DataFrame, r
                     "trade_id": len(trading_history) + 1,  # Simple sequential ID
                     "decision": decision,
                     "position": position,
-                    "result": round(float(daily_return), 6)  # Strategy return for this trade
+                    "result": round(
+                        float(daily_return), 6
+                    ),  # Strategy return for this trade
                 }
             trading_history.append(history_entry)
 
@@ -570,10 +607,14 @@ def run_single_model(model_tag: str, router_model: str, prompts: pd.DataFrame, r
 
         # Console print
         print("\n" + "=" * 80)
-        print(f"Model {model_tag}  Day {idx+1} / {total_rows}   Date: {row['date'].strftime('%Y-%m-%d')}")
+        print(
+            f"Model {model_tag}  Day {idx+1} / {total_rows}   Date: {row['date'].strftime('%Y-%m-%d')}"
+        )
         print(f"Decision:     {decision}   (probability {prob:.2f})")
         print(f"Index return: {row['next_return_1d']:.2f} percent")
-        print(f"Strat return: {daily_return:.2f} percent   Cumulative: {cumulative_return:.2f} percent")
+        print(
+            f"Strat return: {daily_return:.2f} percent   Cumulative: {cumulative_return:.2f} percent"
+        )
         print("\nExplanation (today's decision):")
         print(explanation)
         print("\nStrategic journal (past and future reasoning):")
@@ -583,7 +624,9 @@ def run_single_model(model_tag: str, router_model: str, prompts: pd.DataFrame, r
 
     # Save parsed results and run backtest unchanged
     base_dir = os.path.dirname(os.path.dirname(__file__))
-    parsed_results_path = os.path.join(base_dir, "results", "parsed", f"{model_tag}_parsed.csv")
+    parsed_results_path = os.path.join(
+        base_dir, "results", "parsed", f"{model_tag}_parsed.csv"
+    )
     parsed_df = save_parsed_results(parsed_results_path, rows)
 
     print("\nStep 4  backtest for model", model_tag)
@@ -610,51 +653,65 @@ def run_single_model(model_tag: str, router_model: str, prompts: pd.DataFrame, r
     # Save validation results
     analysis_dir = os.path.join(base_dir, "results", "analysis")
     os.makedirs(analysis_dir, exist_ok=True)
-    validation_path = os.path.join(analysis_dir, f"{model_tag}_statistical_validation.json")
+    validation_path = os.path.join(
+        analysis_dir, f"{model_tag}_statistical_validation.json"
+    )
     save_validation_report(validation_results, validation_path)
 
     # Generate calibration plot
     plots_dir = os.path.join(base_dir, "results", "plots")
     os.makedirs(plots_dir, exist_ok=True)
     calibration_plot_path = os.path.join(plots_dir, f"{model_tag}_calibration.png")
-    calibration_data = create_calibration_plot(parsed_df, model_tag, calibration_plot_path)
+    calibration_data = create_calibration_plot(
+        parsed_df, model_tag, calibration_plot_path
+    )
 
     # Generate calibration by decision plot
-    calibration_by_decision_plot_path = os.path.join(plots_dir, f"{model_tag}_calibration_by_decision.png")
-    create_calibration_by_decision_plot(parsed_df, model_tag, calibration_by_decision_plot_path)
+    calibration_by_decision_plot_path = os.path.join(
+        plots_dir, f"{model_tag}_calibration_by_decision.png"
+    )
+    create_calibration_by_decision_plot(
+        parsed_df, model_tag, calibration_by_decision_plot_path
+    )
 
     # Generate calibration analysis report
     analysis_dir = os.path.join(base_dir, "results", "analysis")
     os.makedirs(analysis_dir, exist_ok=True)
-    calibration_report_path = os.path.join(analysis_dir, f"{model_tag}_calibration_analysis.md")
-    generate_calibration_analysis_report(calibration_data, parsed_df, model_tag, calibration_report_path)
+    calibration_report_path = os.path.join(
+        analysis_dir, f"{model_tag}_calibration_analysis.md"
+    )
+    generate_calibration_analysis_report(
+        calibration_data, parsed_df, model_tag, calibration_report_path
+    )
 
     # Generate decision pattern analysis
     print("\nStep 5  decision pattern analysis for model", model_tag)
-    
+
     # Analyze and print summary
     decision_stats = analyze_decisions_after_outcomes(parsed_df)
-    if 'error' not in decision_stats:
+    if "error" not in decision_stats:
         print("\nDecision Pattern Summary:")
         print(f"  Total decisions analyzed: {decision_stats['total_decisions']}")
-        print(f"  After wins: {decision_stats['total_wins']}, After losses: {decision_stats['total_losses']}")
-        
-        if decision_stats.get('chi_square_test'):
-            chi_test = decision_stats['chi_square_test']
-            sig_text = "SIGNIFICANT" if chi_test['significant'] else "not significant"
+        print(
+            f"  After wins: {decision_stats['total_wins']}, After losses: {decision_stats['total_losses']}"
+        )
+
+        if decision_stats.get("chi_square_test"):
+            chi_test = decision_stats["chi_square_test"]
+            sig_text = "SIGNIFICANT" if chi_test["significant"] else "not significant"
             print(f"  Chi-square test: p={chi_test['p_value']:.4f} ({sig_text})")
-    
+
     duration_stats = analyze_position_duration_stats(parsed_df)
     print("\nPosition Duration Summary:")
     print(f"  Average duration: {duration_stats['average_position_duration']:.2f} days")
     print(f"  Position changes: {duration_stats['total_position_changes']}")
-    if duration_stats.get('longest_streak'):
-        streak = duration_stats['longest_streak']
+    if duration_stats.get("longest_streak"):
+        streak = duration_stats["longest_streak"]
         print(f"  Longest streak: {streak['decision']} for {streak['duration']} days")
-    
+
     # Create visualizations
     create_decision_pattern_plots(parsed_df, model_tag, plots_dir)
-    
+
     # Generate comprehensive report
     analysis_dir = os.path.join(base_dir, "results", "analysis")
     os.makedirs(analysis_dir, exist_ok=True)
@@ -696,25 +753,30 @@ def run_single_model(model_tag: str, router_model: str, prompts: pd.DataFrame, r
     # Step 6: Baseline comparison
     print("\nStep 6  baseline comparison for model", model_tag)
     features_path = os.path.join(base_dir, "data", "processed", "features.csv")
-    
+
     run_baseline_analysis(
         features_path=features_path,
         output_dir=analysis_dir,
         llm_metrics=metrics,
         llm_parsed_df=parsed_df,
-        model_tag=model_tag
+        model_tag=model_tag,
     )
 
     # Generate comprehensive reports (after all analysis is complete)
     print("\nStep 6  generating comprehensive experiment reports for model", model_tag)
     try:
         # Generate both Markdown and HTML reports
-        md_report_path = generate_comprehensive_report(model_tag, base_dir, output_format="markdown")
-        html_report_path = generate_comprehensive_report(model_tag, base_dir, output_format="html")
+        md_report_path = generate_comprehensive_report(
+            model_tag, base_dir, output_format="markdown"
+        )
+        html_report_path = generate_comprehensive_report(
+            model_tag, base_dir, output_format="html"
+        )
         print(f"✓ Markdown report generated: {md_report_path}")
         print(f"✓ HTML report generated: {html_report_path}")
         print(f"🌐 Open HTML report in browser: file://{html_report_path}")
     except Exception as e:
         print(f"⚠️  Warning: Could not generate comprehensive reports: {e}")
         import traceback
+
         traceback.print_exc()

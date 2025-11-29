@@ -39,7 +39,6 @@ def row_to_prompt(row: pd.Series) -> str:
     return text
 
 
-
 # Need these constants from config again
 from .config import MA20_WINDOW, VOL20_WINDOW, RET_5D_WINDOW
 
@@ -54,8 +53,6 @@ def build_prompts(features_path: str, prompts_path: str) -> pd.DataFrame:
         print(f"START_ROW active : skipping first {START_ROW} rows")
         df = df.iloc[START_ROW:].reset_index(drop=True)
         print(f"New first date after START_ROW = {df.iloc[0]['date']}")
-
-
 
     prompts = []
     for _, row in df.iterrows():

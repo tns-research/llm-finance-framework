@@ -2,7 +2,7 @@
 
 import os
 from .config import (
-    USE_DUMMY_MODEL, 
+    USE_DUMMY_MODEL,
     LLM_MODELS,
     ACTIVE_EXPERIMENT,
     get_experiment_suffix,
@@ -23,11 +23,15 @@ def run_pipeline():
 
     # FORCE DUMMY MODE FOR SAFETY - Never call real OpenRouter models during testing
     from .config import USE_DUMMY_MODEL
+
     if not USE_DUMMY_MODEL:
-        print("WARNING: USE_DUMMY_MODEL is False! Forcing to True to prevent accidental API calls.")
+        print(
+            "WARNING: USE_DUMMY_MODEL is False! Forcing to True to prevent accidental API calls."
+        )
         print("Set USE_DUMMY_MODEL = True in config.py for testing.")
         # Override to ensure safety
         import src.config
+
         src.config.USE_DUMMY_MODEL = True
 
     # Show current experiment configuration
@@ -37,9 +41,11 @@ def run_pipeline():
     print("=" * 70)
     print(f"  Active experiment: {config_summary['experiment']}")
     print(f"  Description: {config_summary['description']}")
-    print(f"  Settings: dates={config_summary['show_dates']}, "
-          f"memory={config_summary['strategic_journal']}, "
-          f"feeling={config_summary['feeling_log']}")
+    print(
+        f"  Settings: dates={config_summary['show_dates']}, "
+        f"memory={config_summary['strategic_journal']}, "
+        f"feeling={config_summary['feeling_log']}"
+    )
     print("=" * 70 + "\n")
 
     print("Step 1  prepare features")

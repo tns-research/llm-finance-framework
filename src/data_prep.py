@@ -96,7 +96,9 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
     df = df.dropna().reset_index(drop=True)
 
     if df.empty:
-        raise RuntimeError("Feature DataFrame is empty after processing. Check your raw CSV.")
+        raise RuntimeError(
+            "Feature DataFrame is empty after processing. Check your raw CSV."
+        )
 
     print("Features DataFrame head:")
     print(df.head())
@@ -114,4 +116,3 @@ def prepare_features(raw_path: str, processed_path: str) -> pd.DataFrame:
     features = compute_features(raw)
     features.to_csv(processed_path, index=False)
     return features
-

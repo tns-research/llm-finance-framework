@@ -12,6 +12,7 @@ from .config import (
 )
 from .openrouter_model import call_openrouter
 
+
 def make_empty_stats():
     """
     Helper to initialize per period statistics.
@@ -80,6 +81,7 @@ def build_period_summary(period_label: str, end_date, stats: dict) -> str:
         f"Feeling  {feeling}"
     )
 
+
 def generate_llm_period_summary(
     period_label: str,
     end_date,
@@ -114,7 +116,9 @@ def generate_llm_period_summary(
         # Respect SHOW_DATE_TO_LLM setting in fallback summaries
         if SHOW_DATE_TO_LLM:
             period_header = f"{period_label} ending {end_date.strftime('%Y-%m-%d')}"
-            explanation_date = f"{period_label} ending {end_date.strftime('%Y-%m-%d')}. "
+            explanation_date = (
+                f"{period_label} ending {end_date.strftime('%Y-%m-%d')}. "
+            )
         else:
             period_header = f"{period_label} summary (date hidden)"
             explanation_date = f"{period_label} summary. "
@@ -188,7 +192,9 @@ def generate_llm_period_summary(
             print(debug_block)
             print("=========== END JOURNAL PROMPT ===========\n")
 
-        response_text = call_openrouter(router_model, JOURNAL_SYSTEM_PROMPT, user_message)
+        response_text = call_openrouter(
+            router_model, JOURNAL_SYSTEM_PROMPT, user_message
+        )
         clean = str(response_text).strip()
 
         # Optional: small numeric recap so the memory always carries the hard data
@@ -206,7 +212,6 @@ def generate_llm_period_summary(
             f"BUY {buys}, HOLD {holds}, SELL {sells}.\n\n"
         )
 
-
         wrapped = header + clean
 
         print("\n===== JOURNAL MODEL OUTPUT =====")
@@ -215,17 +220,19 @@ def generate_llm_period_summary(
 
         return wrapped
 
-
-
     except Exception as e:
-        print(f"\n[WARN] Failed to generate {period_label} journal with LLM for model {model_tag}: {e}")
+        print(
+            f"\n[WARN] Failed to generate {period_label} journal with LLM for model {model_tag}: {e}"
+        )
         # Fallback to simple template
         win_rate = (wins / days) * 100.0 if days > 0 else 0.0
 
         # Respect SHOW_DATE_TO_LLM setting in error fallback
         if SHOW_DATE_TO_LLM:
             period_header = f"{period_label} ending {end_date.strftime('%Y-%m-%d')}"
-            explanation_date = f"{period_label} ending {end_date.strftime('%Y-%m-%d')}. "
+            explanation_date = (
+                f"{period_label} ending {end_date.strftime('%Y-%m-%d')}. "
+            )
         else:
             period_header = f"{period_label} summary (date hidden)"
             explanation_date = f"{period_label} summary. "
@@ -252,12 +259,12 @@ def generate_llm_period_summary(
 def create_calibration_plot(parsed_df, model_tag: str, output_path: str):
     """
     Create a calibration plot showing predicted probability vs actual win rate.
-    
+
     The plot bins predictions by probability and shows:
     - Diagonal line (perfect calibration)
     - Actual frequency of wins per bin
     - Count of predictions in each bin
-    
+
     parsed_df: DataFrame with columns 'prob' and 'strategy_return'
     model_tag: name of the model for plot title
     output_path: where to save the plot
@@ -265,91 +272,101 @@ def create_calibration_plot(parsed_df, model_tag: str, output_path: str):
     import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd
-    
+
     df = parsed_df.copy()
-    
+
     # Define if a prediction was a "win" (positive strategy return)
-    df['win'] = (df['strategy_return'] > 0).astype(int)
-    
+    df["win"] = (df["strategy_return"] > 0).astype(int)
+
     # Create probability bins
     bins = np.linspace(0, 1, 11)  # 10 bins: [0-0.1, 0.1-0.2, ..., 0.9-1.0]
-    df['prob_bin'] = pd.cut(df['prob'], bins=bins, include_lowest=True)
-    
+    df["prob_bin"] = pd.cut(df["prob"], bins=bins, include_lowest=True)
+
     # Calculate actual win rate per bin
-    calibration_data = df.groupby('prob_bin', observed=False).agg(
-        mean_predicted_prob=('prob', 'mean'),
-        actual_win_rate=('win', 'mean'),
-        count=('win', 'count')
-    ).reset_index()
-    
+    calibration_data = (
+        df.groupby("prob_bin", observed=False)
+        .agg(
+            mean_predicted_prob=("prob", "mean"),
+            actual_win_rate=("win", "mean"),
+            count=("win", "count"),
+        )
+        .reset_index()
+    )
+
     # Filter out bins with no data
-    calibration_data = calibration_data[calibration_data['count'] > 0]
-    
+    calibration_data = calibration_data[calibration_data["count"] > 0]
+
     # Create the plot
     fig, ax = plt.subplots(figsize=(10, 8))
-    
+
     # Plot perfect calibration line
-    ax.plot([0, 1], [0, 1], 'k--', linewidth=2, label='Perfect Calibration', alpha=0.7)
-    
+    ax.plot([0, 1], [0, 1], "k--", linewidth=2, label="Perfect Calibration", alpha=0.7)
+
     # Plot actual calibration
     ax.scatter(
-        calibration_data['mean_predicted_prob'],
-        calibration_data['actual_win_rate'],
-        s=calibration_data['count'] * 10,  # Size proportional to count
+        calibration_data["mean_predicted_prob"],
+        calibration_data["actual_win_rate"],
+        s=calibration_data["count"] * 10,  # Size proportional to count
         alpha=0.6,
-        color='steelblue',
-        edgecolors='black',
+        color="steelblue",
+        edgecolors="black",
         linewidth=1.5,
-        label='Actual Win Rate'
+        label="Actual Win Rate",
     )
-    
+
     # Add count labels
     for _, row in calibration_data.iterrows():
         ax.annotate(
             f"n={int(row['count'])}",
-            (row['mean_predicted_prob'], row['actual_win_rate']),
+            (row["mean_predicted_prob"], row["actual_win_rate"]),
             xytext=(5, 5),
-            textcoords='offset points',
+            textcoords="offset points",
             fontsize=9,
-            alpha=0.8
+            alpha=0.8,
         )
-    
+
     # Formatting
-    ax.set_xlabel('Predicted Probability', fontsize=12, fontweight='bold')
-    ax.set_ylabel('Actual Win Rate', fontsize=12, fontweight='bold')
-    ax.set_title(f'Calibration Plot - {model_tag}\nPredicted Probability vs Actual Win Rate', 
-                 fontsize=14, fontweight='bold', pad=20)
+    ax.set_xlabel("Predicted Probability", fontsize=12, fontweight="bold")
+    ax.set_ylabel("Actual Win Rate", fontsize=12, fontweight="bold")
+    ax.set_title(
+        f"Calibration Plot - {model_tag}\nPredicted Probability vs Actual Win Rate",
+        fontsize=14,
+        fontweight="bold",
+        pad=20,
+    )
     ax.set_xlim(-0.05, 1.05)
     ax.set_ylim(-0.05, 1.05)
-    ax.grid(True, alpha=0.3, linestyle='--')
-    ax.legend(loc='upper left', fontsize=10)
-    
+    ax.grid(True, alpha=0.3, linestyle="--")
+    ax.legend(loc="upper left", fontsize=10)
+
     # Add statistics text box
     total_trades = len(df)
-    overall_win_rate = df['win'].mean()
-    mean_predicted = df['prob'].mean()
-    
+    overall_win_rate = df["win"].mean()
+    mean_predicted = df["prob"].mean()
+
     stats_text = (
-        f'Total Trades: {total_trades}\n'
-        f'Overall Win Rate: {overall_win_rate:.2%}\n'
-        f'Mean Predicted Prob: {mean_predicted:.2%}'
+        f"Total Trades: {total_trades}\n"
+        f"Overall Win Rate: {overall_win_rate:.2%}\n"
+        f"Mean Predicted Prob: {mean_predicted:.2%}"
     )
-    
+
     ax.text(
-        0.98, 0.02, stats_text,
+        0.98,
+        0.02,
+        stats_text,
         transform=ax.transAxes,
         fontsize=10,
-        verticalalignment='bottom',
-        horizontalalignment='right',
-        bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+        verticalalignment="bottom",
+        horizontalalignment="right",
+        bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.5),
     )
-    
+
     plt.tight_layout()
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close()
-    
+
     print(f"\n[INFO] Calibration plot saved to: {output_path}")
-    
+
     return calibration_data
 
 
@@ -369,8 +386,14 @@ def create_calibration_by_decision_plot(parsed_df, model_tag: str, output_path: 
         subset = parsed_df[parsed_df["decision"] == decision]
 
         if len(subset) < 5:
-            ax.text(0.5, 0.5, f"Insufficient data\n(n={len(subset)})",
-                    ha='center', va='center', transform=ax.transAxes)
+            ax.text(
+                0.5,
+                0.5,
+                f"Insufficient data\n(n={len(subset)})",
+                ha="center",
+                va="center",
+                transform=ax.transAxes,
+            )
             ax.set_title(f"{decision} Decisions")
             continue
 
@@ -381,15 +404,23 @@ def create_calibration_by_decision_plot(parsed_df, model_tag: str, output_path: 
         bins = np.linspace(0, 1, 6)
         subset["prob_bin"] = pd.cut(subset["prob"], bins=bins, include_lowest=True)
 
-        calibration = subset.groupby("prob_bin", observed=False).agg(
-            mean_prob=("prob", "mean"),
-            win_rate=("win", "mean"),
-            count=("win", "count")
-        ).dropna()
+        calibration = (
+            subset.groupby("prob_bin", observed=False)
+            .agg(
+                mean_prob=("prob", "mean"),
+                win_rate=("win", "mean"),
+                count=("win", "count"),
+            )
+            .dropna()
+        )
 
-        ax.plot([0, 1], [0, 1], 'k--', alpha=0.5, label='Perfect')
-        ax.scatter(calibration["mean_prob"], calibration["win_rate"],
-                   s=calibration["count"]*5, alpha=0.7)
+        ax.plot([0, 1], [0, 1], "k--", alpha=0.5, label="Perfect")
+        ax.scatter(
+            calibration["mean_prob"],
+            calibration["win_rate"],
+            s=calibration["count"] * 5,
+            alpha=0.7,
+        )
         ax.set_title(f"{decision} Decisions (n={len(subset)})")
         ax.set_xlabel("Predicted Probability")
         ax.set_ylabel("Actual Win Rate")
@@ -397,7 +428,7 @@ def create_calibration_by_decision_plot(parsed_df, model_tag: str, output_path: 
         ax.set_ylim(0, 1)
         ax.grid(alpha=0.3)
 
-    plt.suptitle(f"Calibration by Decision Type - {model_tag}", fontweight='bold')
+    plt.suptitle(f"Calibration by Decision Type - {model_tag}", fontweight="bold")
     plt.tight_layout()
     plt.savefig(output_path, dpi=300)
     plt.close()
@@ -405,7 +436,9 @@ def create_calibration_by_decision_plot(parsed_df, model_tag: str, output_path: 
     print(f"\n[INFO] Calibration by decision plot saved to: {output_path}")
 
 
-def create_risk_analysis_chart(parsed_df: pd.DataFrame, model_tag: str, output_path: str):
+def create_risk_analysis_chart(
+    parsed_df: pd.DataFrame, model_tag: str, output_path: str
+):
     """
     Create comprehensive risk analysis chart with VaR and stress tests.
 
@@ -416,40 +449,55 @@ def create_risk_analysis_chart(parsed_df: pd.DataFrame, model_tag: str, output_p
     """
     from .statistical_validation import calculate_var_and_stress_tests
 
-    if 'strategy_return' not in parsed_df.columns:
+    if "strategy_return" not in parsed_df.columns:
         print(f"Warning: No strategy returns found for risk analysis chart")
         return
 
-    returns = parsed_df['strategy_return'].values
-    dates = parsed_df['date'] if 'date' in parsed_df.columns else None
+    returns = parsed_df["strategy_return"].values
+    dates = parsed_df["date"] if "date" in parsed_df.columns else None
 
     # Get risk analysis data
     risk_data = calculate_var_and_stress_tests(returns, dates)
 
     fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-    fig.suptitle(f'Risk Analysis - {model_tag}', fontsize=16, fontweight='bold')
+    fig.suptitle(f"Risk Analysis - {model_tag}", fontsize=16, fontweight="bold")
 
     # 1. Returns Distribution
     ax1 = axes[0, 0]
-    ax1.hist(returns, bins=50, alpha=0.7, density=True, label='Strategy Returns')
-    ax1.axvline(np.mean(returns), color='red', linestyle='--', label=f'Mean: {np.mean(returns):.3f}%')
-    ax1.set_title('Returns Distribution', fontweight='bold')
-    ax1.set_xlabel('Daily Return (%)')
-    ax1.set_ylabel('Density')
+    ax1.hist(returns, bins=50, alpha=0.7, density=True, label="Strategy Returns")
+    ax1.axvline(
+        np.mean(returns),
+        color="red",
+        linestyle="--",
+        label=f"Mean: {np.mean(returns):.3f}%",
+    )
+    ax1.set_title("Returns Distribution", fontweight="bold")
+    ax1.set_xlabel("Daily Return (%)")
+    ax1.set_ylabel("Density")
     ax1.legend()
     ax1.grid(alpha=0.3)
 
     # 2. Value at Risk (VaR) Over Time
     ax2 = axes[0, 1]
-    if 'var_95' in risk_data and len(risk_data['var_95']) > 0:
-        var_dates = risk_data.get('var_dates', list(range(len(risk_data['var_95']))))
-        ax2.plot(var_dates, risk_data['var_95'], label='VaR 95%', color='orange', alpha=0.8)
-        ax2.plot(var_dates, risk_data['var_99'], label='VaR 99%', color='red', alpha=0.8)
-        ax2.fill_between(var_dates, risk_data['var_99'], risk_data['var_95'],
-                        alpha=0.2, color='red', label='Tail Risk Zone')
+    if "var_95" in risk_data and len(risk_data["var_95"]) > 0:
+        var_dates = risk_data.get("var_dates", list(range(len(risk_data["var_95"]))))
+        ax2.plot(
+            var_dates, risk_data["var_95"], label="VaR 95%", color="orange", alpha=0.8
+        )
+        ax2.plot(
+            var_dates, risk_data["var_99"], label="VaR 99%", color="red", alpha=0.8
+        )
+        ax2.fill_between(
+            var_dates,
+            risk_data["var_99"],
+            risk_data["var_95"],
+            alpha=0.2,
+            color="red",
+            label="Tail Risk Zone",
+        )
 
-    ax2.set_title('Rolling Value at Risk', fontweight='bold')
-    ax2.set_ylabel('VaR (%)')
+    ax2.set_title("Rolling Value at Risk", fontweight="bold")
+    ax2.set_ylabel("VaR (%)")
     ax2.legend()
     ax2.grid(alpha=0.3)
 
@@ -459,31 +507,37 @@ def create_risk_analysis_chart(parsed_df: pd.DataFrame, model_tag: str, output_p
     running_max = np.maximum.accumulate(cumulative)
     drawdowns = cumulative - running_max
 
-    ax3.fill_between(range(len(drawdowns)), 0, drawdowns, color='red', alpha=0.3)
-    ax3.plot(drawdowns, color='red', linewidth=1)
-    ax3.set_title('Drawdown Analysis', fontweight='bold')
-    ax3.set_ylabel('Drawdown (%)')
+    ax3.fill_between(range(len(drawdowns)), 0, drawdowns, color="red", alpha=0.3)
+    ax3.plot(drawdowns, color="red", linewidth=1)
+    ax3.set_title("Drawdown Analysis", fontweight="bold")
+    ax3.set_ylabel("Drawdown (%)")
     ax3.grid(alpha=0.3)
 
     # 4. Stress Test Scenarios
     ax4 = axes[1, 1]
-    if 'stress_tests' in risk_data:
-        for scenario_name, scenario_data in risk_data['stress_tests'].items():
-            if scenario_name != 'base_case':  # Skip base case to avoid clutter
-                ax4.plot(scenario_data['cumulative'], label=scenario_name.replace('_', ' ').title(), alpha=0.8)
+    if "stress_tests" in risk_data:
+        for scenario_name, scenario_data in risk_data["stress_tests"].items():
+            if scenario_name != "base_case":  # Skip base case to avoid clutter
+                ax4.plot(
+                    scenario_data["cumulative"],
+                    label=scenario_name.replace("_", " ").title(),
+                    alpha=0.8,
+                )
 
-    ax4.set_title('Stress Test Scenarios', fontweight='bold')
-    ax4.set_ylabel('Cumulative Return (%)')
+    ax4.set_title("Stress Test Scenarios", fontweight="bold")
+    ax4.set_ylabel("Cumulative Return (%)")
     ax4.legend()
     ax4.grid(alpha=0.3)
 
     plt.tight_layout()
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close()
     print(f"✓ Risk analysis chart saved: {output_path}")
 
 
-def create_rolling_performance_chart(parsed_df: pd.DataFrame, model_tag: str, output_path: str):
+def create_rolling_performance_chart(
+    parsed_df: pd.DataFrame, model_tag: str, output_path: str
+):
     """
     Create rolling performance analysis chart.
 
@@ -492,27 +546,35 @@ def create_rolling_performance_chart(parsed_df: pd.DataFrame, model_tag: str, ou
         model_tag: Model identifier for chart title
         output_path: Path to save the chart
     """
-    if 'strategy_return' not in parsed_df.columns or 'date' not in parsed_df.columns:
+    if "strategy_return" not in parsed_df.columns or "date" not in parsed_df.columns:
         print(f"Warning: Missing required columns for rolling performance chart")
         return
 
-    df = parsed_df.sort_values('date').copy()
+    df = parsed_df.sort_values("date").copy()
     window_sizes = [63, 126, 252]  # ~3, 6, 12 months
 
     fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-    fig.suptitle(f'Rolling Performance Analysis - {model_tag}', fontsize=16, fontweight='bold')
+    fig.suptitle(
+        f"Rolling Performance Analysis - {model_tag}", fontsize=16, fontweight="bold"
+    )
 
     # 1. Rolling Sharpe Ratio
     ax1 = axes[0, 0]
     for window in window_sizes:
         if len(df) > window:
-            rolling_sharpe = df['strategy_return'].rolling(window).apply(
-                lambda x: x.mean() / x.std() * np.sqrt(252) if x.std() > 0 else 0
+            rolling_sharpe = (
+                df["strategy_return"]
+                .rolling(window)
+                .apply(
+                    lambda x: x.mean() / x.std() * np.sqrt(252) if x.std() > 0 else 0
+                )
             )
-            ax1.plot(df['date'], rolling_sharpe, label=f'{window//21}M Window', alpha=0.8)
+            ax1.plot(
+                df["date"], rolling_sharpe, label=f"{window//21}M Window", alpha=0.8
+            )
 
-    ax1.set_title('Rolling Sharpe Ratio', fontweight='bold')
-    ax1.set_ylabel('Annualized Sharpe Ratio')
+    ax1.set_title("Rolling Sharpe Ratio", fontweight="bold")
+    ax1.set_ylabel("Annualized Sharpe Ratio")
     ax1.legend()
     ax1.grid(alpha=0.3)
 
@@ -520,11 +582,13 @@ def create_rolling_performance_chart(parsed_df: pd.DataFrame, model_tag: str, ou
     ax2 = axes[0, 1]
     for window in window_sizes:
         if len(df) > window:
-            rolling_returns = df['strategy_return'].rolling(window).sum()
-            ax2.plot(df['date'], rolling_returns, label=f'{window//21}M Window', alpha=0.8)
+            rolling_returns = df["strategy_return"].rolling(window).sum()
+            ax2.plot(
+                df["date"], rolling_returns, label=f"{window//21}M Window", alpha=0.8
+            )
 
-    ax2.set_title('Rolling Total Returns', fontweight='bold')
-    ax2.set_ylabel('Total Return (%)')
+    ax2.set_title("Rolling Total Returns", fontweight="bold")
+    ax2.set_ylabel("Total Return (%)")
     ax2.legend()
     ax2.grid(alpha=0.3)
 
@@ -532,13 +596,13 @@ def create_rolling_performance_chart(parsed_df: pd.DataFrame, model_tag: str, ou
     ax3 = axes[1, 0]
     for window in window_sizes:
         if len(df) > window:
-            rolling_cumulative = df['strategy_return'].rolling(window).sum()
+            rolling_cumulative = df["strategy_return"].rolling(window).sum()
             rolling_max = rolling_cumulative.rolling(window, min_periods=1).max()
             rolling_dd = rolling_cumulative - rolling_max
-            ax3.plot(df['date'], rolling_dd, label=f'{window//21}M Window', alpha=0.8)
+            ax3.plot(df["date"], rolling_dd, label=f"{window//21}M Window", alpha=0.8)
 
-    ax3.set_title('Rolling Maximum Drawdown', fontweight='bold')
-    ax3.set_ylabel('Drawdown (%)')
+    ax3.set_title("Rolling Maximum Drawdown", fontweight="bold")
+    ax3.set_ylabel("Drawdown (%)")
     ax3.legend()
     ax3.grid(alpha=0.3)
 
@@ -546,23 +610,30 @@ def create_rolling_performance_chart(parsed_df: pd.DataFrame, model_tag: str, ou
     ax4 = axes[1, 1]
     for window in window_sizes:
         if len(df) > window:
-            rolling_wins = (df['strategy_return'] > 0).rolling(window).sum()
+            rolling_wins = (df["strategy_return"] > 0).rolling(window).sum()
             rolling_win_rate = rolling_wins / window * 100
-            ax4.plot(df['date'], rolling_win_rate, label=f'{window//21}M Window', alpha=0.8)
+            ax4.plot(
+                df["date"], rolling_win_rate, label=f"{window//21}M Window", alpha=0.8
+            )
 
-    ax4.set_title('Rolling Win Rate', fontweight='bold')
-    ax4.set_ylabel('Win Rate (%)')
-    ax4.axhline(y=50, color='red', linestyle='--', alpha=0.7, label='50% Line')
+    ax4.set_title("Rolling Win Rate", fontweight="bold")
+    ax4.set_ylabel("Win Rate (%)")
+    ax4.axhline(y=50, color="red", linestyle="--", alpha=0.7, label="50% Line")
     ax4.legend()
     ax4.grid(alpha=0.3)
 
     plt.tight_layout()
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close()
     print(f"✓ Rolling performance chart saved: {output_path}")
 
 
-def generate_calibration_analysis_report(calibration_data: pd.DataFrame, parsed_df: pd.DataFrame, model_tag: str, output_path: str):
+def generate_calibration_analysis_report(
+    calibration_data: pd.DataFrame,
+    parsed_df: pd.DataFrame,
+    model_tag: str,
+    output_path: str,
+):
     """
     Generate a comprehensive markdown report analyzing model calibration.
 
@@ -576,22 +647,38 @@ def generate_calibration_analysis_report(calibration_data: pd.DataFrame, parsed_
 
     # Calculate overall calibration metrics
     total_trades = len(parsed_df)
-    overall_win_rate = (parsed_df['strategy_return'] > 0).mean()
-    mean_predicted = parsed_df['prob'].mean()
+    overall_win_rate = (parsed_df["strategy_return"] > 0).mean()
+    mean_predicted = parsed_df["prob"].mean()
 
     # Calculate calibration quality metrics
     if len(calibration_data) > 0:
         # Expected calibration error (ECE)
-        ece = np.sum(np.abs(calibration_data['mean_predicted_prob'] - calibration_data['actual_win_rate']) *
-                    calibration_data['count']) / total_trades
+        ece = (
+            np.sum(
+                np.abs(
+                    calibration_data["mean_predicted_prob"]
+                    - calibration_data["actual_win_rate"]
+                )
+                * calibration_data["count"]
+            )
+            / total_trades
+        )
 
         # Maximum calibration error
-        max_ce = np.max(np.abs(calibration_data['mean_predicted_prob'] - calibration_data['actual_win_rate']))
+        max_ce = np.max(
+            np.abs(
+                calibration_data["mean_predicted_prob"]
+                - calibration_data["actual_win_rate"]
+            )
+        )
 
         # Overconfidence score (predicted > actual for high confidence)
-        high_conf_data = calibration_data[calibration_data['mean_predicted_prob'] > 0.7]
+        high_conf_data = calibration_data[calibration_data["mean_predicted_prob"] > 0.7]
         if len(high_conf_data) > 0:
-            overconfidence = np.mean(high_conf_data['mean_predicted_prob'] - high_conf_data['actual_win_rate'])
+            overconfidence = np.mean(
+                high_conf_data["mean_predicted_prob"]
+                - high_conf_data["actual_win_rate"]
+            )
         else:
             overconfidence = 0.0
     else:
@@ -599,15 +686,15 @@ def generate_calibration_analysis_report(calibration_data: pd.DataFrame, parsed_
 
     # Decision-specific calibration
     decision_calibration = {}
-    for decision in ['BUY', 'HOLD', 'SELL']:
-        subset = parsed_df[parsed_df['decision'] == decision].copy()
+    for decision in ["BUY", "HOLD", "SELL"]:
+        subset = parsed_df[parsed_df["decision"] == decision].copy()
         if len(subset) >= 5:
-            subset['win'] = (subset['strategy_return'] > 0).astype(int)
+            subset["win"] = (subset["strategy_return"] > 0).astype(int)
             decision_calibration[decision] = {
-                'count': len(subset),
-                'win_rate': subset['win'].mean(),
-                'mean_prob': subset['prob'].mean(),
-                'overconfidence': subset['prob'].mean() - subset['win'].mean()
+                "count": len(subset),
+                "win_rate": subset["win"].mean(),
+                "mean_prob": subset["prob"].mean(),
+                "overconfidence": subset["prob"].mean() - subset["win"].mean(),
             }
         else:
             decision_calibration[decision] = None
@@ -647,10 +734,12 @@ def generate_calibration_analysis_report(calibration_data: pd.DataFrame, parsed_
     else:
         ece_quality = "**POOR** - Model shows significant calibration problems"
 
-    report_lines.extend([
-        f"- **Calibration Quality:** {ece_quality}",
-        "",
-    ])
+    report_lines.extend(
+        [
+            f"- **Calibration Quality:** {ece_quality}",
+            "",
+        ]
+    )
 
     # Overconfidence interpretation
     if overconfidence > 0.10:
@@ -660,27 +749,31 @@ def generate_calibration_analysis_report(calibration_data: pd.DataFrame, parsed_
     else:
         conf_assessment = "**WELL-CALIBRATED** - Model confidence matches reality"
 
-    report_lines.extend([
-        "### Confidence Assessment",
-        "",
-        f"- **Assessment:** {conf_assessment}",
-        "",
-    ])
+    report_lines.extend(
+        [
+            "### Confidence Assessment",
+            "",
+            f"- **Assessment:** {conf_assessment}",
+            "",
+        ]
+    )
 
     # Decision-specific calibration
-    report_lines.extend([
-        "---",
-        "",
-        "## Calibration by Decision Type",
-        "",
-        "This analysis shows if the model has different calibration characteristics for BUY, HOLD, and SELL decisions.",
-        "",
-    ])
+    report_lines.extend(
+        [
+            "---",
+            "",
+            "## Calibration by Decision Type",
+            "",
+            "This analysis shows if the model has different calibration characteristics for BUY, HOLD, and SELL decisions.",
+            "",
+        ]
+    )
 
-    for decision in ['BUY', 'HOLD', 'SELL']:
+    for decision in ["BUY", "HOLD", "SELL"]:
         calib = decision_calibration[decision]
         if calib:
-            overconf = calib['overconfidence']
+            overconf = calib["overconfidence"]
             if overconf > 0.05:
                 conf_desc = "overconfident"
             elif overconf < -0.05:
@@ -688,84 +781,106 @@ def generate_calibration_analysis_report(calibration_data: pd.DataFrame, parsed_
             else:
                 conf_desc = "well-calibrated"
 
-            report_lines.extend([
-                f"### {decision} Decisions",
-                "",
-                f"- **Count:** {calib['count']} decisions",
-                f"- **Actual Win Rate:** {calib['win_rate']:.1%}",
-                f"- **Mean Predicted Probability:** {calib['mean_prob']:.1%}",
-                f"- **Overconfidence:** {overconf:+.1%} ({conf_desc})",
-                "",
-            ])
+            report_lines.extend(
+                [
+                    f"### {decision} Decisions",
+                    "",
+                    f"- **Count:** {calib['count']} decisions",
+                    f"- **Actual Win Rate:** {calib['win_rate']:.1%}",
+                    f"- **Mean Predicted Probability:** {calib['mean_prob']:.1%}",
+                    f"- **Overconfidence:** {overconf:+.1%} ({conf_desc})",
+                    "",
+                ]
+            )
         else:
-            report_lines.extend([
-                f"### {decision} Decisions",
-                "",
-                f"- **Insufficient data** (n < 5)",
-                "",
-            ])
+            report_lines.extend(
+                [
+                    f"### {decision} Decisions",
+                    "",
+                    f"- **Insufficient data** (n < 5)",
+                    "",
+                ]
+            )
 
     # Recommendations
-    report_lines.extend([
-        "---",
-        "",
-        "## Recommendations",
-        "",
-    ])
+    report_lines.extend(
+        [
+            "---",
+            "",
+            "## Recommendations",
+            "",
+        ]
+    )
 
     recommendations = []
 
     if ece > 0.15:
-        recommendations.append("- **Calibration training needed:** Consider recalibrating the model using techniques like isotonic regression or Platt scaling")
+        recommendations.append(
+            "- **Calibration training needed:** Consider recalibrating the model using techniques like isotonic regression or Platt scaling"
+        )
 
     if overconfidence > 0.10:
-        recommendations.append("- **Overconfidence detected:** Model predictions are too optimistic. Consider adjusting confidence thresholds or using ensemble methods")
+        recommendations.append(
+            "- **Overconfidence detected:** Model predictions are too optimistic. Consider adjusting confidence thresholds or using ensemble methods"
+        )
 
     if overconfidence < -0.10:
-        recommendations.append("- **Underconfidence detected:** Model predictions are too conservative. Consider boosting confidence for high-probability predictions")
+        recommendations.append(
+            "- **Underconfidence detected:** Model predictions are too conservative. Consider boosting confidence for high-probability predictions"
+        )
 
     # Check for decision-specific issues
-    overconfident_decisions = [d for d, c in decision_calibration.items()
-                              if c and c['overconfidence'] > 0.10]
-    underconfident_decisions = [d for d, c in decision_calibration.items()
-                               if c and c['overconfidence'] < -0.10]
+    overconfident_decisions = [
+        d for d, c in decision_calibration.items() if c and c["overconfidence"] > 0.10
+    ]
+    underconfident_decisions = [
+        d for d, c in decision_calibration.items() if c and c["overconfidence"] < -0.10
+    ]
 
     if overconfident_decisions:
-        recommendations.append(f"- **Overconfidence in {', '.join(overconfident_decisions)} decisions:** Consider more conservative thresholds for these actions")
+        recommendations.append(
+            f"- **Overconfidence in {', '.join(overconfident_decisions)} decisions:** Consider more conservative thresholds for these actions"
+        )
 
     if underconfident_decisions:
-        recommendations.append(f"- **Underconfidence in {', '.join(underconfident_decisions)} decisions:** Consider being more aggressive with these actions")
+        recommendations.append(
+            f"- **Underconfidence in {', '.join(underconfident_decisions)} decisions:** Consider being more aggressive with these actions"
+        )
 
     if not recommendations:
-        recommendations.append("- **Calibration looks good:** No major issues detected. Continue monitoring calibration quality.")
+        recommendations.append(
+            "- **Calibration looks good:** No major issues detected. Continue monitoring calibration quality."
+        )
 
     for rec in recommendations:
         report_lines.append(rec)
 
-    report_lines.extend([
-        "",
-        "---",
-        "",
-        "## Visualizations",
-        "",
-        f"![Calibration Plot](../plots/{model_tag}_calibration.png)",
-        "",
-        f"![Calibration by Decision](../plots/{model_tag}_calibration_by_decision.png)",
-    ])
+    report_lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "## Visualizations",
+            "",
+            f"![Calibration Plot](../plots/{model_tag}_calibration.png)",
+            "",
+            f"![Calibration by Decision](../plots/{model_tag}_calibration_by_decision.png)",
+        ]
+    )
 
     # Write report
     report_content = "\n".join(report_lines)
-    with open(output_path, 'w') as f:
+    with open(output_path, "w") as f:
         f.write(report_content)
 
     print(f"\n[INFO] Calibration analysis report saved to: {output_path}")
 
     return {
-        'ece': ece,
-        'max_ce': max_ce,
-        'overconfidence': overconfidence,
-        'total_trades': total_trades,
-        'overall_win_rate': overall_win_rate,
-        'mean_predicted': mean_predicted,
-        'decision_calibration': decision_calibration
+        "ece": ece,
+        "max_ce": max_ce,
+        "overconfidence": overconfidence,
+        "total_trades": total_trades,
+        "overall_win_rate": overall_win_rate,
+        "mean_predicted": mean_predicted,
+        "decision_calibration": decision_calibration,
     }

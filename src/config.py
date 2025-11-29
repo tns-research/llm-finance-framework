@@ -22,29 +22,29 @@
 # MODEL SELECTION
 # ---------------
 USE_DUMMY_MODEL = True  # Set to True for testing (no API key needed)
-                         # Set to False to run real LLM experiments via OpenRouter
+# Set to False to run real LLM experiments via OpenRouter
 
 # EXPERIMENT TYPE
 # ---------------
 ACTIVE_EXPERIMENT = "memory_feeling"  # Choose experiment configuration:
-                                       # - "baseline": No memory, no feeling, no dates
-                                       # - "memory_only": Memory/journal enabled
-                                       # - "memory_feeling": Memory + emotional tracking
-                                       # - "dates_only": Calendar dates shown
-                                       # - "dates_memory": Dates + memory
-                                       # - "dates_full": Full context (dates + memory + feeling)
+# - "baseline": No memory, no feeling, no dates
+# - "memory_only": Memory/journal enabled
+# - "memory_feeling": Memory + emotional tracking
+# - "dates_only": Calendar dates shown
+# - "dates_memory": Dates + memory
+# - "dates_full": Full context (dates + memory + feeling)
 
 # DATA SETTINGS
 # -------------
 SYMBOL = "^GSPC"  # Stock/index symbol (^GSPC = S&P 500)
 DATA_START = "2015-01-01"  # Start date for historical data
-DATA_END = "2023-12-31"    # End date for historical data
+DATA_END = "2023-12-31"  # End date for historical data
 
 # TEST vs FULL RUN
 # ----------------
-TEST_MODE = True       # Set to True for quick tests, False for full experiments
-TEST_LIMIT = 500         # Number of days to run when TEST_MODE = True
-                       # Set TEST_MODE = False for complete ~2700 day analysis
+TEST_MODE = True  # Set to True for quick tests, False for full experiments
+TEST_LIMIT = 50  # Number of days to run when TEST_MODE = True
+# Set TEST_MODE = False for complete ~2700 day analysis
 
 # LLM MODELS TO TEST
 # ------------------
@@ -52,7 +52,7 @@ TEST_LIMIT = 500         # Number of days to run when TEST_MODE = True
 # Uncomment/comment models as needed. Requires USE_DUMMY_MODEL = False
 LLM_MODELS = [
     {
-        "tag": "bert",                    # Model identifier (used in filenames)
+        "tag": "bert",  # Model identifier (used in filenames)
         "router_model": "openrouter/bert-nebulon-alpha",  # OpenRouter model ID
     },
     # Add more models here:
@@ -69,15 +69,15 @@ LLM_MODELS = [
 # TECHNICAL PARAMETERS
 # --------------------
 # Advanced settings for data processing and trading features
-PAST_RET_LAGS = 20     # Number of past return lags for features
-RET_5D_WINDOW = 5      # 5-day return window
-MA20_WINDOW = 20       # 20-day moving average window
-VOL20_WINDOW = 20      # 20-day volatility window
+PAST_RET_LAGS = 20  # Number of past return lags for features
+RET_5D_WINDOW = 5  # 5-day return window
+MA20_WINDOW = 20  # 20-day moving average window
+VOL20_WINDOW = 20  # 20-day volatility window
 
 ENABLE_FULL_TRADING_HISTORY = True  # Include complete trading history in prompts
-                                   # True: Better learning, False: Token efficiency
+# True: Better learning, False: Token efficiency
 
-DEBUG_SHOW_FULL_PROMPT = False      # Show full prompts (for debugging)
+DEBUG_SHOW_FULL_PROMPT = False  # Show full prompts (for debugging)
 
 # =============================================================================
 # ✅ END OF ESSENTIAL CONFIGURATION
@@ -169,14 +169,18 @@ if ACTIVE_EXPERIMENT and ACTIVE_EXPERIMENT in EXPERIMENT_CONFIGS:
     ENABLE_FEELING_LOG = _config["ENABLE_FEELING_LOG"]
     print(f"[CONFIG] Active experiment: {ACTIVE_EXPERIMENT}")
     print(f"         {_config['description']}")
-    print(f"         dates={SHOW_DATE_TO_LLM}, memory={ENABLE_STRATEGIC_JOURNAL}, feeling={ENABLE_FEELING_LOG}")
+    print(
+        f"         dates={SHOW_DATE_TO_LLM}, memory={ENABLE_STRATEGIC_JOURNAL}, feeling={ENABLE_FEELING_LOG}"
+    )
 else:
     # Use manual settings
     SHOW_DATE_TO_LLM = _MANUAL_SHOW_DATE_TO_LLM
     ENABLE_STRATEGIC_JOURNAL = _MANUAL_ENABLE_STRATEGIC_JOURNAL
     ENABLE_FEELING_LOG = _MANUAL_ENABLE_FEELING_LOG
     if ACTIVE_EXPERIMENT:
-        print(f"[CONFIG] Warning: Unknown experiment '{ACTIVE_EXPERIMENT}', using manual settings")
+        print(
+            f"[CONFIG] Warning: Unknown experiment '{ACTIVE_EXPERIMENT}', using manual settings"
+        )
 
 
 # Optional manual override to choose starting row for testing
@@ -187,7 +191,9 @@ START_ROW = 30
 # Provides complete historical trades in prompts as CSV data for pattern recognition
 # Enable: Better long-term learning, comprehensive context
 # Disable: Token efficiency, prevent potential date identification through performance patterns
-ENABLE_FULL_TRADING_HISTORY = True  # Set to False for token efficiency or date leakage prevention
+ENABLE_FULL_TRADING_HISTORY = (
+    True  # Set to False for token efficiency or date leakage prevention
+)
 
 # (USE_DUMMY_MODEL moved to top of file)
 # (DEBUG_SHOW_FULL_PROMPT moved to top of file)
@@ -200,6 +206,7 @@ POSITION_MAP = {
     "HOLD": 0.0,
     "SELL": -1.0,
 }
+
 
 # Build system prompt based on config flags
 def _build_system_prompt():
@@ -249,24 +256,25 @@ Line 5 must contain a "feeling log", in 1 to 3 sentences, describing how you fee
     output_lines = [output_format_intro]
     line_count = 3
     labels_to_skip = ["Explanation"]
-    
+
     if ENABLE_STRATEGIC_JOURNAL:
         output_lines.append(strategic_journal_output)
         labels_to_skip.append("Journal")
         line_count += 1
-    
+
     if ENABLE_FEELING_LOG:
         output_lines.append(feeling_log_output)
         labels_to_skip.append("Feeling")
         line_count += 1
 
     labels_text = " or ".join([f'"{label}"' for label in labels_to_skip])
-    
+
     closing = f"""
 
 Do not include labels such as {labels_text} in the output. Do not include extra text, disclaimers, warnings, apologies or meta commentary. Your output must contain exactly {line_count} lines and nothing else."""
 
     return (rules + "".join(output_lines) + closing).strip()
+
 
 SYSTEM_PROMPT = _build_system_prompt()
 
@@ -325,8 +333,6 @@ Do not include disclaimers or meta commentary."""
 JOURNAL_SYSTEM_PROMPT = _build_journal_system_prompt()
 
 
-
-
 # (LLM_MODELS moved to top of file)
 
 OPENROUTER_API_BASE = "https://openrouter.ai/api/v1/chat/completions"
@@ -335,6 +341,7 @@ OPENROUTER_API_BASE = "https://openrouter.ai/api/v1/chat/completions"
 # =============================================================================
 # EXPERIMENT HELPER FUNCTIONS
 # =============================================================================
+
 
 def list_experiments():
     """Print all available experiment configurations."""
@@ -347,7 +354,11 @@ def list_experiments():
         dates = "Yes" if cfg["SHOW_DATE_TO_LLM"] else "No"
         memory = "Yes" if cfg["ENABLE_STRATEGIC_JOURNAL"] else "No"
         feeling = "Yes" if cfg["ENABLE_FEELING_LOG"] else "No"
-        desc = cfg["description"][:30] + "..." if len(cfg["description"]) > 30 else cfg["description"]
+        desc = (
+            cfg["description"][:30] + "..."
+            if len(cfg["description"]) > 30
+            else cfg["description"]
+        )
         marker = " ◄ ACTIVE" if name == ACTIVE_EXPERIMENT else ""
         print(f"{name:<20} {dates:<8} {memory:<8} {feeling:<8} {desc}{marker}")
     print("=" * 70 + "\n")
@@ -385,4 +396,3 @@ def get_current_config_summary():
             "description", "Manual configuration"
         ),
     }
-

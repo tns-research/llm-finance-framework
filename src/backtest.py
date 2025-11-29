@@ -7,34 +7,33 @@ from .config import POSITION_MAP
 from .config import ENABLE_FEELING_LOG, ENABLE_STRATEGIC_JOURNAL
 
 
-
 def parse_response_text(response_text: str):
     lines = [ln.strip() for ln in str(response_text).splitlines() if ln.strip()]
 
     # Determine expected line count based on config
     expected_lines = 3  # decision, prob, explanation (always present)
     line_index = 3
-    
+
     if ENABLE_STRATEGIC_JOURNAL:
         expected_lines += 1
     if ENABLE_FEELING_LOG:
         expected_lines += 1
-    
+
     if len(lines) < expected_lines:
         raise ValueError(f"Expected at least {expected_lines} lines, got {len(lines)}")
-    
+
     # Always parse first 3 lines
     decision = lines[0].upper()
     prob = float(lines[1])
     explanation = lines[2]
-    
+
     # Parse strategic journal if enabled
     if ENABLE_STRATEGIC_JOURNAL:
         strategic_journal = lines[line_index]
         line_index += 1
     else:
         strategic_journal = "Strategic journal disabled in this configuration."
-    
+
     # Parse feeling log if enabled
     if ENABLE_FEELING_LOG:
         feeling_log = lines[line_index]
@@ -45,8 +44,6 @@ def parse_response_text(response_text: str):
         raise ValueError(f"Invalid decision word: {decision}")
 
     return decision, prob, explanation, strategic_journal, feeling_log
-
-
 
 
 def backtest_model(parsed_df: pd.DataFrame) -> dict:
