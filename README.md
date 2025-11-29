@@ -21,9 +21,18 @@ Each day, the LLM analyzes market data and **chooses one action**:
 
 The LLM receives technical indicators, can maintain a strategic journal, and may express emotional states. Performance is rigorously compared against traditional quantitative strategies.
 
+### How It Works
+The framework follows a systematic 5-step process:
+
+1. **📊 Data Preparation**: Load historical market data and compute technical indicators (moving averages, volatility, momentum)
+2. **📝 Prompt Engineering**: Build context-rich prompts combining market data with optional memory (strategic journals), dates, and emotional state tracking
+3. **🤖 LLM Decision Making**: Query language models via OpenRouter API to generate BUY/HOLD/SELL decisions with confidence scores and explanations
+4. **📈 Backtesting Engine**: Simulate trading performance over historical periods, tracking returns, risk metrics, and position management
+5. **📋 Analysis & Reporting**: Generate comprehensive reports with statistical validation, behavioral pattern analysis, and performance comparisons
+
 ### Research Capabilities
 - **🧪 Compare LLMs vs Traditional Strategies**: Test any LLM against momentum, mean-reversion, volatility timing, and other proven approaches
-- **🧠 Memory & Adaptation**: Study how LLMs learn from experience with strategic journals, feeling logs, and optional complete trading history
+- **🧠 Hierarchical Memory & Adaptation**: Study how LLMs learn from experience with multi-level memory system (daily, weekly, monthly, quarterly, yearly), strategic journals, feeling logs, and optional complete trading history
 - **🎯 Calibration Analysis**: Assess if LLM confidence matches actual performance
 - **🧮 Behavioral Biases**: Detect human-like trading biases in AI decisions
 - **📊 Statistical Rigor**: Bootstrap testing, out-of-sample validation, dual-criteria HOLD evaluation
@@ -34,8 +43,10 @@ The LLM receives technical indicators, can maintain a strategic journal, and may
 
 ### Memory and Learning Dynamics
 **Investigation of temporal learning in sequential financial decisions**
+- Analysis of hierarchical memory systems (daily, weekly, monthly, quarterly, yearly summaries)
+- Assessment of multi-scale temporal learning and adaptation patterns
 - Analysis of historical context integration in LLM decision processes
-- Assessment of adaptive behavior based on performance feedback
+- Evaluation of adaptive behavior based on performance feedback
 - Evaluation of emotional state impacts on decision quality
 
 ### Probabilistic Calibration
@@ -443,12 +454,18 @@ print(f"LLM vs Index p-value: {validation['bootstrap_vs_index']['p_value']}")
 ### Immediate Extensions
 - **Technical Indicators**: Implement RSI, MACD, and other momentum oscillators for richer market signals
 - **Enhanced Feature Engineering**: Improve prompt engineering with new technical indicators and market regime detection
+- **Chain of Thoughts Reasoning**: Implement structured step-by-step reasoning prompts to improve LLM decision quality and explainability
+- **Ensemble Methods**: Combine multiple LLM predictions for improved decision quality
+- **Data Frequency Analysis**: Extend beyond daily data to intraday trading decisions
 - **Cross-Model Comparison**: BERT vs GPT vs Claude calibration differences
 - **Market Regime Analysis**: Calibration stability across bull/bear cycles
 
 
 ### Long-Term Questions
 - **AI Behavioral Training**: Can we train LLMs to avoid human cognitive biases?
+- **Disposition Effect Analysis**: Implement detection of premature profit-taking and excessive loss-holding patterns
+- **Prospect Theory Implementation**: Study risk-seeking in losses vs risk-averse behavior in gains
+- **Survivorship Bias Testing**: Evaluate performance on delisted/failed stocks to avoid backtesting illusions
 - **Hybrid Systems**: Combining LLM intuition with quantitative risk management
 - **Real-Time Adaptation**: Online learning from live trading feedback
 - **Multi-Asset Extension**: Beyond single-stock to portfolio optimization
