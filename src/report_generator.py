@@ -1664,6 +1664,9 @@ def generate_decision_behavior_analysis(
 
         lines.append("")
 
+    # RSI Technical Analysis
+    lines.extend(generate_rsi_analysis_section(data_sources, model_tag))
+
     # Decision Patterns
     if "plots" in data_sources and "decision_patterns" in data_sources["plots"]:
         lines.extend(
@@ -2203,6 +2206,93 @@ def generate_technical_details(data_sources: Dict, model_tag: str) -> List[str]:
     return lines
 
 
+def generate_rsi_analysis_section(data_sources: Dict, model_tag: str) -> List[str]:
+    """Generate RSI analysis section for markdown reports."""
+    section = [
+        "### RSI (Relative Strength Index) Analysis",
+        "",
+        "This section analyzes how the model utilized RSI alongside other technical indicators.",
+        "",
+    ]
+
+    # Technical indicators overview plot
+    if "plots" in data_sources and "technical_indicators" in data_sources["plots"]:
+        section.extend([
+            "#### Technical Indicator Overview",
+            "",
+            f"![Technical Indicators]({data_sources['plots']['technical_indicators']})",
+            "*Figure: Price action with RSI overlay and trading signals*",
+            "",
+        ])
+
+    # RSI performance analysis plot
+    if "plots" in data_sources and "rsi_performance" in data_sources["plots"]:
+        section.extend([
+            "#### RSI Performance Analysis",
+            "",
+            f"![RSI Analysis]({data_sources['plots']['rsi_performance']})",
+            "*Figure: RSI distribution by decision type and performance correlation*",
+            "",
+        ])
+
+    # Key insights
+    section.extend([
+        "#### Key RSI Insights",
+        "",
+        "- **Decision Distribution**: How BUY/HOLD/SELL decisions correlate with RSI levels",
+        "- **Performance by RSI Range**: Win rates across different RSI ranges (0-30, 30-70, 70-100)",
+        "- **Winning vs Losing Trades**: RSI distribution comparison between profitable and unprofitable trades",
+        "- **RSI Momentum**: Performance based on RSI directional changes and momentum",
+        "",
+        "**RSI Strategy Effectiveness**: RSI-based strategies provide momentum signals that complement trend and volatility indicators.",
+        "",
+    ])
+
+    return section
+
+
+def generate_rsi_analysis_section_html(data_sources: Dict, model_tag: str) -> str:
+    """Generate RSI analysis section for HTML reports."""
+    html = """
+                <h3>RSI (Relative Strength Index) Analysis</h3>
+                <p>This section analyzes how the model utilized RSI alongside other technical indicators.</p>
+"""
+
+    # Technical indicators overview plot
+    if "plots" in data_sources and "technical_indicators" in data_sources["plots"]:
+        html += f"""
+                <h4>Technical Indicator Overview</h4>
+                <div class="chart-container">
+                    <img src="{data_sources['plots']['technical_indicators']}" alt="Technical Indicators">
+                    <div class="chart-caption">Figure: Price action with RSI overlay and trading signals</div>
+                </div>
+"""
+
+    # RSI performance analysis plot
+    if "plots" in data_sources and "rsi_performance" in data_sources["plots"]:
+        html += f"""
+                <h4>RSI Performance Analysis</h4>
+                <div class="chart-container">
+                    <img src="{data_sources['plots']['rsi_performance']}" alt="RSI Analysis">
+                    <div class="chart-caption">Figure: RSI distribution by decision type and performance correlation</div>
+                </div>
+"""
+
+    # Key insights
+    html += """
+                <h4>Key RSI Insights</h4>
+                <ul>
+                    <li><strong>Decision Distribution</strong>: How BUY/HOLD/SELL decisions correlate with RSI levels</li>
+                    <li><strong>Performance by RSI Range</strong>: Win rates across different RSI ranges (0-30, 30-70, 70-100)</li>
+                    <li><strong>Winning vs Losing Trades</strong>: RSI distribution comparison between profitable and unprofitable trades</li>
+                    <li><strong>RSI Momentum</strong>: Performance based on RSI directional changes and momentum</li>
+                </ul>
+                <p><strong>RSI Strategy Effectiveness</strong>: RSI-based strategies provide momentum signals that complement trend and volatility indicators.</p>
+"""
+
+    return html
+
+
 # HTML Section Generation Functions
 
 
@@ -2394,6 +2484,9 @@ def generate_decision_behavior_analysis_html(data_sources: Dict, model_tag: str)
                     <div class="chart-caption">Figure: Calibration analysis by decision type (BUY/HOLD/SELL)</div>
                 </div>
 """
+
+    # RSI Technical Analysis
+    html += generate_rsi_analysis_section_html(data_sources, model_tag)
 
     # Decision Patterns
     if "plots" in data_sources and "decision_patterns" in data_sources["plots"]:

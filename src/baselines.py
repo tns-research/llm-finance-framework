@@ -175,6 +175,58 @@ def combined_momentum_vol_baseline(
     return df
 
 
+def rsi_mean_reversion_baseline(
+    features_df: pd.DataFrame, overbought: float = 70, oversold: float = 30
+) -> pd.DataFrame:
+    """
+    RSI Mean Reversion Strategy:
+    - BUY when RSI < oversold (expect bounce up from oversold levels)
+    - SELL when RSI > overbought (expect pullback down from overbought levels)
+    - HOLD otherwise
+
+    This strategy assumes that extreme RSI levels tend to revert to the mean.
+    """
+    df = features_df.copy()
+
+    conditions = [
+        df["rsi_14"] < oversold,  # Oversold → BUY
+        df["rsi_14"] > overbought,  # Overbought → SELL
+    ]
+    choices = ["BUY", "SELL"]
+    df["decision"] = np.select(conditions, choices, default="HOLD")
+
+    df["position"] = df["decision"].map({"BUY": 1.0, "HOLD": 0.0, "SELL": -1.0})
+    df["strategy_return"] = df["position"] * df["next_return_1d"]
+
+    return df
+
+
+def rsi_contrarian_baseline(
+    features_df: pd.DataFrame, rsi_threshold: float = 40
+) -> pd.DataFrame:
+    """
+    RSI Contrarian Strategy:
+    - BUY when RSI is low (below threshold) - fade the weakness
+    - SELL when RSI is high (above 100-threshold) - fade the strength
+    - HOLD in neutral RSI territory
+
+    This is the opposite of mean reversion - bets against RSI extremes.
+    """
+    df = features_df.copy()
+
+    conditions = [
+        df["rsi_14"] < rsi_threshold,  # Fade weakness
+        df["rsi_14"] > (100 - rsi_threshold),  # Fade strength
+    ]
+    choices = ["BUY", "SELL"]
+    df["decision"] = np.select(conditions, choices, default="HOLD")
+
+    df["position"] = df["decision"].map({"BUY": 1.0, "HOLD": 0.0, "SELL": -1.0})
+    df["strategy_return"] = df["position"] * df["next_return_1d"]
+
+    return df
+
+
 # =============================================================================
 # METRICS CALCULATION
 # =============================================================================
@@ -241,6 +293,8 @@ BASELINE_REGISTRY = {
     "mean_reversion": mean_reversion_baseline,
     "volatility_timing": volatility_timing_baseline,
     "momentum_vol_combined": combined_momentum_vol_baseline,
+    "rsi_mean_reversion": rsi_mean_reversion_baseline,
+    "rsi_contrarian": rsi_contrarian_baseline,
 }
 
 

@@ -23,6 +23,8 @@ from .reporting import (
     create_calibration_plot,
     create_calibration_by_decision_plot,
     generate_calibration_analysis_report,
+    create_technical_indicators_plot,
+    create_rsi_performance_analysis,
 )
 from .statistical_validation import (
     comprehensive_statistical_validation,
@@ -711,6 +713,23 @@ def run_single_model(
 
     # Create visualizations
     create_decision_pattern_plots(parsed_df, model_tag, plots_dir)
+
+    # Create RSI technical indicator plots
+    print("Generating RSI technical indicator plots...")
+    features_path = os.path.join(base_dir, "data", "processed", "features.csv")
+    features_df = pd.read_csv(features_path, parse_dates=['date'])
+
+    # Technical indicators overview
+    technical_plot_path = os.path.join(plots_dir, f"{model_tag}_technical_indicators.png")
+    create_technical_indicators_plot(
+        features_df, parsed_df, model_tag, technical_plot_path
+    )
+
+    # RSI performance analysis
+    rsi_plot_path = os.path.join(plots_dir, f"{model_tag}_rsi_performance.png")
+    create_rsi_performance_analysis(
+        parsed_df, features_df, model_tag, rsi_plot_path
+    )
 
     # Generate comprehensive report
     analysis_dir = os.path.join(base_dir, "results", "analysis")

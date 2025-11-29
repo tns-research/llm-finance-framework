@@ -51,9 +51,13 @@ TEST_LIMIT = 50  # Number of days to run when TEST_MODE = True
 # Configure which LLM models to benchmark via OpenRouter API
 # Uncomment/comment models as needed. Requires USE_DUMMY_MODEL = False
 LLM_MODELS = [
+    #{
+    #    "tag": "bert",  # Model identifier (used in filenames)
+    #    "router_model": "openrouter/bert-nebulon-alpha",  # OpenRouter model ID
+    #},
     {
-        "tag": "bert",  # Model identifier (used in filenames)
-        "router_model": "openrouter/bert-nebulon-alpha",  # OpenRouter model ID
+        "tag": "chimera",  # Model identifier (used in filenames)
+        "router_model": "tngtech/tng-r1t-chimera:free",  # OpenRouter model ID
     },
     # Add more models here:
     # {
@@ -73,11 +77,14 @@ PAST_RET_LAGS = 20  # Number of past return lags for features
 RET_5D_WINDOW = 5  # 5-day return window
 MA20_WINDOW = 20  # 20-day moving average window
 VOL20_WINDOW = 20  # 20-day volatility window
+RSI_WINDOW = 14  # RSI period (14 days standard)
+RSI_OVERBOUGHT = 70  # RSI overbought threshold
+RSI_OVERSOLD = 30  # RSI oversold threshold
 
 ENABLE_FULL_TRADING_HISTORY = True  # Include complete trading history in prompts
 # True: Better learning, False: Token efficiency
 
-DEBUG_SHOW_FULL_PROMPT = False  # Show full prompts (for debugging)
+DEBUG_SHOW_FULL_PROMPT = True  # Show full prompts (for debugging)
 
 # =============================================================================
 # ✅ END OF ESSENTIAL CONFIGURATION
@@ -214,15 +221,24 @@ def _build_system_prompt():
 
 Your task is to decide a trading action for the S and P 500 index for the next trading day based only on the information provided in the user message.
 
+Technical indicators available include:
+- 20-day moving average momentum (trend strength)
+- 20-day annualized volatility (risk measure)
+- 5-day recent momentum (short-term trend)
+- 14-day Relative Strength Index (RSI) - momentum oscillator ranging from 0-100
+
 Rules for decision making:
 
 1) Use only the information in the input. Do not use any knowledge about what happens after the input date.
-2) Choose exactly one of the following actions:
+2) RSI values above 70 typically indicate overbought conditions (potential reversal down).
+3) RSI values below 30 typically indicate oversold conditions (potential reversal up).
+4) RSI between 30-70 is considered neutral territory.
+5) Choose exactly one of the following actions:
    BUY  take a long position for the next day
    HOLD stay in cash for the next day, out of the market
    SELL take a short position for the next day
-3) Evaluate both expected return and risk. Do not take actions that imply extreme risk seeking.
-4) If the information is very unclear, HOLD is acceptable for that day, but you should avoid staying in HOLD for many consecutive days if the recent data shows strong and persistent directional signals."""
+6) Evaluate both expected return and risk. Do not take actions that imply extreme risk seeking.
+7) If the information is very unclear, HOLD is acceptable for that day, but you should avoid staying in HOLD for many consecutive days if the recent data shows strong and persistent directional signals."""
 
     strategic_journal_rule = """
 5) You will also receive a section called "Strategic journal". This contains notes about your past decisions, the outcome of these decisions, and the evolution of your cumulative performance. Use this historical feedback to refine your decision making and improve your discipline over time. Become more careful after sequences of losses, and more critical of patterns that have not worked, but do not assume that any trend will always continue.

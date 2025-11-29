@@ -8,6 +8,7 @@ from .config import (
     MA20_WINDOW,
     VOL20_WINDOW,
     RET_5D_WINDOW,
+    RSI_WINDOW,
 )
 
 
@@ -69,6 +70,31 @@ def load_raw_csv(raw_path: str) -> pd.DataFrame:
     return df
 
 
+def compute_rsi(prices: pd.Series, window: int = 14) -> pd.Series:
+    """
+    Calculate Relative Strength Index (RSI).
+
+    RSI = 100 - (100 / (1 + RS))
+    where RS = Average Gain / Average Loss over specified window
+
+    Args:
+        prices: Series of price data
+        window: Period for RSI calculation (default 14)
+
+    Returns:
+        Series with RSI values (0-100 scale)
+    """
+    delta = prices.diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
+
+    # Avoid division by zero by replacing 0 losses with NaN
+    rs = gain / loss.replace(0, np.nan)
+    rsi = 100 - (100 / (1 + rs))
+
+    return rsi
+
+
 def compute_features(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
@@ -85,6 +111,9 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
     # Volatilité réalisée 20 jours annualisée
     daily_vol_20 = df["return_1d"].rolling(VOL20_WINDOW).std()
     df["vol20_annualized"] = daily_vol_20 * np.sqrt(252)
+
+    # RSI (Relative Strength Index)
+    df["rsi_14"] = compute_rsi(df["close"], RSI_WINDOW)
 
     # Momentum 5 jours
     df["ret_5d"] = df["return_1d"].rolling(RET_5D_WINDOW).sum()

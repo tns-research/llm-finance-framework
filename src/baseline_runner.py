@@ -144,6 +144,8 @@ def create_equity_curves_plot(
         "mean_reversion": "green",
         "volatility_timing": "cyan",
         "momentum_vol_combined": "teal",
+        "rsi_mean_reversion": "orange",
+        "rsi_contrarian": "pink",
         "LLM_STRATEGY": "darkorange",
     }
 
@@ -154,6 +156,8 @@ def create_equity_curves_plot(
         "mean_reversion": "-.",
         "volatility_timing": "--",
         "momentum_vol_combined": "-",
+        "rsi_mean_reversion": "-.",
+        "rsi_contrarian": ":",
         "random": ":",
         "random_mean (n=30)": "-",  # Solid line for statistical mean
         "random_representative": "--",  # Dashed for individual run

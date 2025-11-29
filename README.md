@@ -24,7 +24,7 @@ The LLM receives technical indicators, can maintain a strategic journal, and may
 ### How It Works
 The framework follows a systematic 5-step process:
 
-1. **📊 Data Preparation**: Load historical market data and compute technical indicators (moving averages, volatility, momentum)
+1. **📊 Data Preparation**: Load historical market data and compute technical indicators (RSI, moving averages, volatility, momentum)
 2. **📝 Prompt Engineering**: Build context-rich prompts combining market data with optional memory (strategic journals), dates, and emotional state tracking
 3. **🤖 LLM Decision Making**: Query language models via OpenRouter API to generate BUY/HOLD/SELL decisions with confidence scores and explanations
 4. **📈 Backtesting Engine**: Simulate trading performance over historical periods, tracking returns, risk metrics, and position management
@@ -452,7 +452,7 @@ print(f"LLM vs Index p-value: {validation['bootstrap_vs_index']['p_value']}")
 ## 🔬 Future Research Directions
 
 ### Immediate Extensions
-- **Technical Indicators**: Implement RSI, MACD, and other momentum oscillators for richer market signals
+- **Technical Indicators**: Implement MACD and additional momentum oscillators (RSI now available) for richer market signals
 - **Enhanced Feature Engineering**: Improve prompt engineering with new technical indicators and market regime detection
 - **Chain of Thoughts Reasoning**: Implement structured step-by-step reasoning prompts to improve LLM decision quality and explainability
 - **Ensemble Methods**: Combine multiple LLM predictions for improved decision quality
