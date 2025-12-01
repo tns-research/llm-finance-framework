@@ -46,6 +46,36 @@ TEST_MODE = True  # Set to True for quick tests, False for full experiments
 TEST_LIMIT = 50  # Number of days to run when TEST_MODE = True
 # Set TEST_MODE = False for complete ~2700 day analysis
 
+# =================================================================================
+# 🎛️  EXPERIMENT FEATURES - EASY TOGGLES
+# =================================================================================
+
+# TECHNICAL ANALYSIS
+# ------------------
+# Master toggle for technical indicators in LLM prompts
+# When enabled: LLM sees RSI + MACD + Stochastic + Bollinger Bands
+# When disabled: LLM sees only RSI rules (no indicator values)
+# Note: Indicators are always calculated for baselines and analysis
+ENABLE_TECHNICAL_INDICATORS = True
+
+# TRADING HISTORY CONTEXT
+# -----------------------
+# Include complete historical trading performance in LLM prompts
+# Enable: Better long-term learning and pattern recognition
+# Disable: Token efficiency and reduced context length
+ENABLE_FULL_TRADING_HISTORY = True
+
+# DEBUGGING & DEVELOPMENT
+# -----------------------
+# Show full LLM prompts during execution (helpful for understanding what the AI sees)
+DEBUG_SHOW_FULL_PROMPT = True
+
+# DATA SUBSET FOR TESTING
+# -----------------------
+# Start from a specific row in the dataset (useful for testing specific time periods)
+# None = use all available data, 30 = skip first 30 trading days
+START_ROW = 30
+
 # LLM MODELS TO TEST
 # ------------------
 # Configure which LLM models to benchmark via OpenRouter API
@@ -55,15 +85,15 @@ LLM_MODELS = [
     #    "tag": "bert",  # Model identifier (used in filenames)
     #    "router_model": "openrouter/bert-nebulon-alpha",  # OpenRouter model ID
     #},
-    {
-        "tag": "chimera",  # Model identifier (used in filenames)
-        "router_model": "tngtech/tng-r1t-chimera:free",  # OpenRouter model ID
-    },
+    #{
+    #    "tag": "chimera",  # Model identifier (used in filenames)
+    #    "router_model": "tngtech/tng-r1t-chimera:free",  # OpenRouter model ID
+    #},
     # Add more models here:
-    # {
-    #     "tag": "gpt4",
-    #     "router_model": "openai/gpt-4",
-    # },
+     {
+         "tag": "gpt-oss-20b",
+         "router_model": "openai/gpt-oss-20b:free",
+     },
     # {
     #     "tag": "claude",
     #     "router_model": "anthropic/claude-3-sonnet",
@@ -81,10 +111,22 @@ RSI_WINDOW = 14  # RSI period (14 days standard)
 RSI_OVERBOUGHT = 70  # RSI overbought threshold
 RSI_OVERSOLD = 30  # RSI oversold threshold
 
-ENABLE_FULL_TRADING_HISTORY = True  # Include complete trading history in prompts
-# True: Better learning, False: Token efficiency
+# Advanced Technical Indicators
+# ----------------------------
+MACD_FAST = 12  # Fast EMA period for MACD
+MACD_SLOW = 26  # Slow EMA period for MACD
+MACD_SIGNAL = 9  # Signal line EMA period for MACD
+STOCH_K = 14  # %K period for Stochastic Oscillator
+STOCH_D = 3  # %D smoothing period for Stochastic Oscillator
+STOCH_SMOOTH_K = 3  # %K smoothing period (optional)
+BB_WINDOW = 20  # Bollinger Bands period
+BB_STD = 2  # Standard deviations for Bollinger Bands
+STOCH_OVERBOUGHT = 80  # Stochastic overbought threshold
+STOCH_OVERSOLD = 20  # Stochastic oversold threshold
 
-DEBUG_SHOW_FULL_PROMPT = True  # Show full prompts (for debugging)
+# Note: Technical indicators (RSI, MACD, Stochastic, Bollinger Bands)
+# are always calculated for baselines and analysis, regardless of the toggle above.
+# The toggle above only controls whether they appear in LLM prompts.
 
 # =============================================================================
 # ✅ END OF ESSENTIAL CONFIGURATION
@@ -112,10 +154,7 @@ DEBUG_SHOW_FULL_PROMPT = True  # Show full prompts (for debugging)
 #   • dates_memory    - Full learning: dates + strategic adaptation
 #   • dates_full      - Complete context: dates + memory + emotional state
 #
-# Research Questions:
-#   🤔 Does showing dates cause data leakage/overfitting to historical patterns?
-#   🧠 Does strategic memory improve learning from past decisions?
-#   😊 Does emotional tracking add useful self-reflection or just noise?
+
 
 EXPERIMENT_CONFIGS = {
     # --- NO DATES (anonymized) ---
@@ -167,6 +206,7 @@ EXPERIMENT_CONFIGS = {
 _MANUAL_SHOW_DATE_TO_LLM = False
 _MANUAL_ENABLE_STRATEGIC_JOURNAL = False
 _MANUAL_ENABLE_FEELING_LOG = True
+_MANUAL_ENABLE_TECHNICAL_INDICATORS = False
 
 # Apply experiment config or use manual settings
 if ACTIVE_EXPERIMENT and ACTIVE_EXPERIMENT in EXPERIMENT_CONFIGS:
@@ -177,33 +217,22 @@ if ACTIVE_EXPERIMENT and ACTIVE_EXPERIMENT in EXPERIMENT_CONFIGS:
     print(f"[CONFIG] Active experiment: {ACTIVE_EXPERIMENT}")
     print(f"         {_config['description']}")
     print(
-        f"         dates={SHOW_DATE_TO_LLM}, memory={ENABLE_STRATEGIC_JOURNAL}, feeling={ENABLE_FEELING_LOG}"
+        f"         dates={SHOW_DATE_TO_LLM}, memory={ENABLE_STRATEGIC_JOURNAL}, feeling={ENABLE_FEELING_LOG}, technical={ENABLE_TECHNICAL_INDICATORS}"
     )
 else:
     # Use manual settings
     SHOW_DATE_TO_LLM = _MANUAL_SHOW_DATE_TO_LLM
     ENABLE_STRATEGIC_JOURNAL = _MANUAL_ENABLE_STRATEGIC_JOURNAL
     ENABLE_FEELING_LOG = _MANUAL_ENABLE_FEELING_LOG
+    ENABLE_TECHNICAL_INDICATORS = _MANUAL_ENABLE_TECHNICAL_INDICATORS
     if ACTIVE_EXPERIMENT:
         print(
             f"[CONFIG] Warning: Unknown experiment '{ACTIVE_EXPERIMENT}', using manual settings"
         )
 
 
-# Optional manual override to choose starting row for testing
-# None = use automatic first valid feature row
-START_ROW = 30
-
-# Full trading history feature
-# Provides complete historical trades in prompts as CSV data for pattern recognition
-# Enable: Better long-term learning, comprehensive context
-# Disable: Token efficiency, prevent potential date identification through performance patterns
-ENABLE_FULL_TRADING_HISTORY = (
-    True  # Set to False for token efficiency or date leakage prevention
-)
 
 # (USE_DUMMY_MODEL moved to top of file)
-# (DEBUG_SHOW_FULL_PROMPT moved to top of file)
 # (TEST_MODE and TEST_LIMIT moved to top of file)
 
 # Decision mapping
@@ -217,33 +246,64 @@ POSITION_MAP = {
 
 # Build system prompt based on config flags
 def _build_system_prompt():
-    base_rules = """You are a cautious but rational equity index hedge fund trader. Your role is to beat the S&P500.
+    # Build technical indicators description based on ENABLE_TECHNICAL_INDICATORS
+    if ENABLE_TECHNICAL_INDICATORS:
+        technical_indicators_desc = """
+- 14-day Relative Strength Index (RSI) - momentum oscillator ranging from 0-100
+- MACD(12,26,9) - Moving Average Convergence Divergence with histogram
+- Stochastic Oscillator(14,3) - momentum indicator ranging from 0-100
+- Bollinger Bands(20,2) - volatility bands showing price extremes"""
+    else:
+        technical_indicators_desc = ""
+
+    base_rules = f"""You are a cautious but rational equity index hedge fund trader. Your role is to beat the S&P500.
 
 Your task is to decide a trading action for the S and P 500 index for the next trading day based only on the information provided in the user message.
 
 Technical indicators available include:
 - 20-day moving average momentum (trend strength)
 - 20-day annualized volatility (risk measure)
-- 5-day recent momentum (short-term trend)
-- 14-day Relative Strength Index (RSI) - momentum oscillator ranging from 0-100
+- 5-day recent momentum (short-term trend){technical_indicators_desc}
 
 Rules for decision making:
 
-1) Use only the information in the input. Do not use any knowledge about what happens after the input date.
-2) RSI measures the speed and change of price movements, with higher values indicating stronger recent upward momentum.
-3) Choose exactly one of the following actions:
+1) Use only the information in the input. Do not use any knowledge about what happens after the input date."""
+
+    # Build rules based on ENABLE_TECHNICAL_INDICATORS
+    if ENABLE_TECHNICAL_INDICATORS:
+        base_rules += """
+2) RSI measures momentum from 0-100, with >70 overbought and <30 oversold - look for divergences and reversals.
+3) MACD crossing above signal line suggests bullish momentum, below suggests bearish - histogram shows momentum strength.
+4) Stochastic Oscillator >80 is overbought, <20 is oversold - look for divergences from price action.
+5) Bollinger Bands squeeze indicates low volatility (potential breakout), expansion indicates high volatility.
+6) Choose exactly one of the following actions:
    BUY  take a long position for the next day
    HOLD stay in cash for the next day, out of the market
    SELL take a short position for the next day
-4) Evaluate both expected return and risk. Do not take actions that imply extreme risk seeking.
-5) If the information is very unclear, HOLD is acceptable for that day, but you should avoid staying in HOLD for many consecutive days if the recent data shows strong and persistent directional signals."""
+7) Evaluate both expected return and risk. Do not take actions that imply extreme risk seeking.
+8) If the information is very unclear, HOLD is acceptable for that day, but you should avoid staying in HOLD for many consecutive days if the recent data shows strong and persistent directional signals."""
+    else:
+        base_rules += """
+2) Choose exactly one of the following actions:
+   BUY  take a long position for the next day
+   HOLD stay in cash for the next day, out of the market
+   SELL take a short position for the next day
+3) Evaluate both expected return and risk. Do not take actions that imply extreme risk seeking.
+4) If the information is very unclear, HOLD is acceptable for that day, but you should avoid staying in HOLD for many consecutive days if the recent data shows strong and persistent directional signals."""
 
-    strategic_journal_rule = """
-5) You will also receive a section called "Strategic journal". This contains notes about your past decisions, the outcome of these decisions, and the evolution of your cumulative performance. Use this historical feedback to refine your decision making and improve your discipline over time. Become more careful after sequences of losses, and more critical of patterns that have not worked, but do not assume that any trend will always continue.
-6) Your long run objective is to achieve a higher cumulative return than a simple buy and hold strategy on the index, while keeping risk and drawdowns at a reasonable level. Staying in cash for very long periods is also costly, because you then fail to capture market moves. You must balance caution with the need to take directional risk when the data supports it."""
+    # Adjust rule numbering based on technical indicators
+    strategic_rule_num = "6)" if ENABLE_TECHNICAL_INDICATORS else "5)"
+    objective_rule_num = "7)" if ENABLE_TECHNICAL_INDICATORS else "6)"
 
-    no_strategic_journal_rule = """
-5) Your long run objective is to achieve a higher cumulative return than a simple buy and hold strategy on the index, while keeping risk and drawdowns at a reasonable level. Staying in cash for very long periods is also costly, because you then fail to capture market moves. You must balance caution with the need to take directional risk when the data supports it."""
+    strategic_journal_rule = f"""
+{strategic_rule_num} You will also receive a section called "Strategic journal". This contains notes about your past decisions, the outcome of these decisions, and the evolution of your cumulative performance. Use this historical feedback to refine your decision making and improve your discipline over time. Become more careful after sequences of losses, and more critical of patterns that have not worked, but do not assume that any trend will always continue.
+{objective_rule_num} Your long run objective is to achieve a higher cumulative return than a simple buy and hold strategy on the index, while keeping risk and drawdowns at a reasonable level. Staying in cash for very long periods is also costly, because you then fail to capture market moves. You must balance caution with the need to take directional risk when the data supports it."""
+
+    # Adjust rule numbering for no strategic journal case
+    objective_rule_num_no_journal = "5)" if ENABLE_TECHNICAL_INDICATORS else "4)"
+
+    no_strategic_journal_rule = f"""
+{objective_rule_num_no_journal} Your long run objective is to achieve a higher cumulative return than a simple buy and hold strategy on the index, while keeping risk and drawdowns at a reasonable level. Staying in cash for very long periods is also costly, because you then fail to capture market moves. You must balance caution with the need to take directional risk when the data supports it."""
 
     # Add appropriate rule based on strategic journal flag
     if ENABLE_STRATEGIC_JOURNAL:

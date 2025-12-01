@@ -62,3 +62,10 @@ dist/
 .coverage.*
 htmlcov/
 .tox/
+
+# Research directory (keep private until publication)
+docs/research/
+
+# Raw data files (Stooq, proprietary data sources)
+data/raw/*.csv
+data/raw/sp500.csv

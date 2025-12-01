@@ -895,52 +895,152 @@ def create_technical_indicators_plot(features_df: pd.DataFrame,
                                    model_tag: str = "indicators",
                                    output_path: str = None):
     """
-    Create comprehensive technical indicators plot with RSI overlay.
+    Create comprehensive technical indicators plot.
 
-    Shows: Price, RSI, and optionally trading decisions.
+    Shows available indicators: Price, RSI (if available), and optionally trading decisions.
+    Gracefully handles missing indicator data.
     """
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 10),
-                                   gridspec_kw={'height_ratios': [3, 1]})
+    # Check what indicators are available
+    has_rsi = 'rsi_14' in features_df.columns
+    has_macd = 'macd_line' in features_df.columns
+    has_stoch = 'stoch_k' in features_df.columns
+    has_bb = 'bb_upper' in features_df.columns
 
-    # Price subplot
-    ax1.plot(features_df['date'], features_df['close'],
-             label='Close Price', color='black', alpha=0.8)
-    ax1.set_title(f'Technical Indicators - {model_tag}')
-    ax1.set_ylabel('Price')
-    ax1.legend()
-    ax1.grid(True, alpha=0.3)
+    # Determine subplot layout based on available indicators
+    n_indicators = sum([has_rsi, has_macd, has_stoch, has_bb])
+    if n_indicators == 0:
+        # No indicators available - just show price
+        fig, ax1 = plt.subplots(1, 1, figsize=(15, 8))
+        ax1.plot(features_df['date'], features_df['close'],
+                 label='Close Price', color='black', alpha=0.8)
+        ax1.set_title(f'Price Chart - {model_tag} (No Technical Indicators)')
+        ax1.set_ylabel('Price')
+        ax1.legend()
+        ax1.grid(True, alpha=0.3)
+        axes = [ax1]
+    else:
+        # Create subplots for price + indicators
+        fig, axes = plt.subplots(n_indicators + 1, 1, figsize=(15, 8 + 3*n_indicators))
 
-    # RSI subplot
-    ax2.plot(features_df['date'], features_df['rsi_14'],
-             label='RSI(14)', color='purple', linewidth=1.5)
-    ax2.axhline(y=70, color='red', linestyle='--', alpha=0.7,
-                label='Overbought (70)')
-    ax2.axhline(y=30, color='green', linestyle='--', alpha=0.7,
-                label='Oversold (30)')
-    ax2.axhline(y=50, color='gray', linestyle='-', alpha=0.5,
-                label='Neutral (50)')
-    ax2.fill_between(features_df['date'], 30, 70, alpha=0.1, color='yellow')
+        # Price subplot (always first)
+        axes[0].plot(features_df['date'], features_df['close'],
+                     label='Close Price', color='black', alpha=0.8)
+        axes[0].set_title(f'Technical Indicators - {model_tag}')
+        axes[0].set_ylabel('Price')
+        axes[0].legend()
+        axes[0].grid(True, alpha=0.3)
 
-    # Add trading signals if provided
+        # RSI subplot (if available)
+        subplot_idx = 1
+        if has_rsi:
+            axes[subplot_idx].plot(features_df['date'], features_df['rsi_14'],
+                                   label='RSI(14)', color='purple', linewidth=1.5)
+            axes[subplot_idx].axhline(y=70, color='red', linestyle='--', alpha=0.7,
+                                      label='Overbought (70)')
+            axes[subplot_idx].axhline(y=30, color='green', linestyle='--', alpha=0.7,
+                                      label='Oversold (30)')
+            axes[subplot_idx].axhline(y=50, color='gray', linestyle='-', alpha=0.5,
+                                      label='Neutral (50)')
+            axes[subplot_idx].fill_between(features_df['date'], 30, 70, alpha=0.1, color='yellow')
+            axes[subplot_idx].set_title('RSI(14)')
+            axes[subplot_idx].set_ylabel('RSI Value')
+            axes[subplot_idx].legend()
+            axes[subplot_idx].grid(True, alpha=0.3)
+            subplot_idx += 1
+
+        # MACD subplot (if available)
+        if has_macd:
+            # Plot MACD line and signal
+            axes[subplot_idx].plot(features_df['date'], features_df['macd_line'],
+                                   label='MACD Line', color='blue', linewidth=1.5)
+            axes[subplot_idx].plot(features_df['date'], features_df['macd_signal'],
+                                   label='Signal Line', color='red', linewidth=1.5)
+            # Plot histogram
+            colors = ['green' if x >= 0 else 'red' for x in features_df['macd_histogram']]
+            axes[subplot_idx].bar(features_df['date'], features_df['macd_histogram'],
+                                  color=colors, alpha=0.7, label='Histogram')
+            axes[subplot_idx].set_title('MACD')
+            axes[subplot_idx].set_ylabel('MACD Value')
+            axes[subplot_idx].legend()
+            axes[subplot_idx].grid(True, alpha=0.3)
+            subplot_idx += 1
+
+        # Stochastic subplot (if available)
+        if has_stoch:
+            axes[subplot_idx].plot(features_df['date'], features_df['stoch_k'],
+                                   label='%K', color='orange', linewidth=1.5)
+            axes[subplot_idx].plot(features_df['date'], features_df['stoch_d'],
+                                   label='%D', color='purple', linewidth=1.5)
+            axes[subplot_idx].axhline(y=80, color='red', linestyle='--', alpha=0.7,
+                                      label='Overbought (80)')
+            axes[subplot_idx].axhline(y=20, color='green', linestyle='--', alpha=0.7,
+                                      label='Oversold (20)')
+            axes[subplot_idx].fill_between(features_df['date'], 20, 80, alpha=0.1, color='yellow')
+            axes[subplot_idx].set_title('Stochastic Oscillator')
+            axes[subplot_idx].set_ylabel('Stochastic Value')
+            axes[subplot_idx].legend()
+            axes[subplot_idx].grid(True, alpha=0.3)
+            subplot_idx += 1
+
+        # Bollinger Bands subplot (if available)
+        if has_bb:
+            axes[subplot_idx].plot(features_df['date'], features_df['close'],
+                                   label='Close Price', color='black', alpha=0.8)
+            axes[subplot_idx].plot(features_df['date'], features_df['bb_upper'],
+                                   label='Upper Band', color='red', linestyle='--', alpha=0.7)
+            axes[subplot_idx].plot(features_df['date'], features_df['bb_middle'],
+                                   label='Middle Band', color='blue', linestyle='-', alpha=0.7)
+            axes[subplot_idx].plot(features_df['date'], features_df['bb_lower'],
+                                   label='Lower Band', color='green', linestyle='--', alpha=0.7)
+            axes[subplot_idx].fill_between(features_df['date'],
+                                           features_df['bb_lower'],
+                                           features_df['bb_upper'],
+                                           alpha=0.1, color='yellow')
+            axes[subplot_idx].set_title('Bollinger Bands')
+            axes[subplot_idx].set_ylabel('Price')
+            axes[subplot_idx].legend()
+            axes[subplot_idx].grid(True, alpha=0.3)
+
+    # Add trading signals if provided (only to price chart)
     if decisions_df is not None:
-        # Merge RSI values from features_df into decisions_df for plotting
-        decisions_with_rsi = decisions_df.merge(
-            features_df[['date', 'rsi_14']], on='date', how='left'
-        )
+        price_ax = axes[0]  # Always plot signals on price chart
 
-        buy_signals = decisions_with_rsi[decisions_with_rsi['decision'] == 'BUY']
-        sell_signals = decisions_with_rsi[decisions_with_rsi['decision'] == 'SELL']
+        # For signals, we need to merge with whatever indicator data is available
+        # Use RSI if available, otherwise just use basic signals
+        if has_rsi:
+            decisions_with_indicators = decisions_df.merge(
+                features_df[['date', 'rsi_14']], on='date', how='left'
+            )
+        else:
+            decisions_with_indicators = decisions_df.copy()
 
-        ax2.scatter(buy_signals['date'], buy_signals['rsi_14'],
-                   marker='^', color='green', s=80, label='BUY Signal', zorder=5)
-        ax2.scatter(sell_signals['date'], sell_signals['rsi_14'],
-                   marker='v', color='red', s=80, label='SELL Signal', zorder=5)
+        buy_signals = decisions_with_indicators[decisions_with_indicators['decision'] == 'BUY']
+        sell_signals = decisions_with_indicators[decisions_with_indicators['decision'] == 'SELL']
 
-    ax2.set_title('RSI(14) with Trading Signals')
-    ax2.set_ylim(0, 100)
-    ax2.set_ylabel('RSI Value')
-    ax2.legend()
-    ax2.grid(True, alpha=0.3)
+        # Add buy/sell signals to the most relevant subplot
+        if has_rsi:
+            # Find RSI subplot (should be axes[1] if it exists)
+            rsi_ax_idx = 1 if has_rsi else None
+            if rsi_ax_idx is not None:
+                axes[rsi_ax_idx].scatter(buy_signals['date'], buy_signals['rsi_14'],
+                                       marker='^', color='green', s=80, label='BUY Signal', zorder=5)
+                axes[rsi_ax_idx].scatter(sell_signals['date'], sell_signals['rsi_14'],
+                                       marker='v', color='red', s=80, label='SELL Signal', zorder=5)
+                # Update RSI subplot title to include signals
+                axes[rsi_ax_idx].set_title('RSI(14) with Trading Signals')
+        else:
+            # No RSI - add signals to price chart instead
+            price_ax.scatter(buy_signals['date'], buy_signals['close'],
+                           marker='^', color='green', s=100, label='BUY Signal', zorder=5)
+            price_ax.scatter(sell_signals['date'], sell_signals['close'],
+                           marker='v', color='red', s=100, label='SELL Signal', zorder=5)
+
+    # Set date formatting for x-axis
+    import matplotlib.dates as mdates
+    for ax in axes:
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+        ax.xaxis.set_major_locator(mdates.MonthLocator(interval=6))
+        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
 
     plt.tight_layout()
     if output_path:
@@ -955,12 +1055,22 @@ def create_rsi_performance_analysis(parsed_df: pd.DataFrame,
                                    output_path: str):
     """
     Analyze RSI distribution by decision type and performance correlation.
+    Only generates analysis if RSI data is available.
     """
+    # Check if RSI data is available
+    if 'rsi_14' not in features_df.columns:
+        print(f"[WARNING] RSI data not available for {model_tag} - skipping RSI performance analysis")
+        return
+
     # Merge data
     analysis_df = parsed_df.merge(
         features_df[['date', 'rsi_14']],
         on='date', how='left'
     ).dropna()
+
+    if len(analysis_df) == 0:
+        print(f"[WARNING] No valid RSI data for analysis in {model_tag}")
+        return
 
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
     fig.suptitle(f'RSI Performance Analysis - {model_tag}', fontsize=14)

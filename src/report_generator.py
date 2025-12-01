@@ -2208,10 +2208,23 @@ def generate_technical_details(data_sources: Dict, model_tag: str) -> List[str]:
 
 def generate_rsi_analysis_section(data_sources: Dict, model_tag: str) -> List[str]:
     """Generate RSI analysis section for markdown reports."""
+    # Check if any technical indicator plots are available
+    has_technical_plots = ("plots" in data_sources and
+                          ("technical_indicators" in data_sources["plots"] or
+                           "rsi_performance" in data_sources["plots"]))
+
+    if not has_technical_plots:
+        return [
+            "### Technical Indicators Analysis",
+            "",
+            "*Technical indicators were disabled for this experiment.*",
+            "",
+        ]
+
     section = [
-        "### RSI (Relative Strength Index) Analysis",
+        "### Technical Indicators Analysis",
         "",
-        "This section analyzes how the model utilized RSI alongside other technical indicators.",
+        "This section analyzes how the model utilized technical indicators.",
         "",
     ]
 
@@ -2221,11 +2234,11 @@ def generate_rsi_analysis_section(data_sources: Dict, model_tag: str) -> List[st
             "#### Technical Indicator Overview",
             "",
             f"![Technical Indicators]({data_sources['plots']['technical_indicators']})",
-            "*Figure: Price action with RSI overlay and trading signals*",
+            "*Figure: Price action with available technical indicators and trading signals*",
             "",
         ])
 
-    # RSI performance analysis plot
+    # RSI performance analysis plot (only if RSI-specific analysis was generated)
     if "plots" in data_sources and "rsi_performance" in data_sources["plots"]:
         section.extend([
             "#### RSI Performance Analysis",
@@ -2235,27 +2248,46 @@ def generate_rsi_analysis_section(data_sources: Dict, model_tag: str) -> List[st
             "",
         ])
 
-    # Key insights
-    section.extend([
-        "#### Key RSI Insights",
-        "",
-        "- **Decision Distribution**: How BUY/HOLD/SELL decisions correlate with RSI levels",
-        "- **Performance by RSI Range**: Win rates across different RSI ranges (0-30, 30-70, 70-100)",
-        "- **Winning vs Losing Trades**: RSI distribution comparison between profitable and unprofitable trades",
-        "- **RSI Momentum**: Performance based on RSI directional changes and momentum",
-        "",
-        "**RSI Strategy Effectiveness**: RSI-based strategies provide momentum signals that complement trend and volatility indicators.",
-        "",
-    ])
+    # Key insights (conditional based on what analysis was performed)
+    if "plots" in data_sources and "rsi_performance" in data_sources["plots"]:
+        section.extend([
+            "#### Key RSI Insights",
+            "",
+            "- **Decision Distribution**: How BUY/HOLD/SELL decisions correlate with RSI levels",
+            "- **Performance by RSI Range**: Win rates across different RSI ranges (0-30, 30-70, 70-100)",
+            "- **Winning vs Losing Trades**: RSI distribution comparison between profitable and unprofitable trades",
+            "- **RSI Momentum**: Performance based on RSI directional changes and momentum",
+            "",
+            "**RSI Strategy Effectiveness**: RSI-based strategies provide momentum signals that complement trend and volatility indicators.",
+            "",
+        ])
+    elif "plots" in data_sources and "technical_indicators" in data_sources["plots"]:
+        section.extend([
+            "#### Technical Indicator Analysis",
+            "",
+            "Technical indicators were included in this experiment. The overview plot above shows available indicators alongside price action and trading decisions.",
+            "",
+        ])
 
     return section
 
 
 def generate_rsi_analysis_section_html(data_sources: Dict, model_tag: str) -> str:
     """Generate RSI analysis section for HTML reports."""
+    # Check if any technical indicator plots are available
+    has_technical_plots = ("plots" in data_sources and
+                          ("technical_indicators" in data_sources["plots"] or
+                           "rsi_performance" in data_sources["plots"]))
+
+    if not has_technical_plots:
+        return """
+                <h3>Technical Indicators Analysis</h3>
+                <p><em>Technical indicators were disabled for this experiment.</em></p>
+"""
+
     html = """
-                <h3>RSI (Relative Strength Index) Analysis</h3>
-                <p>This section analyzes how the model utilized RSI alongside other technical indicators.</p>
+                <h3>Technical Indicators Analysis</h3>
+                <p>This section analyzes how the model utilized technical indicators.</p>
 """
 
     # Technical indicators overview plot
@@ -2264,11 +2296,11 @@ def generate_rsi_analysis_section_html(data_sources: Dict, model_tag: str) -> st
                 <h4>Technical Indicator Overview</h4>
                 <div class="chart-container">
                     <img src="{data_sources['plots']['technical_indicators']}" alt="Technical Indicators">
-                    <div class="chart-caption">Figure: Price action with RSI overlay and trading signals</div>
+                    <div class="chart-caption">Figure: Price action with available technical indicators and trading signals</div>
                 </div>
 """
 
-    # RSI performance analysis plot
+    # RSI performance analysis plot (only if RSI-specific analysis was generated)
     if "plots" in data_sources and "rsi_performance" in data_sources["plots"]:
         html += f"""
                 <h4>RSI Performance Analysis</h4>
@@ -2278,8 +2310,9 @@ def generate_rsi_analysis_section_html(data_sources: Dict, model_tag: str) -> st
                 </div>
 """
 
-    # Key insights
-    html += """
+    # Key insights (only if RSI-specific analysis was generated)
+    if "plots" in data_sources and "rsi_performance" in data_sources["plots"]:
+        html += """
                 <h4>Key RSI Insights</h4>
                 <ul>
                     <li><strong>Decision Distribution</strong>: How BUY/HOLD/SELL decisions correlate with RSI levels</li>
@@ -2288,6 +2321,11 @@ def generate_rsi_analysis_section_html(data_sources: Dict, model_tag: str) -> st
                     <li><strong>RSI Momentum</strong>: Performance based on RSI directional changes and momentum</li>
                 </ul>
                 <p><strong>RSI Strategy Effectiveness</strong>: RSI-based strategies provide momentum signals that complement trend and volatility indicators.</p>
+"""
+    elif "plots" in data_sources and "technical_indicators" in data_sources["plots"]:
+        html += """
+                <h4>Technical Indicator Analysis</h4>
+                <p>Technical indicators were included in this experiment. The overview plot above shows available indicators alongside price action and trading decisions.</p>
 """
 
     return html

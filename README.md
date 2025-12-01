@@ -204,9 +204,14 @@ Every commit is automatically checked by our CI/CD pipeline:
 
 ## 📈 Data Source
 
-**Stock data provided by Stooq**: Access financial data at [stooq.com](https://stooq.com/)
+**Data Sources**: The framework works with publicly available financial market data in standard CSV format.
 
-The framework is designed to work with any daily stock/index data. Modify `src/data_prep.py` to integrate your preferred data source.
+**Getting Data**:
+- **Yahoo Finance**: Use `yfinance` library (recommended for research)
+- **Alpha Vantage**: Free API with clear academic usage terms
+- **Any CSV**: With columns: Date, Open, High, Low, Close, Volume
+
+**Note**: Raw data files are not included in this repository. Users must obtain their own data sources for research and reproducibility.
 
 ---
 
@@ -507,7 +512,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🙏 Acknowledgments
 
 - **OpenRouter** for LLM API access
-- **Stooq** for providing historical financial data
+- **Open-source community** for financial data libraries and research tools
 
 ---
 

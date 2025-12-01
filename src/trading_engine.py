@@ -714,22 +714,35 @@ def run_single_model(
     # Create visualizations
     create_decision_pattern_plots(parsed_df, model_tag, plots_dir)
 
-    # Create RSI technical indicator plots
-    print("Generating RSI technical indicator plots...")
+    # Load features data for technical indicators analysis
     features_path = os.path.join(base_dir, "data", "processed", "features.csv")
     features_df = pd.read_csv(features_path, parse_dates=['date'])
 
-    # Technical indicators overview
-    technical_plot_path = os.path.join(plots_dir, f"{model_tag}_technical_indicators.png")
-    create_technical_indicators_plot(
-        features_df, parsed_df, model_tag, technical_plot_path
-    )
+    # Check if technical indicators are available
+    has_rsi = 'rsi_14' in features_df.columns
+    has_macd = 'macd_line' in features_df.columns
+    has_stoch = 'stoch_k' in features_df.columns
+    has_bb = 'bb_upper' in features_df.columns
 
-    # RSI performance analysis
-    rsi_plot_path = os.path.join(plots_dir, f"{model_tag}_rsi_performance.png")
-    create_rsi_performance_analysis(
-        parsed_df, features_df, model_tag, rsi_plot_path
-    )
+    # Create technical indicators plots (conditionally)
+    if has_rsi or has_macd or has_stoch or has_bb:
+        print("Generating technical indicators plots...")
+        technical_plot_path = os.path.join(plots_dir, f"{model_tag}_technical_indicators.png")
+        create_technical_indicators_plot(
+            features_df, parsed_df, model_tag, technical_plot_path
+        )
+    else:
+        print("Technical indicators plots skipped (no technical indicators enabled)")
+
+    # RSI performance analysis (only if RSI data available)
+    if has_rsi:
+        print("Generating RSI performance analysis...")
+        rsi_plot_path = os.path.join(plots_dir, f"{model_tag}_rsi_performance.png")
+        create_rsi_performance_analysis(
+            parsed_df, features_df, model_tag, rsi_plot_path
+        )
+    else:
+        print("RSI performance analysis skipped (RSI not enabled)")
 
     # Generate comprehensive report
     analysis_dir = os.path.join(base_dir, "results", "analysis")
