@@ -24,11 +24,21 @@ The LLM receives technical indicators, can maintain a strategic journal, and may
 ### How It Works
 The framework follows a systematic 5-step process:
 
-1. **📊 Data Preparation**: Load historical market data and compute technical indicators (RSI, moving averages, volatility, momentum)
+1. **📊 Data Preparation**: Load historical market data and compute comprehensive technical indicators (RSI, MACD, Stochastic Oscillator, Bollinger Bands, moving averages, volatility, momentum)
 2. **📝 Prompt Engineering**: Build context-rich prompts combining market data with optional memory (strategic journals), dates, and emotional state tracking
 3. **🤖 LLM Decision Making**: Query language models via OpenRouter API to generate BUY/HOLD/SELL decisions with confidence scores and explanations
 4. **📈 Backtesting Engine**: Simulate trading performance over historical periods, tracking returns, risk metrics, and position management
 5. **📋 Analysis & Reporting**: Generate comprehensive reports with statistical validation, behavioral pattern analysis, and performance comparisons
+
+### Technical Indicator Memory System**
+**Advanced context integration with historical technical analysis**
+
+The framework implements a sophisticated memory system that includes historical technical indicators alongside traditional memory components:
+
+- **📈 Current Day Analysis**: RSI, MACD, Stochastic Oscillator, and Bollinger Bands for immediate decision-making
+- **📅 Historical Context**: Daily memory entries include technical indicator values from past days for pattern recognition
+- **📊 Period Summaries**: Weekly, monthly, quarterly, and yearly summaries analyze technical indicator performance and trends
+- **🧠 Enhanced Learning**: LLMs can correlate technical signals across timeframes for improved decision quality
 
 ### Research Capabilities
 - **🧪 Compare LLMs vs Traditional Strategies**: Test any LLM against momentum, mean-reversion, volatility timing, and other proven approaches
@@ -457,8 +467,9 @@ print(f"LLM vs Index p-value: {validation['bootstrap_vs_index']['p_value']}")
 ## 🔬 Future Research Directions
 
 ### Immediate Extensions
-- **Technical Indicators**: Implement MACD and additional momentum oscillators (RSI now available) for richer market signals
-- **Enhanced Feature Engineering**: Improve prompt engineering with new technical indicators and market regime detection
+- **Win Rate Analysis**: Investigate HOLD decision calibration and win rate calculations for better performance assessment
+- **Technical Indicator Baselines**: Develop new baseline strategies using MACD, Stochastic, and Bollinger Bands signals
+- **Enhanced Feature Engineering**: Improve prompt engineering with market regime detection and advanced technical analysis
 - **Chain of Thoughts Reasoning**: Implement structured step-by-step reasoning prompts to improve LLM decision quality and explainability
 - **Ensemble Methods**: Combine multiple LLM predictions for improved decision quality
 - **Data Frequency Analysis**: Extend beyond daily data to intraday trading decisions

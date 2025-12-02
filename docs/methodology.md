@@ -91,6 +91,46 @@ HOLD positions are evaluated using two complementary criteria:
 overall_score = (0.6 × quiet_success) + (0.4 × context_correctness)
 ```
 
+## 🤖 Behavioral Analysis Framework
+
+The framework includes systematic behavioral pattern detection to assess whether LLMs manifest human-like trading biases:
+
+### Decision Pattern Analysis
+Examines how LLMs respond to prior outcomes and tests for systematic behavioral tendencies:
+
+**Win/Loss Response Patterns:**
+```python
+df["previous_outcome"] = df["previous_return"].apply(
+    lambda x: "win" if x > 0 else ("loss" if x < 0 else "neutral")
+)
+```
+
+**Behavioral Metrics:**
+- Decision distribution after wins vs. losses (BUY/HOLD/SELL percentages)
+- Confidence modulation following different outcomes
+- Statistical significance of behavioral differences
+
+### Confidence Calibration Assessment
+Evaluates whether LLM probability estimates align with actual outcome frequencies:
+
+**Calibration Metrics:**
+- **Expected Calibration Error (ECE)**: Mean absolute difference between predicted and actual win rates
+- **Maximum Calibration Error**: Largest calibration deviation
+- **Overconfidence Assessment**: Systematic over/under-estimation patterns
+
+### Market Regime Adaptation
+Assesses LLM performance consistency across different market conditions:
+
+**Regime Classification:**
+- Low volatility: Below median 20-day volatility
+- Moderate volatility: Median to 75th percentile
+- High volatility: Above 75th percentile
+
+**Performance by Regime:**
+- Risk-adjusted returns within each volatility regime
+- Win rates across market conditions
+- Adaptation patterns during market stress
+
 ## 📈 Performance Metrics
 
 ### Primary Metrics
@@ -154,6 +194,7 @@ max_drawdown = min(cumulative_returns - running_maximum)
 #### Independent Variables
 - **Memory Context**: None, Journal, Journal + Feelings, Optional Full Trading History
 - **Temporal Awareness**: Anonymized vs Real Dates
+- **Technical Indicators**: RSI, MACD, Stochastic, Bollinger Bands (configurable inclusion)
 - **LLM Architecture**: Different model families and sizes
 
 #### Data Leakage Controls
@@ -193,7 +234,13 @@ max_drawdown = min(cumulative_returns - running_maximum)
 - **Frequency**: Daily trading data
 
 ### Feature Engineering
-The current implementation includes basic price-based and momentum features:
+The implementation includes comprehensive technical indicators alongside basic price-based and momentum features:
+
+**Core Technical Indicators:**
+- **RSI (Relative Strength Index)**: Momentum oscillator (0-100 scale)
+- **MACD (Moving Average Convergence Divergence)**: Trend momentum with signal line and histogram
+- **Stochastic Oscillator**: Momentum timing indicator (0-100 scale)
+- **Bollinger Bands**: Volatility-based support/resistance levels
 
 ```python
 # Daily returns
@@ -211,11 +258,24 @@ df["ret_5d"] = df["return_1d"].rolling(RET_5D_WINDOW).sum()  # 5-day momentum
 daily_vol_20 = df["return_1d"].rolling(VOL20_WINDOW).std()
 df["vol20_annualized"] = daily_vol_20 * np.sqrt(252)  # Annualized volatility
 
+# Advanced Technical Indicators (always calculated)
+df["rsi_14"] = compute_rsi(df["close"], RSI_WINDOW)
+macd_line, macd_signal, macd_hist = compute_macd(df["close"], MACD_FAST, MACD_SLOW, MACD_SIGNAL)
+df["macd_line"] = macd_line
+df["macd_signal"] = macd_signal
+df["macd_histogram"] = macd_hist
+stoch_k, stoch_d = compute_stochastic(df["high"], df["low"], df["close"], STOCH_K, STOCH_D, STOCH_SMOOTH_K)
+df["stoch_k"] = stoch_k
+df["stoch_d"] = stoch_d
+bb_upper, bb_middle, bb_lower = compute_bollinger_bands(df["close"], BB_WINDOW, BB_STD)
+df["bb_upper"] = bb_upper
+df["bb_middle"] = bb_middle
+df["bb_lower"] = bb_lower
+df["bb_position"] = (df["close"] - bb_lower) / (bb_upper - bb_lower)
+
 # Target variable
 df["next_return_1d"] = df["return_1d"].shift(-1)  # Next day's return
 ```
-
-**Note**: Advanced technical indicators (RSI, MACD, Bollinger Bands) are not currently implemented.
 
 ### Data Quality Checks
 - **Missing data**: Remove rows with NaN values (df.dropna())
@@ -224,6 +284,18 @@ df["next_return_1d"] = df["return_1d"].shift(-1)  # Next day's return
 - **Feature completeness**: Drop incomplete feature rows
 
 ## 📋 Implementation Details
+
+### Software Architecture
+The framework implements a modular Python architecture with specialized modules for each stage of the evaluation pipeline:
+
+- **`main.py`**: Orchestrates the complete evaluation pipeline from data to results
+- **`data_prep.py`**: Loads Stooq CSV data, computes comprehensive technical indicators (RSI, MACD, Stochastic, Bollinger Bands)
+- **`prompts.py`**: Generates context-rich prompts with hierarchical memory integration
+- **`trading_engine.py`**: Manages OpenRouter API calls and temporal memory systems
+- **`backtest.py`**: Calculates Sharpe ratios, drawdowns, and equity curves
+- **`statistical_validation.py`**: Implements bootstrap testing with 10,000 resamples
+- **`decision_analysis.py`**: Detects behavioral biases, confidence calibration, and market regime analysis
+- **`reporting.py`**: Generates matplotlib visualizations and markdown reports
 
 ### Position Management
 - **BUY**: +1.0 (long position)

@@ -56,7 +56,7 @@ TEST_LIMIT = 15  # Number of days to run when TEST_MODE = True
 # When enabled: LLM sees RSI + MACD + Stochastic + Bollinger Bands
 # When disabled: LLM sees only RSI rules (no indicator values)
 # Note: Indicators are always calculated for baselines and analysis
-ENABLE_TECHNICAL_INDICATORS = False
+ENABLE_TECHNICAL_INDICATORS = True
 
 # TRADING HISTORY CONTEXT
 # -----------------------
