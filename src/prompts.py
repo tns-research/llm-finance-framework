@@ -111,6 +111,14 @@ def build_prompts(features_path: str, prompts_path: str) -> pd.DataFrame:
                 "date": row["date"],
                 "prompt_text": prompt_text,
                 "next_return_1d": row["next_return_1d"],
+                # Include technical indicators (always calculated)
+                "rsi_14": row.get("rsi_14"),
+                "macd_line": row.get("macd_line"),
+                "macd_signal": row.get("macd_signal"),
+                "macd_histogram": row.get("macd_histogram"),
+                "stoch_k": row.get("stoch_k"),
+                "stoch_d": row.get("stoch_d"),
+                "bb_position": row.get("bb_position"),
             }
         )
 

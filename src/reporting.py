@@ -82,12 +82,78 @@ def build_period_summary(period_label: str, end_date, stats: dict) -> str:
     )
 
 
+def compute_period_technical_stats(features_df: pd.DataFrame, start_date, end_date) -> dict:
+    """
+    Compute technical indicator statistics for a time period.
+
+    This function calculates period-level summaries of technical indicators
+    to provide rich context to the LLM for memory/reflection purposes.
+    Only includes statistics when data is available and valid.
+
+    Args:
+        features_df: DataFrame with technical indicator columns
+        start_date: Start date of the period (inclusive)
+        end_date: End date of the period (inclusive)
+
+    Returns:
+        dict: Technical indicator statistics for the period
+    """
+    # Filter data for the period
+    period_data = features_df[
+        (features_df['date'] >= start_date) &
+        (features_df['date'] <= end_date)
+    ].copy()
+
+    stats = {}
+
+    # RSI Statistics
+    if 'rsi_14' in period_data.columns:
+        rsi_valid = period_data['rsi_14'].dropna()
+        if len(rsi_valid) > 0:
+            stats['rsi_avg'] = rsi_valid.mean()
+            stats['rsi_overbought_pct'] = (rsi_valid > 70).sum() / len(rsi_valid) * 100
+            stats['rsi_oversold_pct'] = (rsi_valid < 30).sum() / len(rsi_valid) * 100
+            stats['rsi_min'] = rsi_valid.min()
+            stats['rsi_max'] = rsi_valid.max()
+
+    # MACD Statistics
+    if 'macd_histogram' in period_data.columns:
+        hist_valid = period_data['macd_histogram'].dropna()
+        if len(hist_valid) > 0:
+            stats['macd_bullish_pct'] = (hist_valid > 0).sum() / len(hist_valid) * 100
+            stats['macd_avg_histogram'] = hist_valid.mean()
+            # Count signal line crossovers (histogram changes sign)
+            hist_sign_changes = ((hist_valid > 0) != (hist_valid.shift(1) > 0)).sum()
+            stats['macd_crossovers'] = hist_sign_changes
+
+    # Stochastic Statistics
+    if 'stoch_k' in period_data.columns:
+        stoch_valid = period_data['stoch_k'].dropna()
+        if len(stoch_valid) > 0:
+            stats['stoch_overbought_pct'] = (stoch_valid > 80).sum() / len(stoch_valid) * 100
+            stats['stoch_oversold_pct'] = (stoch_valid < 20).sum() / len(stoch_valid) * 100
+            stats['stoch_min'] = stoch_valid.min()
+            stats['stoch_max'] = stoch_valid.max()
+
+    # Bollinger Bands Statistics
+    if 'bb_position' in period_data.columns:
+        bb_valid = period_data['bb_position'].dropna()
+        if len(bb_valid) > 0:
+            # Near upper band (position > 0.95) or near lower band (position < 0.05)
+            stats['bb_upper_touch_pct'] = (bb_valid > 0.95).sum() / len(bb_valid) * 100
+            stats['bb_lower_touch_pct'] = (bb_valid < 0.05).sum() / len(bb_valid) * 100
+            stats['bb_avg_position'] = bb_valid.mean()
+
+    return stats
+
+
 def generate_llm_period_summary(
     period_label: str,
     end_date,
     stats: dict,
     router_model: str,
     model_tag: str,
+    technical_stats: dict = None,
 ) -> str:
     """
     Use the LLM itself to write a weekly, monthly, quarterly or yearly journal
@@ -130,9 +196,49 @@ def generate_llm_period_summary(
             f"The strategy {outperform_word} the index by {edge:.2f} percent over {days} days."
         )
 
+        # Add technical analysis to explanation if available
+        if technical_stats:
+            if 'rsi_avg' in technical_stats:
+                explanation += f" RSI averaged {technical_stats['rsi_avg']:.1f} with {technical_stats['rsi_overbought_pct']:.1f}% overbought days."
+            if 'macd_bullish_pct' in technical_stats:
+                explanation += f" MACD was bullish {technical_stats['macd_bullish_pct']:.1f}% of the time."
+            if 'stoch_overbought_pct' in technical_stats:
+                explanation += f" Stochastic showed {technical_stats['stoch_overbought_pct']:.1f}% overbought conditions."
+            if 'bb_upper_touch_pct' in technical_stats:
+                explanation += f" Price touched Bollinger upper band on {technical_stats['bb_upper_touch_pct']:.1f}% of days."
+
         journal = (
             f"During this period you traded BUY {buys} times, HOLD {holds} times, SELL {sells} times, "
             f"with a win rate of {win_rate:.1f} percent on daily returns. "
+        )
+
+        # Add technical analysis to strategic journal if available
+        if technical_stats:
+            journal += "Technical indicators provided "
+            tech_signals = []
+
+            if 'rsi_avg' in technical_stats:
+                rsi_signal = "bullish signals" if technical_stats['rsi_avg'] < 50 else "bearish signals"
+                tech_signals.append(f"RSI {rsi_signal}")
+
+            if 'macd_bullish_pct' in technical_stats:
+                macd_signal = "mostly bullish momentum" if technical_stats['macd_bullish_pct'] > 50 else "mostly bearish momentum"
+                tech_signals.append(f"MACD showing {macd_signal}")
+
+            if 'stoch_overbought_pct' in technical_stats:
+                stoch_signal = "frequent overbought conditions" if technical_stats['stoch_overbought_pct'] > 20 else "limited overbought conditions"
+                tech_signals.append(f"Stochastic with {stoch_signal}")
+
+            if 'bb_upper_touch_pct' in technical_stats:
+                bb_signal = "frequent band touches" if technical_stats['bb_upper_touch_pct'] + technical_stats['bb_lower_touch_pct'] > 10 else "rare band extremes"
+                tech_signals.append(f"Bollinger Bands with {bb_signal}")
+
+            if tech_signals:
+                journal += f"mixed signals: {', '.join(tech_signals)}. "
+            else:
+                journal += "consistent signals. "
+
+        journal += (
             "Reflect on whether your positioning matched the prevailing trend and volatility, "
             "and whether your risk management was consistent."
         )
@@ -162,6 +268,40 @@ def generate_llm_period_summary(
         date_info = ""  # No date information sent to LLM in anonymized mode
         period_desc = f"You are summarizing a completed {period_label} (time period anonymized).\n\n"
 
+    # Add technical indicators section if available
+    technical_info = ""
+    if technical_stats:
+        technical_info = "\nTechnical indicators summary for this period:\n"
+
+        if 'rsi_avg' in technical_stats:
+            technical_info += (
+                f"- RSI(14): Average {technical_stats['rsi_avg']:.1f}, "
+                f"{technical_stats['rsi_overbought_pct']:.1f}% overbought days (>70), "
+                f"{technical_stats['rsi_oversold_pct']:.1f}% oversold days (<30), "
+                f"range {technical_stats['rsi_min']:.1f}-{technical_stats['rsi_max']:.1f}\n"
+            )
+
+        if 'macd_bullish_pct' in technical_stats:
+            technical_info += (
+                f"- MACD(12,26,9): {technical_stats['macd_bullish_pct']:.1f}% bullish periods, "
+                f"avg histogram {technical_stats['macd_avg_histogram']:.3f}, "
+                f"{technical_stats.get('macd_crossovers', 0)} signal crossovers\n"
+            )
+
+        if 'stoch_overbought_pct' in technical_stats:
+            technical_info += (
+                f"- Stochastic(14,3): {technical_stats['stoch_overbought_pct']:.1f}% overbought days (>80), "
+                f"{technical_stats['stoch_oversold_pct']:.1f}% oversold days (<20), "
+                f"range {technical_stats['stoch_min']:.1f}-{technical_stats['stoch_max']:.1f}\n"
+            )
+
+        if 'bb_upper_touch_pct' in technical_stats:
+            technical_info += (
+                f"- Bollinger Bands(20,2): {technical_stats['bb_upper_touch_pct']:.1f}% days touched upper band, "
+                f"{technical_stats['bb_lower_touch_pct']:.1f}% touched lower band, "
+                f"avg position {technical_stats['bb_avg_position']:.2f}\n"
+            )
+
     user_message = (
         f"{period_desc}"
         f"Period information\n"
@@ -174,7 +314,8 @@ def generate_llm_period_summary(
         f"- Number of BUY decisions  {buys}\n"
         f"- Number of HOLD decisions  {holds}\n"
         f"- Number of SELL decisions  {sells}\n"
-        f"- Daily win rate  {win_rate:.1f} percent\n\n"
+        f"- Daily win rate  {win_rate:.1f} percent"
+        f"{technical_info}\n\n"
         "Write a reflection journal for this period. Do not include any dates or calendar references. Use only the numerical information provided."
     )
 

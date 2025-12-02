@@ -2251,16 +2251,16 @@ def generate_rsi_analysis_section(data_sources: Dict, model_tag: str) -> List[st
     # Key insights (conditional based on what analysis was performed)
     if "plots" in data_sources and "rsi_performance" in data_sources["plots"]:
         section.extend([
-            "#### Key RSI Insights",
-            "",
-            "- **Decision Distribution**: How BUY/HOLD/SELL decisions correlate with RSI levels",
-            "- **Performance by RSI Range**: Win rates across different RSI ranges (0-30, 30-70, 70-100)",
-            "- **Winning vs Losing Trades**: RSI distribution comparison between profitable and unprofitable trades",
-            "- **RSI Momentum**: Performance based on RSI directional changes and momentum",
-            "",
-            "**RSI Strategy Effectiveness**: RSI-based strategies provide momentum signals that complement trend and volatility indicators.",
-            "",
-        ])
+        "#### Key RSI Insights",
+        "",
+        "- **Decision Distribution**: How BUY/HOLD/SELL decisions correlate with RSI levels",
+        "- **Performance by RSI Range**: Win rates across different RSI ranges (0-30, 30-70, 70-100)",
+        "- **Winning vs Losing Trades**: RSI distribution comparison between profitable and unprofitable trades",
+        "- **RSI Momentum**: Performance based on RSI directional changes and momentum",
+        "",
+        "**RSI Strategy Effectiveness**: RSI-based strategies provide momentum signals that complement trend and volatility indicators.",
+        "",
+    ])
     elif "plots" in data_sources and "technical_indicators" in data_sources["plots"]:
         section.extend([
             "#### Technical Indicator Analysis",

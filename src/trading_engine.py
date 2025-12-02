@@ -13,6 +13,7 @@ from .config import (
     SHOW_DATE_TO_LLM,
     ENABLE_STRATEGIC_JOURNAL,
     ENABLE_FULL_TRADING_HISTORY,
+    ENABLE_TECHNICAL_INDICATORS,
 )
 from .backtest import parse_response_text, backtest_model, save_parsed_results
 from .dummy_model import dummy_call_model
@@ -20,6 +21,7 @@ from .openrouter_model import call_openrouter
 from .reporting import (
     make_empty_stats,
     generate_llm_period_summary,
+    compute_period_technical_stats,
     create_calibration_plot,
     create_calibration_by_decision_plot,
     generate_calibration_analysis_report,
@@ -104,17 +106,44 @@ def format_journal_entry(trade_data, current_date, show_dates):
         relative_label = get_relative_time_label(trade_data["date"], current_date)
         entry_prefix = f"{relative_label}: "
 
-    return (
+    base_entry = (
         entry_prefix
         + f"action {trade_data['decision']} (prob {trade_data['prob']:.2f}), "
         f"next day index return {trade_data['next_return_1d']:.2f} percent, "
         f"strategy return {trade_data['strategy_return']:.2f} percent, "
         f"cumulative strategy return {trade_data['cumulative_return']:.2f} percent, "
-        f"cumulative index return {trade_data['index_cumulative_return']:.2f} percent. "
-        f"Explanation: {trade_data['explanation']} "
-        f"Strategic journal: {trade_data['strategic_journal']} "
-        f"Feeling: {trade_data['feeling_log']}"
+        f"cumulative index return {trade_data['index_cumulative_return']:.2f} percent."
     )
+
+    # Add technical indicators if available and enabled
+    if ENABLE_TECHNICAL_INDICATORS and "rsi_14" in trade_data:
+        tech_indicators = []
+
+        if trade_data.get("rsi_14") is not None and not pd.isna(trade_data["rsi_14"]):
+            tech_indicators.append(f"RSI(14): {trade_data['rsi_14']:.1f}")
+
+        if (trade_data.get("macd_line") is not None and
+            trade_data.get("macd_signal") is not None and
+            trade_data.get("macd_histogram") is not None and
+            not any(pd.isna([trade_data["macd_line"], trade_data["macd_signal"], trade_data["macd_histogram"]]))):
+            tech_indicators.append(
+                f"MACD: {trade_data['macd_line']:.2f}/{trade_data['macd_signal']:.2f}/{trade_data['macd_histogram']:.3f}"
+            )
+
+        if (trade_data.get("stoch_k") is not None and
+            trade_data.get("stoch_d") is not None and
+            not any(pd.isna([trade_data["stoch_k"], trade_data["stoch_d"]]))):
+            tech_indicators.append(f"Stochastic: {trade_data['stoch_k']:.1f}/{trade_data['stoch_d']:.1f}")
+
+        if trade_data.get("bb_position") is not None and not pd.isna(trade_data["bb_position"]):
+            tech_indicators.append(f"BB Position: {trade_data['bb_position']:.2f}")
+
+        if tech_indicators:
+            base_entry += f" Technical indicators: {' | '.join(tech_indicators)}."
+
+    base_entry += f" Explanation: {trade_data['explanation']} Strategic journal: {trade_data['strategic_journal']} Feeling: {trade_data['feeling_log']}"
+
+    return base_entry
 
 
 def run_single_model(
@@ -124,6 +153,9 @@ def run_single_model(
     Run one model over all prompts with its own strategic journal,
     save results, backtest, and print final performance summary.
     """
+
+    # Define base directory for file paths
+    base_dir = os.path.dirname(os.path.dirname(__file__))
 
     print("\n" + "#" * 80)
     print(f"Running model: {model_tag}  (router id: {router_model})")
@@ -204,12 +236,22 @@ def run_single_model(
             # Week boundary
             if iso_week != prev_iso_week or iso_year != prev_iso_year:
                 if week_stats["days"] > 0:
+                    technical_stats = None
+                    if ENABLE_TECHNICAL_INDICATORS:
+                        # Load features data to compute technical stats for the week
+                        features_path = os.path.join(base_dir, "data", "processed", "features.csv")
+                        features_df = pd.read_csv(features_path, parse_dates=['date'])
+                        technical_stats = compute_period_technical_stats(
+                            features_df, last_date - pd.Timedelta(days=6), last_date
+                        )
+
                     summary = generate_llm_period_summary(
                         "Week",
                         last_date,
                         week_stats,
                         router_model,
                         model_tag,
+                        technical_stats,
                     )
                     weekly_memory.append(summary)
                     weekly_memory = weekly_memory[-5:]  # keep last 5
@@ -218,12 +260,22 @@ def run_single_model(
             # Month boundary
             if month != prev_month or year != prev_year:
                 if month_stats["days"] > 0:
+                    technical_stats = None
+                    if ENABLE_TECHNICAL_INDICATORS:
+                        # Load features data to compute technical stats for the month
+                        features_path = os.path.join(base_dir, "data", "processed", "features.csv")
+                        features_df = pd.read_csv(features_path, parse_dates=['date'])
+                        technical_stats = compute_period_technical_stats(
+                            features_df, last_date - pd.Timedelta(days=30), last_date
+                        )
+
                     summary = generate_llm_period_summary(
                         "Month",
                         last_date,
                         month_stats,
                         router_model,
                         model_tag,
+                        technical_stats,
                     )
                     monthly_memory.append(summary)
                     monthly_memory = monthly_memory[-5:]
@@ -232,12 +284,22 @@ def run_single_model(
             # Quarter boundary
             if quarter != prev_quarter or year != prev_year:
                 if quarter_stats["days"] > 0:
+                    technical_stats = None
+                    if ENABLE_TECHNICAL_INDICATORS:
+                        # Load features data to compute technical stats for the quarter
+                        features_path = os.path.join(base_dir, "data", "processed", "features.csv")
+                        features_df = pd.read_csv(features_path, parse_dates=['date'])
+                        technical_stats = compute_period_technical_stats(
+                            features_df, last_date - pd.Timedelta(days=90), last_date
+                        )
+
                     summary = generate_llm_period_summary(
                         "Quarter",
                         last_date,
                         quarter_stats,
                         router_model,
                         model_tag,
+                        technical_stats,
                     )
                     quarterly_memory.append(summary)
                     quarterly_memory = quarterly_memory[-5:]
@@ -246,12 +308,22 @@ def run_single_model(
             # Year boundary
             if year != prev_year:
                 if year_stats["days"] > 0:
+                    technical_stats = None
+                    if ENABLE_TECHNICAL_INDICATORS:
+                        # Load features data to compute technical stats for the year
+                        features_path = os.path.join(base_dir, "data", "processed", "features.csv")
+                        features_df = pd.read_csv(features_path, parse_dates=['date'])
+                        technical_stats = compute_period_technical_stats(
+                            features_df, last_date - pd.Timedelta(days=365), last_date
+                        )
+
                     summary = generate_llm_period_summary(
                         "Year",
                         last_date,
                         year_stats,
                         router_model,
                         model_tag,
+                        technical_stats,
                     )
                     yearly_memory.append(summary)
                     yearly_memory = yearly_memory[-5:]
@@ -556,6 +628,18 @@ def run_single_model(
             "feeling_log": feeling_log,
         }
 
+        # Add technical indicators to trade data when enabled
+        if ENABLE_TECHNICAL_INDICATORS:
+            trade_data.update({
+                "rsi_14": row.get("rsi_14"),
+                "macd_line": row.get("macd_line"),
+                "macd_signal": row.get("macd_signal"),
+                "macd_histogram": row.get("macd_histogram"),
+                "stoch_k": row.get("stoch_k"),
+                "stoch_d": row.get("stoch_d"),
+                "bb_position": row.get("bb_position"),
+            })
+
         journal_entries.append(trade_data)
 
         # Accumulate full trading history for future prompts
@@ -625,7 +709,6 @@ def run_single_model(
         print(feeling_log)
 
     # Save parsed results and run backtest unchanged
-    base_dir = os.path.dirname(os.path.dirname(__file__))
     parsed_results_path = os.path.join(
         base_dir, "results", "parsed", f"{model_tag}_parsed.csv"
     )

@@ -43,7 +43,7 @@ DATA_END = "2023-12-31"  # End date for historical data
 # TEST vs FULL RUN
 # ----------------
 TEST_MODE = True  # Set to True for quick tests, False for full experiments
-TEST_LIMIT = 50  # Number of days to run when TEST_MODE = True
+TEST_LIMIT = 15  # Number of days to run when TEST_MODE = True
 # Set TEST_MODE = False for complete ~2700 day analysis
 
 # =================================================================================
@@ -56,7 +56,7 @@ TEST_LIMIT = 50  # Number of days to run when TEST_MODE = True
 # When enabled: LLM sees RSI + MACD + Stochastic + Bollinger Bands
 # When disabled: LLM sees only RSI rules (no indicator values)
 # Note: Indicators are always calculated for baselines and analysis
-ENABLE_TECHNICAL_INDICATORS = True
+ENABLE_TECHNICAL_INDICATORS = False
 
 # TRADING HISTORY CONTEXT
 # -----------------------
@@ -366,7 +366,14 @@ The user message will give you:
 - the strategy total return for that period
 - the index total return for that period
 - the number of winning days
-- the number of BUY, HOLD, and SELL decisions
+- the number of BUY, HOLD, and SELL decisions"""
+
+    # Add technical indicators info when enabled
+    if ENABLE_TECHNICAL_INDICATORS:
+        base_prompt += """
+- Technical indicators summary for this period (averages and key statistics)"""
+
+    base_prompt += """
 
 Write your answer in"""
 
@@ -375,25 +382,66 @@ Write your answer in"""
 
 Explanation:
 Summarize how the market behaved during this period and how the strategy performed relative to the index.
-Mention whether the strategy outperformed or underperformed and how large the difference was.
+Mention whether the strategy outperformed or underperformed and how large the difference was."""
+
+        if ENABLE_TECHNICAL_INDICATORS:
+            sections += """
+Analyze how technical indicators behaved during this period."""
+
+        sections += """
 
 Strategic journal:
-Reflect on what worked or failed in your decision making and risk management during this period.
+Reflect on what worked or failed in your decision making and risk management during this period."""
+
+        if ENABLE_TECHNICAL_INDICATORS:
+            sections += """
+Consider whether technical indicators provided useful signals or conflicting information."""
+
+        sections += """
 Mention any biases, patterns, or adjustments that you should consider for future periods.
 
 Feeling log:
 Describe how you "feel" about this period (for example confident, cautious, frustrated, relieved),
 linking these feelings to the performance and the quality of your decisions."""
+
+        if ENABLE_TECHNICAL_INDICATORS:
+            sections += """
+Consider how technical indicator behavior influenced your emotional state."""
+
     else:
         sections = """ two clearly separated sections, in plain English:
 
 Explanation:
 Summarize how the market behaved during this period and how the strategy performed relative to the index.
-Mention whether the strategy outperformed or underperformed and how large the difference was.
+Mention whether the strategy outperformed or underperformed and how large the difference was."""
+
+        if ENABLE_TECHNICAL_INDICATORS:
+            sections += """
+Analyze how technical indicators behaved during this period."""
+
+        sections += """
 
 Strategic journal:
-Reflect on what worked or failed in your decision making and risk management during this period.
+Reflect on what worked or failed in your decision making and risk management during this period."""
+
+        if ENABLE_TECHNICAL_INDICATORS:
+            sections += """
+Consider whether technical indicators provided useful signals or conflicting information."""
+
+        sections += """
 Mention any biases, patterns, or adjustments that you should consider for future periods."""
+
+    # Add technical indicator interpretation guidelines when enabled
+    if ENABLE_TECHNICAL_INDICATORS:
+        sections += """
+
+When analyzing technical indicators in your reflection:
+- RSI(14): Values >70 indicate overbought conditions, <30 indicate oversold conditions
+- MACD: Positive histogram suggests bullish momentum, negative suggests bearish
+- Stochastic(14,3): Values >80 indicate overbought, <20 indicate oversold
+- Bollinger Bands: Price near upper band suggests potential reversal, near lower band suggests potential bounce
+
+Consider how these indicators performed during the period and whether they aligned with your trading decisions."""
 
     closing = """
 
