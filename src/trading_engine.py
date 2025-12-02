@@ -43,6 +43,53 @@ from .decision_analysis import (
 from .baseline_runner import run_baseline_analysis
 
 
+def format_period_technical_indicators(technical_stats: dict, period_name: str) -> str:
+    """Format aggregated technical indicators for memory display."""
+    if not technical_stats:
+        return ""
+
+    lines = []
+
+    # RSI
+    if 'rsi_avg' in technical_stats:
+        rsi_parts = [f"Average {technical_stats['rsi_avg']:.1f}"]
+        if 'rsi_overbought_pct' in technical_stats:
+            rsi_parts.append(f"{technical_stats['rsi_overbought_pct']:.0f}% overbought")
+        if 'rsi_oversold_pct' in technical_stats:
+            rsi_parts.append(f"{technical_stats['rsi_oversold_pct']:.0f}% oversold")
+        if 'rsi_min' in technical_stats and 'rsi_max' in technical_stats:
+            rsi_parts.append(f"range {technical_stats['rsi_min']:.1f}-{technical_stats['rsi_max']:.1f}")
+        lines.append(f"RSI(14): {' ('.join(rsi_parts)})")
+
+    # MACD
+    if 'macd_bullish_pct' in technical_stats:
+        macd_parts = [f"{technical_stats['macd_bullish_pct']:.0f}% bullish periods"]
+        if 'macd_avg_histogram' in technical_stats:
+            macd_parts.append(f"avg histogram {technical_stats['macd_avg_histogram']:.3f}")
+        if 'macd_crossovers' in technical_stats and technical_stats['macd_crossovers'] > 0:
+            macd_parts.append(f"{technical_stats['macd_crossovers']} crossovers")
+        lines.append(f"MACD: {', '.join(macd_parts)}")
+
+    # Stochastic
+    if 'stoch_overbought_pct' in technical_stats:
+        stoch_parts = [f"{technical_stats['stoch_overbought_pct']:.0f}% overbought days"]
+        if 'stoch_oversold_pct' in technical_stats:
+            stoch_parts.append(f"{technical_stats['stoch_oversold_pct']:.0f}% oversold days")
+        lines.append(f"Stochastic: {', '.join(stoch_parts)}")
+
+    # Bollinger Bands
+    if 'bb_avg_position' in technical_stats:
+        bb_parts = [f"Avg position {technical_stats['bb_avg_position']:.2f}"]
+        if 'bb_upper_touch_pct' in technical_stats and 'bb_lower_touch_pct' in technical_stats:
+            total_touches = technical_stats['bb_upper_touch_pct'] + technical_stats['bb_lower_touch_pct']
+            bb_parts.append(f"band touches {total_touches:.0f}%")
+        lines.append(f"Bollinger Bands: {', '.join(bb_parts)}")
+
+    if lines:
+        return f"\n\n{period_name} technical indicators:\n" + "\n".join(lines) + "\n"
+    return ""
+
+
 def get_relative_time_label(past_date, current_date):
     """
     Calculate relative time label for journal entries in 'no date' mode.
@@ -253,7 +300,10 @@ def run_single_model(
                         model_tag,
                         technical_stats,
                     )
-                    weekly_memory.append(summary)
+                    weekly_memory.append({
+                        "summary": summary,
+                        "technical_stats": technical_stats
+                    })
                     weekly_memory = weekly_memory[-5:]  # keep last 5
                     week_stats = make_empty_stats()
 
@@ -277,7 +327,10 @@ def run_single_model(
                         model_tag,
                         technical_stats,
                     )
-                    monthly_memory.append(summary)
+                    monthly_memory.append({
+                        "summary": summary,
+                        "technical_stats": technical_stats
+                    })
                     monthly_memory = monthly_memory[-5:]
                     month_stats = make_empty_stats()
 
@@ -301,7 +354,10 @@ def run_single_model(
                         model_tag,
                         technical_stats,
                     )
-                    quarterly_memory.append(summary)
+                    quarterly_memory.append({
+                        "summary": summary,
+                        "technical_stats": technical_stats
+                    })
                     quarterly_memory = quarterly_memory[-5:]
                     quarter_stats = make_empty_stats()
 
@@ -325,7 +381,10 @@ def run_single_model(
                         model_tag,
                         technical_stats,
                     )
-                    yearly_memory.append(summary)
+                    yearly_memory.append({
+                        "summary": summary,
+                        "technical_stats": technical_stats
+                    })
                     yearly_memory = yearly_memory[-5:]
                     year_stats = make_empty_stats()
 
@@ -372,7 +431,7 @@ def run_single_model(
         if weekly_memory:
             # Add relative time labels to weekly summaries (most recent first)
             labeled_weekly = []
-            for i, summary in enumerate(
+            for i, memory_item in enumerate(
                 weekly_memory[::-1]
             ):  # Reverse to get most recent first
                 weeks_ago = i + 1
@@ -380,7 +439,16 @@ def run_single_model(
                     label = "1 week ago"
                 else:
                     label = f"{weeks_ago} weeks ago"
-                labeled_weekly.append(f"{label}:\n{summary}")
+
+                # Handle both new dict format and old string format for backward compatibility
+                if isinstance(memory_item, dict):
+                    memory_text = f"{label}:\n{memory_item['summary']}"
+                    memory_text += format_period_technical_indicators(memory_item['technical_stats'], "Weekly")
+                else:
+                    # Backward compatibility: old string format
+                    memory_text = f"{label}:\n{memory_item}"
+
+                labeled_weekly.append(memory_text)
             weekly_block = "Weekly memory (most recent first)\n" + "\n\n".join(
                 labeled_weekly
             )
@@ -390,7 +458,7 @@ def run_single_model(
         if monthly_memory:
             # Add relative time labels to monthly summaries (most recent first)
             labeled_monthly = []
-            for i, summary in enumerate(
+            for i, memory_item in enumerate(
                 monthly_memory[::-1]
             ):  # Reverse to get most recent first
                 months_ago = i + 1
@@ -398,7 +466,16 @@ def run_single_model(
                     label = "1 month ago"
                 else:
                     label = f"{months_ago} months ago"
-                labeled_monthly.append(f"{label}:\n{summary}")
+
+                # Handle both new dict format and old string format for backward compatibility
+                if isinstance(memory_item, dict):
+                    memory_text = f"{label}:\n{memory_item['summary']}"
+                    memory_text += format_period_technical_indicators(memory_item['technical_stats'], "Monthly")
+                else:
+                    # Backward compatibility: old string format
+                    memory_text = f"{label}:\n{memory_item}"
+
+                labeled_monthly.append(memory_text)
             monthly_block = "Monthly memory (most recent first)\n" + "\n\n".join(
                 labeled_monthly
             )
@@ -408,7 +485,7 @@ def run_single_model(
         if quarterly_memory:
             # Add relative time labels to quarterly summaries (most recent first)
             labeled_quarterly = []
-            for i, summary in enumerate(
+            for i, memory_item in enumerate(
                 quarterly_memory[::-1]
             ):  # Reverse to get most recent first
                 quarters_ago = i + 1
@@ -416,7 +493,16 @@ def run_single_model(
                     label = "1 quarter ago"
                 else:
                     label = f"{quarters_ago} quarters ago"
-                labeled_quarterly.append(f"{label}:\n{summary}")
+
+                # Handle both new dict format and old string format for backward compatibility
+                if isinstance(memory_item, dict):
+                    memory_text = f"{label}:\n{memory_item['summary']}"
+                    memory_text += format_period_technical_indicators(memory_item['technical_stats'], "Quarterly")
+                else:
+                    # Backward compatibility: old string format
+                    memory_text = f"{label}:\n{memory_item}"
+
+                labeled_quarterly.append(memory_text)
             quarterly_block = "Quarterly memory (most recent first)\n" + "\n\n".join(
                 labeled_quarterly
             )
@@ -426,7 +512,7 @@ def run_single_model(
         if yearly_memory:
             # Add relative time labels to yearly summaries (most recent first)
             labeled_yearly = []
-            for i, summary in enumerate(
+            for i, memory_item in enumerate(
                 yearly_memory[::-1]
             ):  # Reverse to get most recent first
                 years_ago = i + 1
@@ -434,7 +520,16 @@ def run_single_model(
                     label = "1 year ago"
                 else:
                     label = f"{years_ago} years ago"
-                labeled_yearly.append(f"{label}:\n{summary}")
+
+                # Handle both new dict format and old string format for backward compatibility
+                if isinstance(memory_item, dict):
+                    memory_text = f"{label}:\n{memory_item['summary']}"
+                    memory_text += format_period_technical_indicators(memory_item['technical_stats'], "Yearly")
+                else:
+                    # Backward compatibility: old string format
+                    memory_text = f"{label}:\n{memory_item}"
+
+                labeled_yearly.append(memory_text)
             yearly_block = "Yearly memory (most recent first)\n" + "\n\n".join(
                 labeled_yearly
             )
