@@ -70,7 +70,7 @@ ENABLE_FULL_TRADING_HISTORY = True
 # DEBUGGING & DEVELOPMENT
 # -----------------------
 # Show full LLM prompts during execution (helpful for understanding what the AI sees)
-DEBUG_SHOW_FULL_PROMPT = True
+DEBUG_SHOW_FULL_PROMPT = False
 
 # DATA SUBSET FOR TESTING
 # -----------------------
