@@ -44,7 +44,7 @@ DATA_END = "2023-12-31"  # End date for historical data
 # ----------------
 TEST_MODE = True  # Set to True for quick tests, False for full experiments
 TEST_LIMIT = (
-    4  # Number of days to run when TEST_MODE = True (test on at least 3 days)
+    40  # Number of days to run when TEST_MODE = True (test on at least 3 days)
 )
 # Set TEST_MODE = False for complete ~2700 day analysis
 

@@ -174,6 +174,98 @@ max_drawdown = min(cumulative_returns - running_maximum)
 - **Expected Return**: strategy_return.mean()
 - **Calibration**: predicted_probability vs actual_win_rate
 
+## 🎯 LLM Prompt Architecture & Hierarchical Memory System
+
+### Prompt Structure Overview
+
+The framework employs a sophisticated hierarchical prompt architecture that provides LLMs with multiple layers of temporal and contextual memory to enable adaptive trading decisions.
+
+#### System Prompt (Fixed Component)
+The system prompt establishes the LLM's role and provides static context:
+- **Technical Indicators Description**: RSI, MACD, Stochastic, Bollinger Bands explanations
+- **Decision Rules**: Trading guidelines and risk considerations
+- **Output Format**: Strict 5-line response format requiring BUY/HOLD/SELL decision, probability, explanation, strategic journal, and feeling log
+
+#### User Message (Dynamic Component)
+The user message contains time-varying information structured in hierarchical layers:
+
+##### 1. Raw Technical Data Layer 📊
+```
+Past 20 daily returns in percent: [1.08, 0.08, 0.30, -0.06, -0.09, ...]
+Past 20 days RSI(14) values: [50.9, 53.9, 54.1, 56.2, 63.4, ...]
+Past 20 days MACD histogram values: [0.246, 1.181, 2.080, ...]
+Past 20 days Stochastic %K values: [66.1, 80.8, 95.2, ...]
+Past 20 days Bollinger Band positions: [0.87, 0.87, 0.93, ...]
+Current market summary: Technical indicators status
+```
+**Purpose**: Provides raw quantitative data for pattern recognition
+
+##### 2. Strategic Journal Layer 🧠 (Short-term Memory)
+```
+Past trades and results so far:
+2 weeks ago: action BUY (prob 0.45), next day index return 0.21%, strategy return 0.21%, cumulative strategy return -0.39%, cumulative index return 1.52%. Technical indicators: RSI(14): 46.3 | MACD: 5.57/6.74/-1.175 | Stochastic: 65.7/69.7 | BB Position: 0.42.
+[Last 10 formatted trade entries with LLM's own explanations]
+```
+**Purpose**: Immediate self-reflection and recent decision context
+**Source**: Rolling window of last 10 trades from `journal_entries`
+**Mechanism**: LLM reads its own previous explanations and strategic reasoning
+
+##### 3. Performance Summary Layer 📈 (Quantitative Feedback)
+```
+Total strategy return so far  0.79%
+Total S&P 500 return so far  0.69%
+You are outperforming the index by 0.10%
+Number of decisions so far  39 (BUY 13, HOLD 11, SELL 15)
+Win rate so far  35.9%
+```
+**Purpose**: Current performance metrics and benchmark comparison
+**Source**: Real-time calculations from PerformanceTracker
+
+##### 4. Hierarchical Memory Layer 🏗️ (Long-term Learning)
+```
+Weekly memory (most recent first)
+1 week ago: [LLM-generated weekly reflection and strategic analysis]
+2 weeks ago: [LLM-generated weekly reflection and strategic analysis]
+[... up to 5 most recent weekly summaries ...]
+
+Monthly memory (most recent first)
+1 month ago: [LLM-generated monthly performance analysis]
+[... up to 2 most recent monthly summaries ...]
+```
+**Purpose**: Multi-timeframe strategic learning and pattern recognition
+**Source**: PeriodManager-generated summaries from separate LLM calls
+**Mechanism**: Dedicated LLM prompts analyze weekly/monthly performance and generate reflective summaries
+
+##### 5. Complete Trading History Layer 📋 (Full Context)
+```
+TRADING_HISTORY:
+trade_id,decision,position,result
+1,BUY,1.0,0.923515
+2,SELL,-1.0,0.148067
+[... complete chronological record ...]
+```
+**Purpose**: Comprehensive historical data for pattern analysis
+**Source**: Full trading record with outcomes
+
+### Memory Hierarchy Benefits
+
+This hierarchical architecture provides cognitive scaffolding:
+
+1. **Immediate Context** (Strategic Journal): "What did I just do and why?"
+2. **Short-term Learning** (Weekly Memory): "What patterns emerged this week?"
+3. **Long-term Adaptation** (Monthly Memory): "How am I performing over months?"
+4. **Quantitative Feedback** (Performance Summary): "Am I beating the market?"
+5. **Complete Reference** (Trading History): "Full historical context for analysis"
+
+### Technical Implementation
+
+- **Strategic Journal**: Managed by TradeHistoryManager (`journal_entries`)
+- **Memory Blocks**: Managed by MemoryManager (LLM-generated period summaries)
+- **Performance Summary**: Managed by PerformanceTracker (real-time calculations)
+- **Trading History**: Managed by TradeHistoryManager (`trading_history`)
+
+This architecture enables LLMs to maintain consistency, learn from feedback, and adapt strategies across multiple temporal horizons.
+
 ## 🎯 Experimental Design
 
 ### Research Questions Addressed

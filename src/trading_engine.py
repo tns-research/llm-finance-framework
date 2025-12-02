@@ -22,6 +22,7 @@ from .memory_manager import MemoryManager
 from .period_manager import PeriodManager
 from .configuration_manager import ConfigurationManager
 from .performance_tracker import PerformanceTracker
+from .journal_manager import JournalManager
 from .decision_analysis import (
     analyze_decisions_after_outcomes,
     analyze_position_duration_stats,
@@ -47,125 +48,6 @@ from .statistical_validation import (
 )
 
 
-def get_relative_time_label(past_date, current_date):
-    """
-    Calculate relative time label for journal entries in 'no date' mode.
-    Returns labels like '1 week ago', '2 weeks ago', '1 month ago', etc.
-    """
-    days_diff = (current_date - past_date).days
-
-    if days_diff == 0:
-        return "today"
-    elif days_diff == 1:
-        return "1 day ago"
-    elif days_diff < 14:
-        return f"{days_diff} days ago"
-    elif days_diff < 21:
-        weeks = 2
-        return f"{weeks} weeks ago"
-    elif days_diff < 28:
-        weeks = 3
-        return f"{weeks} weeks ago"
-    elif days_diff < 35:
-        weeks = 4
-        return f"{weeks} weeks ago"
-    elif days_diff < 60:
-        return "1 month ago"
-    elif days_diff < 90:
-        return "2 months ago"
-    elif days_diff < 120:
-        return "3 months ago"
-    elif days_diff < 150:
-        return "4 months ago"
-    elif days_diff < 180:
-        return "5 months ago"
-    elif days_diff < 210:
-        return "6 months ago"
-    elif days_diff < 240:
-        return "7 months ago"
-    elif days_diff < 270:
-        return "8 months ago"
-    elif days_diff < 300:
-        return "9 months ago"
-    elif days_diff < 330:
-        return "10 months ago"
-    elif days_diff < 365:
-        return "11 months ago"
-    else:
-        years = days_diff // 365
-        if years == 1:
-            return "1 year ago"
-        else:
-            return f"{years} years ago"
-
-
-def format_journal_entry(trade_data, current_date, show_dates):
-    """
-    Format a single journal entry with appropriate date labeling.
-    """
-    if show_dates:
-        entry_prefix = f"Date {trade_data['date'].strftime('%Y-%m-%d')}: "
-    else:
-        # Use relative time in 'no date' mode
-        relative_label = get_relative_time_label(trade_data["date"], current_date)
-        entry_prefix = f"{relative_label}: "
-
-    base_entry = (
-        entry_prefix
-        + f"action {trade_data['decision']} (prob {trade_data['prob']:.2f}), "
-        f"next day index return {trade_data['next_return_1d']:.2f} percent, "
-        f"strategy return {trade_data['strategy_return']:.2f} percent, "
-        f"cumulative strategy return {trade_data['cumulative_return']:.2f} percent, "
-        f"cumulative index return {trade_data['index_cumulative_return']:.2f} percent."
-    )
-
-    # Add technical indicators if available and enabled
-    if ENABLE_TECHNICAL_INDICATORS and "rsi_14" in trade_data:
-        tech_indicators = []
-
-        if trade_data.get("rsi_14") is not None and not pd.isna(trade_data["rsi_14"]):
-            tech_indicators.append(f"RSI(14): {trade_data['rsi_14']:.1f}")
-
-        if (
-            trade_data.get("macd_line") is not None
-            and trade_data.get("macd_signal") is not None
-            and trade_data.get("macd_histogram") is not None
-            and not any(
-                pd.isna(
-                    [
-                        trade_data["macd_line"],
-                        trade_data["macd_signal"],
-                        trade_data["macd_histogram"],
-                    ]
-                )
-            )
-        ):
-            tech_indicators.append(
-                f"MACD: {trade_data['macd_line']:.2f}/{trade_data['macd_signal']:.2f}/{trade_data['macd_histogram']:.3f}"
-            )
-
-        if (
-            trade_data.get("stoch_k") is not None
-            and trade_data.get("stoch_d") is not None
-            and not any(pd.isna([trade_data["stoch_k"], trade_data["stoch_d"]]))
-        ):
-            tech_indicators.append(
-                f"Stochastic: {trade_data['stoch_k']:.1f}/{trade_data['stoch_d']:.1f}"
-            )
-
-        if trade_data.get("bb_position") is not None and not pd.isna(
-            trade_data["bb_position"]
-        ):
-            tech_indicators.append(f"BB Position: {trade_data['bb_position']:.2f}")
-
-        if tech_indicators:
-            base_entry += f" Technical indicators: {' | '.join(tech_indicators)}."
-
-    base_entry += f" Explanation: {trade_data['explanation']} Strategic journal: {trade_data['strategic_journal']} Feeling: {trade_data['feeling_log']}"
-
-    return base_entry
-
-
 def run_single_model(
     model_tag: str, router_model: str, prompts: pd.DataFrame, raw_path: str
 ):
@@ -181,12 +63,14 @@ def run_single_model(
     print(f"Running model: {model_tag}  (router id: {router_model})")
     print("#" * 80)
 
-    journal_entries = []  # Will store dicts with trade data for dynamic formatting
     trading_history = []  # Will store all past trades as data for full history feature
     rows = []
 
     # Unified performance tracking system
     performance_tracker = PerformanceTracker()
+
+    # Unified journal management system
+    journal_manager = JournalManager()
 
     # Position duration tracking for backward compatibility
     previous_decision = None
@@ -231,18 +115,7 @@ def run_single_model(
         base_prompt = row["prompt_text"]
 
         # Short term journal based on past daily trades
-        if journal_entries:
-            recent_entries = journal_entries[-10:]
-            # Format each entry dynamically with relative dates if needed
-            formatted_entries = [
-                format_journal_entry(entry, current_date, SHOW_DATE_TO_LLM)
-                for entry in recent_entries
-            ]
-            journal_text = "Past trades and results so far:\n" + "\n".join(
-                formatted_entries
-            )
-        else:
-            journal_text = "No past trades yet. You are starting your strategy."
+        journal_text = journal_manager.get_journal_block(current_date, SHOW_DATE_TO_LLM, ENABLE_TECHNICAL_INDICATORS)
 
         # Performance summary based only on past days
         performance_summary = performance_tracker.get_performance_summary()
@@ -412,7 +285,7 @@ def run_single_model(
                 }
             )
 
-        journal_entries.append(trade_data)
+        journal_manager.add_trade_entry(trade_data)
 
         # Accumulate full trading history for future prompts
         if ENABLE_FULL_TRADING_HISTORY:
