@@ -7,18 +7,19 @@ or called from trading_engine to add baseline context to LLM results.
 """
 
 import os
-import pandas as pd
+
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 from .baselines import (
-    run_all_baselines,
-    compare_llm_to_baselines,
-    print_baseline_comparison,
-    enhanced_compare_llm_to_baselines,
-    print_enhanced_baseline_comparison,
-    calculate_llm_vs_random_stats,
     BASELINE_REGISTRY,
+    calculate_llm_vs_random_stats,
+    compare_llm_to_baselines,
+    enhanced_compare_llm_to_baselines,
+    print_baseline_comparison,
+    print_enhanced_baseline_comparison,
+    run_all_baselines,
 )
 
 
@@ -273,7 +274,7 @@ def run_baseline_analysis(
         print(f"After START_ROW={START_ROW}: {len(features_df)} rows")
 
     # Handle TEST_MODE limit
-    from .config import TEST_MODE, TEST_LIMIT
+    from .config import TEST_LIMIT, TEST_MODE
 
     if TEST_MODE:
         features_df = features_df.head(TEST_LIMIT)

@@ -13,24 +13,25 @@ Creates a single, showable document consolidating all analysis results:
 Generates missing charts and provides executive summary.
 """
 
-import os
 import json
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
+import os
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-from datetime import datetime
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 # Import existing analysis modules
 try:
     # Try relative imports (when imported as module)
-    from .statistical_validation import print_validation_report
     from .baselines import calculate_baseline_metrics
+    from .statistical_validation import print_validation_report
 except ImportError:
     # Fall back to absolute imports (when run as script)
-    from statistical_validation import print_validation_report
     from baselines import calculate_baseline_metrics
+    from statistical_validation import print_validation_report
 
 
 def generate_comprehensive_report(
@@ -304,8 +305,8 @@ def generate_additional_charts(
     # Import chart generation functions from reporting module
     try:
         from .reporting import (
-            create_rolling_performance_chart,
             create_risk_analysis_chart,
+            create_rolling_performance_chart,
         )
 
         # Rolling performance charts
@@ -1839,8 +1840,8 @@ def generate_statistical_validation_section(
 
     if "statistical_validation" in data_sources:
         # Use the existing print function but capture output
-        from io import StringIO
         import sys
+        from io import StringIO
 
         old_stdout = sys.stdout
         sys.stdout = captured_output = StringIO()
@@ -2734,8 +2735,8 @@ def generate_statistical_validation_section_html(
 
     if "statistical_validation" in data_sources:
         # Use the existing print function but capture output
-        from io import StringIO
         import sys
+        from io import StringIO
 
         old_stdout = sys.stdout
         sys.stdout = captured_output = StringIO()
@@ -3475,8 +3476,8 @@ def generate_technical_details_html(data_sources: Dict, model_tag: str) -> str:
 # Standalone execution
 if __name__ == "__main__":
     # Example usage - handle imports when run as script
-    import sys
     import argparse
+    import sys
 
     # Add current directory to path for imports when run as script
     sys.path.insert(0, os.path.dirname(__file__))

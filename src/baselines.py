@@ -11,11 +11,11 @@ Baseline Hierarchy:
 3. Rule-based    - Simple trading rules using technical features
 """
 
+from typing import Dict, List, Tuple
+
 import numpy as np
 import pandas as pd
 from scipy import stats
-from typing import Dict, Tuple, List
-
 
 # =============================================================================
 # BASELINE STRATEGY FUNCTIONS

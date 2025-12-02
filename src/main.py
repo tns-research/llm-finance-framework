@@ -1,12 +1,13 @@
 # src/main.py
 
 import os
+
 from .config import (
-    USE_DUMMY_MODEL,
-    LLM_MODELS,
     ACTIVE_EXPERIMENT,
-    get_experiment_suffix,
+    LLM_MODELS,
+    USE_DUMMY_MODEL,
     get_current_config_summary,
+    get_experiment_suffix,
     list_experiments,
 )
 from .data_prep import prepare_features

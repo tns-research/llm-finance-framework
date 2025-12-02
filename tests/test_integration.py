@@ -1,24 +1,30 @@
 #!/usr/bin/env python3
 """Integration tests for the full LLM finance framework pipeline with new indicators."""
 
-import pytest
-import pandas as pd
-import numpy as np
 import os
 import sys
 import tempfile
 
+import numpy as np
+import pandas as pd
+import pytest
+
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
+from src import config
+from src.config import (
+    BB_STD,
+    BB_WINDOW,
+    ENABLE_TECHNICAL_INDICATORS,
+    MACD_FAST,
+    MACD_SIGNAL,
+    MACD_SLOW,
+    STOCH_D,
+    STOCH_K,
+)
 from src.data_prep import prepare_features
 from src.prompts import build_prompts
-from src.config import (
-    ENABLE_MACD, ENABLE_STOCHASTIC, ENABLE_BOLLINGER_BANDS,
-    MACD_FAST, MACD_SLOW, MACD_SIGNAL,
-    STOCH_K, STOCH_D,
-    BB_WINDOW, BB_STD
-)
 
 
 class TestFullPipelineIntegration:
@@ -77,19 +83,19 @@ class TestFullPipelineIntegration:
             assert feature in features_df.columns, f"Missing base feature: {feature}"
 
         # Validate new indicator features are present when enabled
-        if ENABLE_MACD:
+        if ENABLE_TECHNICAL_INDICATORS:
             macd_features = ["macd_line", "macd_signal", "macd_histogram"]
             for feature in macd_features:
                 assert feature in features_df.columns, f"Missing MACD feature: {feature}"
                 assert not features_df[feature].isna().all(), f"MACD feature {feature} is all NaN"
 
-        if ENABLE_STOCHASTIC:
+        if ENABLE_TECHNICAL_INDICATORS:
             stoch_features = ["stoch_k", "stoch_d"]
             for feature in stoch_features:
                 assert feature in features_df.columns, f"Missing Stochastic feature: {feature}"
                 assert not features_df[feature].isna().all(), f"Stochastic feature {feature} is all NaN"
 
-        if ENABLE_BOLLINGER_BANDS:
+        if ENABLE_TECHNICAL_INDICATORS:
             bb_features = ["bb_upper", "bb_middle", "bb_lower", "bb_position"]
             for feature in bb_features:
                 assert feature in features_df.columns, f"Missing Bollinger Bands feature: {feature}"
@@ -103,18 +109,18 @@ class TestFullPipelineIntegration:
 
         assert 'RSI(14)' in sample_prompt, "RSI not found in prompt"
 
-        if ENABLE_MACD:
+        if ENABLE_TECHNICAL_INDICATORS:
             assert 'MACD(' in sample_prompt, "MACD not found in prompt"
             assert str(MACD_FAST) in sample_prompt, f"MACD fast period {MACD_FAST} not in prompt"
             assert str(MACD_SLOW) in sample_prompt, f"MACD slow period {MACD_SLOW} not in prompt"
             assert str(MACD_SIGNAL) in sample_prompt, f"MACD signal period {MACD_SIGNAL} not in prompt"
 
-        if ENABLE_STOCHASTIC:
+        if ENABLE_TECHNICAL_INDICATORS:
             assert 'Stochastic(' in sample_prompt, "Stochastic not found in prompt"
             assert str(STOCH_K) in sample_prompt, f"Stochastic K period {STOCH_K} not in prompt"
             assert str(STOCH_D) in sample_prompt, f"Stochastic D period {STOCH_D} not in prompt"
 
-        if ENABLE_BOLLINGER_BANDS:
+        if ENABLE_TECHNICAL_INDICATORS:
             assert 'Bollinger Bands(' in sample_prompt, "Bollinger Bands not found in prompt"
             assert str(BB_WINDOW) in sample_prompt, f"Bollinger Bands window {BB_WINDOW} not in prompt"
             assert str(BB_STD) in sample_prompt, f"Bollinger Bands std {BB_STD} not in prompt"
@@ -130,8 +136,17 @@ class TestFullPipelineIntegration:
         assert not prompts_df.empty, "Prompts DataFrame is empty"
 
         # Check that dates are preserved correctly
-        assert len(features_df) == len(prompts_df), "Features and prompts have different lengths"
-        assert all(features_df['date'] == prompts_df['date']), "Dates don't match between features and prompts"
+        # Note: prompts may be shorter than features when lagged indicators require historical data
+        if ENABLE_TECHNICAL_INDICATORS:
+            # With lagged indicators, prompts start after PAST_RET_LAGS rows are available
+            expected_prompts_start = config.PAST_RET_LAGS if hasattr(config, 'PAST_RET_LAGS') else 20
+            assert len(prompts_df) <= len(features_df), "Prompts should not be longer than features"
+            # Check that prompt dates are a subset of feature dates
+            assert all(date in features_df['date'].values for date in prompts_df['date'].values), "Prompt dates not found in features"
+        else:
+            # Without lagged indicators, they should match
+            assert len(features_df) == len(prompts_df), "Features and prompts have different lengths"
+            assert all(features_df['date'] == prompts_df['date']), "Dates don't match between features and prompts"
 
     def test_pipeline_with_minimal_ohlc_data(self, tmp_path):
         """Test pipeline works with minimal OHLC data (just close prices)."""
@@ -160,22 +175,17 @@ class TestFullPipelineIntegration:
         assert "return_1d" in features_df.columns
 
         # Advanced indicators might be NaN but columns should exist
-        if ENABLE_MACD:
+        if ENABLE_TECHNICAL_INDICATORS:
             assert "macd_line" in features_df.columns
-        if ENABLE_STOCHASTIC:
+        if ENABLE_TECHNICAL_INDICATORS:
             assert "stoch_k" in features_df.columns
-        if ENABLE_BOLLINGER_BANDS:
+        if ENABLE_TECHNICAL_INDICATORS:
             assert "bb_upper" in features_df.columns
 
     def test_feature_flags_disable_indicators(self, sample_ohlc_data, tmp_path, monkeypatch):
         """Test that disabling feature flags removes indicators from pipeline."""
         # Temporarily disable all advanced indicators
-        monkeypatch.setattr('src.data_prep.ENABLE_MACD', False)
-        monkeypatch.setattr('src.data_prep.ENABLE_STOCHASTIC', False)
-        monkeypatch.setattr('src.data_prep.ENABLE_BOLLINGER_BANDS', False)
-        monkeypatch.setattr('src.prompts.ENABLE_MACD', False)
-        monkeypatch.setattr('src.prompts.ENABLE_STOCHASTIC', False)
-        monkeypatch.setattr('src.prompts.ENABLE_BOLLINGER_BANDS', False)
+        monkeypatch.setattr('src.config.ENABLE_TECHNICAL_INDICATORS', False)
 
         # Save sample data
         csv_path = tmp_path / "sample_data.csv"
@@ -188,10 +198,11 @@ class TestFullPipelineIntegration:
         features_df = prepare_features(str(csv_path), str(features_path))
         prompts_df = build_prompts(str(features_path), str(prompts_path))
 
-        # Should not have advanced indicator columns
+        # Features always contain indicator columns (calculated for baselines/analysis)
+        # but prompts should not contain advanced indicators when disabled
         advanced_features = ["macd_line", "stoch_k", "bb_upper"]
         for feature in advanced_features:
-            assert feature not in features_df.columns, f"Advanced feature {feature} should not be present when disabled"
+            assert feature in features_df.columns, f"Advanced feature {feature} should always be present (calculated for analysis)"
 
         # Prompts should not contain advanced indicators
         sample_prompt = prompts_df['prompt_text'].iloc[30]
@@ -225,11 +236,11 @@ class TestFullPipelineIntegration:
         assert any('Summary' in line for line in lines), "Summary section not found"
 
         # Should have advanced indicators if enabled
-        if ENABLE_MACD:
+        if ENABLE_TECHNICAL_INDICATORS:
             assert any('MACD(' in line for line in lines), "MACD information not found"
-        if ENABLE_STOCHASTIC:
+        if ENABLE_TECHNICAL_INDICATORS:
             assert any('Stochastic(' in line for line in lines), "Stochastic information not found"
-        if ENABLE_BOLLINGER_BANDS:
+        if ENABLE_TECHNICAL_INDICATORS:
             assert any('Bollinger Bands(' in line for line in lines), "Bollinger Bands information not found"
 
         # Summary should be coherent

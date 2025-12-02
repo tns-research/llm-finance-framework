@@ -1,7 +1,9 @@
 # src/prompts.py
 
 import os
+
 import pandas as pd
+
 from . import config
 
 
@@ -140,7 +142,7 @@ def row_to_prompt(row: pd.Series) -> str:
 
 
 # Need these constants from config again
-from .config import MA20_WINDOW, VOL20_WINDOW, RET_5D_WINDOW
+from .config import MA20_WINDOW, RET_5D_WINDOW, VOL20_WINDOW
 
 
 def build_prompts(features_path: str, prompts_path: str) -> pd.DataFrame:

@@ -1,8 +1,9 @@
 # src/openrouter_model.py
 
 import os
-import requests
 from typing import Optional
+
+import requests
 
 from .config import OPENROUTER_API_BASE
 

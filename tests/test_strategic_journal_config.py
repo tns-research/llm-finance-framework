@@ -7,8 +7,8 @@ import sys
 
 sys.path.insert(0, ".")
 
-from src.config import SYSTEM_PROMPT, ENABLE_STRATEGIC_JOURNAL, ENABLE_FEELING_LOG
 from src.backtest import parse_response_text
+from src.config import ENABLE_FEELING_LOG, ENABLE_STRATEGIC_JOURNAL, SYSTEM_PROMPT
 
 
 def test_config():

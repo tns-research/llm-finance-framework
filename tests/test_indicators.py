@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """Unit tests for advanced technical indicators."""
 
-import pytest
-import pandas as pd
-import numpy as np
-import sys
 import os
+import sys
+
+import numpy as np
+import pandas as pd
+import pytest
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
-from src.data_prep import compute_macd, compute_stochastic, compute_bollinger_bands
+from src.data_prep import compute_bollinger_bands, compute_macd, compute_stochastic
 
 
 class TestTechnicalIndicators:

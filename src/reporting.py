@@ -1,14 +1,14 @@
 # src/reporting.py
 
-import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 from .config import (
-    USE_DUMMY_MODEL,
     DEBUG_SHOW_FULL_PROMPT,
     JOURNAL_SYSTEM_PROMPT,
     SHOW_DATE_TO_LLM,
+    USE_DUMMY_MODEL,
 )
 from .openrouter_model import call_openrouter
 

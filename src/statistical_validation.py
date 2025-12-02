@@ -8,12 +8,13 @@ Provides rigorous statistical testing for LLM trading strategies including:
 - Comprehensive statistical validation suite
 """
 
+import json
+import os
+from typing import Dict, Optional, Tuple
+
 import numpy as np
 import pandas as pd
 from scipy import stats
-from typing import Dict, Tuple, Optional
-import json
-import os
 
 
 def bootstrap_sharpe_comparison(

@@ -1,11 +1,12 @@
 # src/decision_analysis.py
 
 import os
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy import stats
 from typing import Dict
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from scipy import stats
 
 
 def analyze_decisions_after_outcomes(parsed_df: pd.DataFrame) -> dict:

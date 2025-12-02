@@ -1,46 +1,47 @@
 # src/trading_engine.py
 
 import os
+
 import pandas as pd
 
+from .backtest import backtest_model, parse_response_text, save_parsed_results
+from .baseline_runner import run_baseline_analysis
 from .config import (
-    SYSTEM_PROMPT,
-    POSITION_MAP,
-    USE_DUMMY_MODEL,
-    TEST_MODE,
-    TEST_LIMIT,
     DEBUG_SHOW_FULL_PROMPT,
-    SHOW_DATE_TO_LLM,
-    ENABLE_STRATEGIC_JOURNAL,
     ENABLE_FULL_TRADING_HISTORY,
+    ENABLE_STRATEGIC_JOURNAL,
     ENABLE_TECHNICAL_INDICATORS,
+    POSITION_MAP,
+    SHOW_DATE_TO_LLM,
+    SYSTEM_PROMPT,
+    TEST_LIMIT,
+    TEST_MODE,
+    USE_DUMMY_MODEL,
 )
-from .backtest import parse_response_text, backtest_model, save_parsed_results
-from .dummy_model import dummy_call_model
-from .openrouter_model import call_openrouter
-from .reporting import (
-    make_empty_stats,
-    generate_llm_period_summary,
-    compute_period_technical_stats,
-    create_calibration_plot,
-    create_calibration_by_decision_plot,
-    generate_calibration_analysis_report,
-    create_technical_indicators_plot,
-    create_rsi_performance_analysis,
-)
-from .statistical_validation import (
-    comprehensive_statistical_validation,
-    print_validation_report,
-    save_validation_report,
-)
-from .report_generator import generate_comprehensive_report
 from .decision_analysis import (
     analyze_decisions_after_outcomes,
     analyze_position_duration_stats,
     create_decision_pattern_plots,
     generate_pattern_analysis_report,
 )
-from .baseline_runner import run_baseline_analysis
+from .dummy_model import dummy_call_model
+from .openrouter_model import call_openrouter
+from .report_generator import generate_comprehensive_report
+from .reporting import (
+    compute_period_technical_stats,
+    create_calibration_by_decision_plot,
+    create_calibration_plot,
+    create_rsi_performance_analysis,
+    create_technical_indicators_plot,
+    generate_calibration_analysis_report,
+    generate_llm_period_summary,
+    make_empty_stats,
+)
+from .statistical_validation import (
+    comprehensive_statistical_validation,
+    print_validation_report,
+    save_validation_report,
+)
 
 
 def format_period_technical_indicators(technical_stats: dict, period_name: str) -> str:

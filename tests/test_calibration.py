@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Test script to generate calibration plots for existing results."""
 
-import pandas as pd
 import os
 import sys
+
+import pandas as pd
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))

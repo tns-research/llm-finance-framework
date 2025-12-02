@@ -1,7 +1,8 @@
 # src/dummy_model.py
 
 import random
-from .config import ENABLE_STRATEGIC_JOURNAL, ENABLE_FEELING_LOG
+
+from .config import ENABLE_FEELING_LOG, ENABLE_STRATEGIC_JOURNAL
 
 
 def dummy_call_model(system_prompt: str, user_prompt: str) -> str:
