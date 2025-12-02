@@ -576,6 +576,20 @@ def evaluate_hold_decisions_dual_criteria(parsed_df: pd.DataFrame) -> Dict:
 
     overall_success_rate = np.mean(combined_scores) if combined_scores else 0
 
+    # ===== PER-DECISION SUCCESS INDICATORS =====
+    # Create binary success indicators for calibration analysis
+    # HOLD is successful if:
+    # 1. It occurred in a quiet market (score >= 0.6), OR
+    # 2. It avoided losses in volatile conditions (score >= 0.4)
+    hold_success_indicators = [int(score >= 0.4) for score in combined_scores]
+
+    # Create DataFrame with per-decision success data
+    hold_success_df = pd.DataFrame({
+        'index': hold_data.index,
+        'hold_success': hold_success_indicators,
+        'hold_success_score': combined_scores
+    })
+
     # ===== CONTEXT REASONS BREAKDOWN =====
     context_reasons = {}
     for context in contexts:
@@ -599,6 +613,7 @@ def evaluate_hold_decisions_dual_criteria(parsed_df: pd.DataFrame) -> Dict:
 
     return {
         "overall_hold_success_rate": overall_success_rate,
+        "hold_success_indicators": hold_success_df,
         # Quiet market criterion
         "quiet_market_success": {
             "success_rate": quiet_success_rate,

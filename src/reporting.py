@@ -420,6 +420,38 @@ def generate_llm_period_summary(
         )
 
 
+def calculate_decision_success(parsed_df: pd.DataFrame) -> pd.Series:
+    """
+    Calculate success indicators for each decision type using appropriate criteria.
+
+    - BUY/SELL: strategy_return > 0 (positive returns)
+    - HOLD: Use specialized HOLD success criteria (quiet markets, risk avoidance)
+
+    Returns:
+        pd.Series: Boolean success indicators for each decision
+    """
+    from .statistical_validation import evaluate_hold_decisions_dual_criteria
+
+    df = parsed_df.copy()
+
+    # Default: strategy_return > 0 for BUY/SELL
+    success = (df["strategy_return"] > 0).astype(int)
+
+    # Override HOLD decisions with specialized criteria
+    hold_mask = df["decision"] == "HOLD"
+    if hold_mask.any():
+        hold_analysis = evaluate_hold_decisions_dual_criteria(df)
+        if "hold_success_indicators" in hold_analysis:
+            hold_success_df = hold_analysis["hold_success_indicators"]
+            # Merge success indicators back to main dataframe
+            hold_success_map = dict(zip(hold_success_df['index'], hold_success_df['hold_success']))
+            success.loc[hold_mask] = df.loc[hold_mask].index.map(
+                lambda idx: hold_success_map.get(idx, 0)
+            )
+
+    return success
+
+
 def create_calibration_plot(parsed_df, model_tag: str, output_path: str):
     """
     Create a calibration plot showing predicted probability vs actual win rate.
@@ -562,7 +594,8 @@ def create_calibration_by_decision_plot(parsed_df, model_tag: str, output_path: 
             continue
 
         subset = subset.copy()
-        subset["win"] = (subset["strategy_return"] > 0).astype(int)
+        # Use decision-type-specific success criteria
+        subset["win"] = calculate_decision_success(subset)
 
         # Bin and plot
         bins = np.linspace(0, 1, 6)
@@ -865,7 +898,8 @@ def generate_calibration_analysis_report(
     for decision in ["BUY", "HOLD", "SELL"]:
         subset = parsed_df[parsed_df["decision"] == decision].copy()
         if len(subset) >= 5:
-            subset["win"] = (subset["strategy_return"] > 0).astype(int)
+            # Use decision-type-specific success criteria
+            subset["win"] = calculate_decision_success(subset)
             decision_calibration[decision] = {
                 "count": len(subset),
                 "win_rate": subset["win"].mean(),
