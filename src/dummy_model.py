@@ -2,7 +2,7 @@
 
 import random
 
-from .config import ENABLE_FEELING_LOG, ENABLE_STRATEGIC_JOURNAL
+from .config_compat import ENABLE_FEELING_LOG, ENABLE_STRATEGIC_JOURNAL
 
 
 def dummy_call_model(system_prompt: str, user_prompt: str) -> str:

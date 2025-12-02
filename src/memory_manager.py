@@ -12,8 +12,8 @@ import pandas as pd
 from datetime import datetime
 
 from .memory_classes import MemoryItem, PeriodConfig
-from .reporting import compute_period_technical_stats
-from .config import ENABLE_TECHNICAL_INDICATORS
+from .reporting import compute_period_technical_stats, format_period_technical_indicators
+from .config_compat import ENABLE_TECHNICAL_INDICATORS
 
 
 class MemoryManager:
@@ -82,7 +82,6 @@ class MemoryManager:
 
             # Add technical indicators if available
             if memory_item.technical_stats:
-                from .trading_engine import format_period_technical_indicators
                 tech_text = format_period_technical_indicators(
                     memory_item.technical_stats,
                     period.capitalize()

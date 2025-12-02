@@ -6,7 +6,7 @@ import pandas as pd
 
 from .backtest import backtest_model, parse_response_text, save_parsed_results
 from .baseline_runner import run_baseline_analysis
-from .config import (
+from .config_compat import (
     DEBUG_SHOW_FULL_PROMPT,
     ENABLE_FULL_TRADING_HISTORY,
     ENABLE_STRATEGIC_JOURNAL,
@@ -20,6 +20,7 @@ from .config import (
 )
 from .memory_manager import MemoryManager
 from .period_manager import PeriodManager
+from .configuration_manager import ConfigurationManager
 from .decision_analysis import (
     analyze_decisions_after_outcomes,
     analyze_position_duration_stats,
@@ -43,70 +44,6 @@ from .statistical_validation import (
     print_validation_report,
     save_validation_report,
 )
-
-
-def format_period_technical_indicators(technical_stats: dict, period_name: str) -> str:
-    """Format aggregated technical indicators for memory display."""
-    if not technical_stats:
-        return ""
-
-    lines = []
-
-    # RSI
-    if "rsi_avg" in technical_stats:
-        rsi_parts = [f"Average {technical_stats['rsi_avg']:.1f}"]
-        if "rsi_overbought_pct" in technical_stats:
-            rsi_parts.append(f"{technical_stats['rsi_overbought_pct']:.0f}% overbought")
-        if "rsi_oversold_pct" in technical_stats:
-            rsi_parts.append(f"{technical_stats['rsi_oversold_pct']:.0f}% oversold")
-        if "rsi_min" in technical_stats and "rsi_max" in technical_stats:
-            rsi_parts.append(
-                f"range {technical_stats['rsi_min']:.1f}-{technical_stats['rsi_max']:.1f}"
-            )
-        lines.append(f"RSI(14): {' ('.join(rsi_parts)})")
-
-    # MACD
-    if "macd_bullish_pct" in technical_stats:
-        macd_parts = [f"{technical_stats['macd_bullish_pct']:.0f}% bullish periods"]
-        if "macd_avg_histogram" in technical_stats:
-            macd_parts.append(
-                f"avg histogram {technical_stats['macd_avg_histogram']:.3f}"
-            )
-        if (
-            "macd_crossovers" in technical_stats
-            and technical_stats["macd_crossovers"] > 0
-        ):
-            macd_parts.append(f"{technical_stats['macd_crossovers']} crossovers")
-        lines.append(f"MACD: {', '.join(macd_parts)}")
-
-    # Stochastic
-    if "stoch_overbought_pct" in technical_stats:
-        stoch_parts = [
-            f"{technical_stats['stoch_overbought_pct']:.0f}% overbought days"
-        ]
-        if "stoch_oversold_pct" in technical_stats:
-            stoch_parts.append(
-                f"{technical_stats['stoch_oversold_pct']:.0f}% oversold days"
-            )
-        lines.append(f"Stochastic: {', '.join(stoch_parts)}")
-
-    # Bollinger Bands
-    if "bb_avg_position" in technical_stats:
-        bb_parts = [f"Avg position {technical_stats['bb_avg_position']:.2f}"]
-        if (
-            "bb_upper_touch_pct" in technical_stats
-            and "bb_lower_touch_pct" in technical_stats
-        ):
-            total_touches = (
-                technical_stats["bb_upper_touch_pct"]
-                + technical_stats["bb_lower_touch_pct"]
-            )
-            bb_parts.append(f"band touches {total_touches:.0f}%")
-        lines.append(f"Bollinger Bands: {', '.join(bb_parts)}")
-
-    if lines:
-        return f"\n\n{period_name} technical indicators:\n" + "\n".join(lines) + "\n"
-    return ""
 
 
 def get_relative_time_label(past_date, current_date):
@@ -264,8 +201,9 @@ def run_single_model(
     previous_return = None
 
     # Unified memory and period management system
+    config_manager = ConfigurationManager()
     memory_manager = MemoryManager()
-    period_manager = PeriodManager(memory_manager)
+    period_manager = PeriodManager(memory_manager, config_manager)
 
     last_date = None
     total_rows = len(prompts)

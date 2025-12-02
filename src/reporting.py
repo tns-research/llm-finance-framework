@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from typing import Union
 
-from .config import (
+from .config_compat import (
     DEBUG_SHOW_FULL_PROMPT,
     JOURNAL_SYSTEM_PROMPT,
     SHOW_DATE_TO_LLM,
@@ -151,7 +151,136 @@ def compute_period_technical_stats(
             stats["bb_lower_touch_pct"] = (bb_valid < 0.05).sum() / len(bb_valid) * 100
             stats["bb_avg_position"] = bb_valid.mean()
 
+    # Add current/latest values for short periods or when aggregated stats are not meaningful
+    if len(period_data) > 0:
+        last_row = period_data.iloc[-1]
+
+        # Current RSI value
+        if "rsi_14" in period_data.columns and not pd.isna(last_row.get("rsi_14")):
+            stats["rsi_current"] = last_row["rsi_14"]
+
+        # Current MACD values
+        macd_cols = ["macd_line", "macd_signal", "macd_histogram"]
+        if all(col in period_data.columns for col in macd_cols):
+            macd_values = [last_row.get(col) for col in macd_cols]
+            if not any(pd.isna(macd_values)):
+                stats["macd_current"] = {
+                    "line": last_row["macd_line"],
+                    "signal": last_row["macd_signal"],
+                    "histogram": last_row["macd_histogram"]
+                }
+
+        # Current Stochastic values
+        stoch_cols = ["stoch_k", "stoch_d"]
+        if all(col in period_data.columns for col in stoch_cols):
+            stoch_values = [last_row.get(col) for col in stoch_cols]
+            if not any(pd.isna(stoch_values)):
+                stats["stoch_current"] = {
+                    "k": last_row["stoch_k"],
+                    "d": last_row["stoch_d"]
+                }
+
+        # Current Bollinger Band position
+        if "bb_position" in period_data.columns and not pd.isna(last_row.get("bb_position")):
+            stats["bb_current_position"] = last_row["bb_position"]
+
     return stats
+
+
+def format_period_technical_indicators(technical_stats: dict, period_name: str) -> str:
+    """Format aggregated technical indicators for memory display."""
+    if not technical_stats:
+        return ""
+
+    lines = []
+
+    # RSI
+    if "rsi_avg" in technical_stats:
+        rsi_parts = [f"Average {technical_stats['rsi_avg']:.1f}"]
+        if "rsi_overbought_pct" in technical_stats:
+            rsi_parts.append(f"{technical_stats['rsi_overbought_pct']:.0f}% overbought")
+        if "rsi_oversold_pct" in technical_stats:
+            rsi_parts.append(f"{technical_stats['rsi_oversold_pct']:.0f}% oversold")
+        if "rsi_min" in technical_stats and "rsi_max" in technical_stats:
+            rsi_parts.append(
+                f"range {technical_stats['rsi_min']:.1f}-{technical_stats['rsi_max']:.1f}"
+            )
+        lines.append(f"RSI(14): {', '.join(rsi_parts)}")
+    elif "rsi_current" in technical_stats:
+        # Fallback for short periods - show current value
+        rsi_val = technical_stats["rsi_current"]
+        status = "neutral"
+        if rsi_val > 70:
+            status = "overbought"
+        elif rsi_val < 30:
+            status = "oversold"
+        lines.append(f"RSI(14): {rsi_val:.1f} ({status})")
+
+    # MACD
+    if "macd_bullish_pct" in technical_stats:
+        macd_parts = [f"{technical_stats['macd_bullish_pct']:.0f}% bullish periods"]
+        if "macd_avg_histogram" in technical_stats:
+            macd_parts.append(
+                f"avg histogram {technical_stats['macd_avg_histogram']:.3f}"
+            )
+        if (
+            "macd_crossovers" in technical_stats
+            and technical_stats["macd_crossovers"] > 0
+        ):
+            macd_parts.append(f"{technical_stats['macd_crossovers']} crossovers")
+        lines.append(f"MACD: {', '.join(macd_parts)}")
+    elif "macd_current" in technical_stats:
+        # Fallback for short periods - show current values
+        macd = technical_stats["macd_current"]
+        signal = "bullish" if macd["histogram"] > 0 else "bearish"
+        lines.append(f"MACD: {macd['line']:.2f}/{macd['signal']:.2f}/{macd['histogram']:.3f} ({signal})")
+
+    # Stochastic
+    if "stoch_overbought_pct" in technical_stats:
+        stoch_parts = [
+            f"{technical_stats['stoch_overbought_pct']:.0f}% overbought days"
+        ]
+        if "stoch_oversold_pct" in technical_stats:
+            stoch_parts.append(
+                f"{technical_stats['stoch_oversold_pct']:.0f}% oversold days"
+            )
+        lines.append(f"Stochastic: {', '.join(stoch_parts)}")
+    elif "stoch_current" in technical_stats:
+        # Fallback for short periods - show current values
+        stoch = technical_stats["stoch_current"]
+        status = "neutral"
+        if stoch["k"] > 80:
+            status = "overbought"
+        elif stoch["k"] < 20:
+            status = "oversold"
+        lines.append(f"Stochastic: {stoch['k']:.1f}/{stoch['d']:.1f} ({status})")
+
+    # Bollinger Bands
+    if "bb_avg_position" in technical_stats:
+        bb_parts = [f"Avg position {technical_stats['bb_avg_position']:.2f}"]
+        if (
+            "bb_upper_touch_pct" in technical_stats
+            and "bb_lower_touch_pct" in technical_stats
+        ):
+            total_touches = (
+                technical_stats["bb_upper_touch_pct"]
+                + technical_stats["bb_lower_touch_pct"]
+            )
+            bb_parts.append(f"band touches {total_touches:.0f}%")
+        lines.append(f"Bollinger Bands: {', '.join(bb_parts)}")
+    elif "bb_current_position" in technical_stats:
+        # Fallback for short periods - show current position
+        pos = technical_stats["bb_current_position"]
+        location = "middle"
+        if pos > 0.8:
+            location = "upper band"
+        elif pos < 0.2:
+            location = "lower band"
+        lines.append(f"Bollinger Bands: Position {pos:.2f} ({location})")
+
+    if lines:
+        return f"\n\n{period_name} technical indicators:\n" + "\n".join(lines) + "\n"
+    return ""
 
 
 def generate_llm_period_summary(
@@ -308,6 +437,7 @@ def generate_llm_period_summary(
     # Add technical indicators section if available
     technical_info = ""
     if technical_stats:
+        print(f"DEBUG: LLM received technical_stats = {technical_stats}")
         technical_info = "\nTechnical indicators summary for this period:\n"
 
         if "rsi_avg" in technical_stats:
@@ -338,6 +468,8 @@ def generate_llm_period_summary(
                 f"{technical_stats['bb_lower_touch_pct']:.1f}% touched lower band, "
                 f"avg position {technical_stats['bb_avg_position']:.2f}\n"
             )
+    else:
+        print("DEBUG: LLM received technical_stats = None/empty")
 
     user_message = (
         f"{period_desc}"

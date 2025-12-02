@@ -5,7 +5,7 @@ import os
 import numpy as np
 import pandas as pd
 
-from .config import ENABLE_FEELING_LOG, ENABLE_STRATEGIC_JOURNAL, POSITION_MAP
+from .config_compat import ENABLE_FEELING_LOG, ENABLE_STRATEGIC_JOURNAL, POSITION_MAP
 
 
 def parse_response_text(response_text: str):

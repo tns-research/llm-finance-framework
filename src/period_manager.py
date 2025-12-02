@@ -12,8 +12,8 @@ import pandas as pd
 
 from .memory_classes import PeriodStats
 from .memory_manager import MemoryManager
-from .reporting import generate_llm_period_summary
-from .config import ENABLE_TECHNICAL_INDICATORS
+from .reporting import generate_llm_period_summary, compute_period_technical_stats
+from .configuration_manager import ConfigurationManager
 
 
 class PeriodManager:
@@ -24,14 +24,16 @@ class PeriodManager:
     and period management logic that existed for each period type.
     """
 
-    def __init__(self, memory_manager: MemoryManager):
+    def __init__(self, memory_manager: MemoryManager, config_manager: ConfigurationManager = None):
         """
-        Initialize period manager with memory manager dependency.
+        Initialize period manager with memory manager and config manager dependencies.
 
         Args:
             memory_manager: MemoryManager instance for storing period summaries
+            config_manager: ConfigurationManager instance for accessing settings
         """
         self.memory_manager = memory_manager
+        self.config_manager = config_manager or ConfigurationManager()
         self.stats: Dict[str, PeriodStats] = {
             'weekly': PeriodStats(),
             'monthly': PeriodStats(),
@@ -128,7 +130,8 @@ class PeriodManager:
 
         # Compute technical stats if enabled
         technical_stats = None
-        if ENABLE_TECHNICAL_INDICATORS:
+        flags = self.config_manager.get_feature_flags()
+        if flags['ENABLE_TECHNICAL_INDICATORS']:
             technical_stats = self._compute_technical_stats(period, end_date)
 
         # Generate LLM summary

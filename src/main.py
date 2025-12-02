@@ -1,13 +1,12 @@
 # src/main.py
 
 import os
-
-from .config import (
-    ACTIVE_EXPERIMENT,
-    LLM_MODELS,
+from .config_compat import (
     USE_DUMMY_MODEL,
-    get_current_config_summary,
+    LLM_MODELS,
+    ACTIVE_EXPERIMENT,
     get_experiment_suffix,
+    get_current_config_summary,
     list_experiments,
 )
 from .data_prep import prepare_features
@@ -23,7 +22,7 @@ def run_pipeline():
     prompts_path = os.path.join(base_dir, "data", "processed", "prompts.csv")
 
     # FORCE DUMMY MODE FOR SAFETY - Never call real OpenRouter models during testing
-    from .config import USE_DUMMY_MODEL
+    from .config_compat import USE_DUMMY_MODEL
 
     if not USE_DUMMY_MODEL:
         print(

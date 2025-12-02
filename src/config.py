@@ -21,7 +21,7 @@
 
 # MODEL SELECTION
 # ---------------
-USE_DUMMY_MODEL = False  # Set to True for testing (no API key needed)
+USE_DUMMY_MODEL = True  # Set to True for testing (no API key needed)
 # Set to False to run real LLM experiments via OpenRouter
 
 # EXPERIMENT TYPE
@@ -44,7 +44,7 @@ DATA_END = "2023-12-31"  # End date for historical data
 # ----------------
 TEST_MODE = True  # Set to True for quick tests, False for full experiments
 TEST_LIMIT = (
-    5  # Number of days to run when TEST_MODE = True (test on at least 3 days)
+    4  # Number of days to run when TEST_MODE = True (test on at least 3 days)
 )
 # Set TEST_MODE = False for complete ~2700 day analysis
 
@@ -84,8 +84,8 @@ START_ROW = 33
 # Uncomment/comment models as needed. Requires USE_DUMMY_MODEL = False
 LLM_MODELS = [
     # {
-    #    "tag": "bert",  # Model identifier (used in filenames)
-    #    "router_model": "openrouter/bert-nebulon-alpha",  # OpenRouter model ID
+    #    "tag": "bert",  # Model no longer available
+    #    "router_model": "openrouter/bert-nebulon-alpha",
     # },
     # {
     #    "tag": "chimera",  # Model identifier (used in filenames)
@@ -93,9 +93,13 @@ LLM_MODELS = [
     # },
     # Add more models here:
     {
-        "tag": "gpt-oss-20b",
-        "router_model": "openai/gpt-oss-20b:free",
+        "tag": "olmo-32b",
+        "router_model": "allenai/olmo-3-32b-think",
     },
+    #{
+    #    "tag": "gpt-oss-20b",
+    #    "router_model": "openai/gpt-oss-20b:free",
+    #},
     # {
     #     "tag": "claude",
     #     "router_model": "anthropic/claude-3-sonnet",

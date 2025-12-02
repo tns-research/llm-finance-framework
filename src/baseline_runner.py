@@ -267,14 +267,14 @@ def run_baseline_analysis(
     print(f"Loaded {len(features_df)} rows from {features_path}")
 
     # Handle START_ROW if configured
-    from .config import START_ROW
+    from .config_compat import START_ROW
 
     if START_ROW is not None:
         features_df = features_df.iloc[START_ROW:].reset_index(drop=True)
         print(f"After START_ROW={START_ROW}: {len(features_df)} rows")
 
     # Handle TEST_MODE limit
-    from .config import TEST_LIMIT, TEST_MODE
+    from .config_compat import TEST_LIMIT, TEST_MODE
 
     if TEST_MODE:
         features_df = features_df.head(TEST_LIMIT)

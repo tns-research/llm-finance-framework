@@ -5,7 +5,7 @@ from typing import Optional
 
 import requests
 
-from .config import OPENROUTER_API_BASE
+from .config_compat import OPENROUTER_API_BASE
 
 
 def get_openrouter_api_key() -> str:
