@@ -21,7 +21,7 @@
 
 # MODEL SELECTION
 # ---------------
-USE_DUMMY_MODEL = True  # Set to True for testing (no API key needed)
+USE_DUMMY_MODEL = False  # Set to True for testing (no API key needed)
 # Set to False to run real LLM experiments via OpenRouter
 
 # EXPERIMENT TYPE
@@ -43,7 +43,7 @@ DATA_END = "2023-12-31"  # End date for historical data
 # TEST vs FULL RUN
 # ----------------
 TEST_MODE = True  # Set to True for quick tests, False for full experiments
-TEST_LIMIT = 15  # Number of days to run when TEST_MODE = True
+TEST_LIMIT = 5  # Number of days to run when TEST_MODE = True
 # Set TEST_MODE = False for complete ~2700 day analysis
 
 # =================================================================================
@@ -54,7 +54,7 @@ TEST_LIMIT = 15  # Number of days to run when TEST_MODE = True
 # ------------------
 # Master toggle for technical indicators in LLM prompts
 # When enabled: LLM sees RSI + MACD + Stochastic + Bollinger Bands
-# When disabled: LLM sees only RSI rules (no indicator values)
+# When disabled: LLM sees no indicator values
 # Note: Indicators are always calculated for baselines and analysis
 ENABLE_TECHNICAL_INDICATORS = True
 

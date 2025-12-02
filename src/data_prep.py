@@ -246,6 +246,14 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
     # Bollinger Band position (%B)
     df["bb_position"] = (df["close"] - bb_lower) / (bb_upper - bb_lower)
 
+    # Historical Technical Indicators (only when enabled)
+    if config.ENABLE_TECHNICAL_INDICATORS:
+        for k in range(1, config.PAST_RET_LAGS + 1):
+            df[f"rsi_lag_{k}"] = df["rsi_14"].shift(k)
+            df[f"macd_hist_lag_{k}"] = df["macd_histogram"].shift(k)
+            df[f"stoch_k_lag_{k}"] = df["stoch_k"].shift(k)
+            df[f"bb_position_lag_{k}"] = df["bb_position"].shift(k)
+
     # Momentum 5 jours
     df["ret_5d"] = df["return_1d"].rolling(config.RET_5D_WINDOW).sum()
 

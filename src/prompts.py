@@ -54,11 +54,60 @@ def row_to_prompt(row: pd.Series) -> str:
         header,
         f"Past {config.PAST_RET_LAGS} daily returns in percent, most recent last",
         f"{past_rets_str}",
+    ]
+
+    # Historical Technical Indicators (only when enabled)
+    if config.ENABLE_TECHNICAL_INDICATORS:
+        # Historical RSI values
+        if all(f"rsi_lag_{k}" in row.index for k in range(1, config.PAST_RET_LAGS + 1)):
+            past_rsi = [row[f"rsi_lag_{k}"] for k in range(config.PAST_RET_LAGS, 0, -1)]
+            past_rsi_str = ", ".join(f"{r:.1f}" for r in past_rsi if not pd.isna(r))
+            if past_rsi_str:
+                text_parts.extend([
+                    "",
+                    f"Past {config.PAST_RET_LAGS} days RSI(14) values, most recent last",
+                    f"{past_rsi_str}"
+                ])
+
+        # Historical MACD histogram values
+        if all(f"macd_hist_lag_{k}" in row.index for k in range(1, config.PAST_RET_LAGS + 1)):
+            past_macd = [row[f"macd_hist_lag_{k}"] for k in range(config.PAST_RET_LAGS, 0, -1)]
+            past_macd_str = ", ".join(f"{r:.3f}" for r in past_macd if not pd.isna(r))
+            if past_macd_str:
+                text_parts.extend([
+                    "",
+                    f"Past {config.PAST_RET_LAGS} days MACD histogram values, most recent last",
+                    f"{past_macd_str}"
+                ])
+
+        # Historical Stochastic %K values
+        if all(f"stoch_k_lag_{k}" in row.index for k in range(1, config.PAST_RET_LAGS + 1)):
+            past_stoch = [row[f"stoch_k_lag_{k}"] for k in range(config.PAST_RET_LAGS, 0, -1)]
+            past_stoch_str = ", ".join(f"{r:.1f}" for r in past_stoch if not pd.isna(r))
+            if past_stoch_str:
+                text_parts.extend([
+                    "",
+                    f"Past {config.PAST_RET_LAGS} days Stochastic %K values, most recent last",
+                    f"{past_stoch_str}"
+                ])
+
+        # Historical Bollinger Band positions
+        if all(f"bb_position_lag_{k}" in row.index for k in range(1, config.PAST_RET_LAGS + 1)):
+            past_bb = [row[f"bb_position_lag_{k}"] for k in range(config.PAST_RET_LAGS, 0, -1)]
+            past_bb_str = ", ".join(f"{r:.2f}" for r in past_bb if not pd.isna(r))
+            if past_bb_str:
+                text_parts.extend([
+                    "",
+                    f"Past {config.PAST_RET_LAGS} days Bollinger Band positions (0=lower, 1=upper), most recent last",
+                    f"{past_bb_str}"
+                ])
+
+    text_parts.extend([
         "",
         f"{config.MA20_WINDOW} day total return  {row['ma20_pct']:.2f} percent",
         f"{config.VOL20_WINDOW} day realized volatility  {row['vol20_annualized']:.2f} percent annualized",
         f"{config.RET_5D_WINDOW} day total return  {row['ret_5d']:.2f} percent"
-    ]
+    ])
 
     # Add RSI conditionally (RSI data always available, but only show when technical indicators enabled)
     if config.ENABLE_TECHNICAL_INDICATORS and "rsi_14" in row.index and not pd.isna(row["rsi_14"]):
