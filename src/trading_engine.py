@@ -18,6 +18,8 @@ from .config import (
     TEST_MODE,
     USE_DUMMY_MODEL,
 )
+from .memory_manager import MemoryManager
+from .period_manager import PeriodManager
 from .decision_analysis import (
     analyze_decisions_after_outcomes,
     analyze_position_duration_stats,
@@ -35,7 +37,6 @@ from .reporting import (
     create_technical_indicators_plot,
     generate_calibration_analysis_report,
     generate_llm_period_summary,
-    make_empty_stats,
 )
 from .statistical_validation import (
     comprehensive_statistical_validation,
@@ -262,16 +263,9 @@ def run_single_model(
     previous_decision = None
     previous_return = None
 
-    # Mid and long term memory
-    weekly_memory = []
-    monthly_memory = []
-    quarterly_memory = []
-    yearly_memory = []
-
-    week_stats = make_empty_stats()
-    month_stats = make_empty_stats()
-    quarter_stats = make_empty_stats()
-    year_stats = make_empty_stats()
+    # Unified memory and period management system
+    memory_manager = MemoryManager()
+    period_manager = PeriodManager(memory_manager)
 
     last_date = None
     total_rows = len(prompts)
@@ -300,131 +294,9 @@ def run_single_model(
         month = current_date.month
         quarter = (month - 1) // 3 + 1
 
-        # If we have a previous date, check for period boundaries and close periods
+        # Check period boundaries and generate summaries using unified system
         if last_date is not None:
-            prev_iso = last_date.isocalendar()
-            try:
-                prev_iso_year = prev_iso.year
-                prev_iso_week = prev_iso.week
-            except AttributeError:
-                prev_iso_year = int(prev_iso[0])
-                prev_iso_week = int(prev_iso[1])
-
-            prev_year = last_date.year
-            prev_month = last_date.month
-            prev_quarter = (prev_month - 1) // 3 + 1
-
-            # Week boundary
-            if iso_week != prev_iso_week or iso_year != prev_iso_year:
-                if week_stats["days"] > 0:
-                    technical_stats = None
-                    if ENABLE_TECHNICAL_INDICATORS:
-                        # Load features data to compute technical stats for the week
-                        features_path = os.path.join(
-                            base_dir, "data", "processed", "features.csv"
-                        )
-                        features_df = pd.read_csv(features_path, parse_dates=["date"])
-                        technical_stats = compute_period_technical_stats(
-                            features_df, last_date - pd.Timedelta(days=6), last_date
-                        )
-
-                    summary = generate_llm_period_summary(
-                        "Week",
-                        last_date,
-                        week_stats,
-                        router_model,
-                        model_tag,
-                        technical_stats,
-                    )
-                    weekly_memory.append(
-                        {"summary": summary, "technical_stats": technical_stats}
-                    )
-                    weekly_memory = weekly_memory[-5:]  # keep last 5
-                    week_stats = make_empty_stats()
-
-            # Month boundary
-            if month != prev_month or year != prev_year:
-                if month_stats["days"] > 0:
-                    technical_stats = None
-                    if ENABLE_TECHNICAL_INDICATORS:
-                        # Load features data to compute technical stats for the month
-                        features_path = os.path.join(
-                            base_dir, "data", "processed", "features.csv"
-                        )
-                        features_df = pd.read_csv(features_path, parse_dates=["date"])
-                        technical_stats = compute_period_technical_stats(
-                            features_df, last_date - pd.Timedelta(days=30), last_date
-                        )
-
-                    summary = generate_llm_period_summary(
-                        "Month",
-                        last_date,
-                        month_stats,
-                        router_model,
-                        model_tag,
-                        technical_stats,
-                    )
-                    monthly_memory.append(
-                        {"summary": summary, "technical_stats": technical_stats}
-                    )
-                    monthly_memory = monthly_memory[-5:]
-                    month_stats = make_empty_stats()
-
-            # Quarter boundary
-            if quarter != prev_quarter or year != prev_year:
-                if quarter_stats["days"] > 0:
-                    technical_stats = None
-                    if ENABLE_TECHNICAL_INDICATORS:
-                        # Load features data to compute technical stats for the quarter
-                        features_path = os.path.join(
-                            base_dir, "data", "processed", "features.csv"
-                        )
-                        features_df = pd.read_csv(features_path, parse_dates=["date"])
-                        technical_stats = compute_period_technical_stats(
-                            features_df, last_date - pd.Timedelta(days=90), last_date
-                        )
-
-                    summary = generate_llm_period_summary(
-                        "Quarter",
-                        last_date,
-                        quarter_stats,
-                        router_model,
-                        model_tag,
-                        technical_stats,
-                    )
-                    quarterly_memory.append(
-                        {"summary": summary, "technical_stats": technical_stats}
-                    )
-                    quarterly_memory = quarterly_memory[-5:]
-                    quarter_stats = make_empty_stats()
-
-            # Year boundary
-            if year != prev_year:
-                if year_stats["days"] > 0:
-                    technical_stats = None
-                    if ENABLE_TECHNICAL_INDICATORS:
-                        # Load features data to compute technical stats for the year
-                        features_path = os.path.join(
-                            base_dir, "data", "processed", "features.csv"
-                        )
-                        features_df = pd.read_csv(features_path, parse_dates=["date"])
-                        technical_stats = compute_period_technical_stats(
-                            features_df, last_date - pd.Timedelta(days=365), last_date
-                        )
-
-                    summary = generate_llm_period_summary(
-                        "Year",
-                        last_date,
-                        year_stats,
-                        router_model,
-                        model_tag,
-                        technical_stats,
-                    )
-                    yearly_memory.append(
-                        {"summary": summary, "technical_stats": technical_stats}
-                    )
-                    yearly_memory = yearly_memory[-5:]
-                    year_stats = make_empty_stats()
+            period_manager.check_all_periods(current_date, last_date, router_model, model_tag)
 
         base_prompt = row["prompt_text"]
 
@@ -465,122 +337,12 @@ def run_single_model(
                 f"Win rate so far  {win_rate_pct:.1f} percent."
             )
 
-        # Mid and long term memory blocks with relative time labels
-        if weekly_memory:
-            # Add relative time labels to weekly summaries (most recent first)
-            labeled_weekly = []
-            for i, memory_item in enumerate(
-                weekly_memory[::-1]
-            ):  # Reverse to get most recent first
-                weeks_ago = i + 1
-                if weeks_ago == 1:
-                    label = "1 week ago"
-                else:
-                    label = f"{weeks_ago} weeks ago"
-
-                # Handle both new dict format and old string format for backward compatibility
-                if isinstance(memory_item, dict):
-                    memory_text = f"{label}:\n{memory_item['summary']}"
-                    memory_text += format_period_technical_indicators(
-                        memory_item["technical_stats"], "Weekly"
-                    )
-                else:
-                    # Backward compatibility: old string format
-                    memory_text = f"{label}:\n{memory_item}"
-
-                labeled_weekly.append(memory_text)
-            weekly_block = "Weekly memory (most recent first)\n" + "\n\n".join(
-                labeled_weekly
-            )
-        else:
-            weekly_block = "No weekly summaries yet."
-
-        if monthly_memory:
-            # Add relative time labels to monthly summaries (most recent first)
-            labeled_monthly = []
-            for i, memory_item in enumerate(
-                monthly_memory[::-1]
-            ):  # Reverse to get most recent first
-                months_ago = i + 1
-                if months_ago == 1:
-                    label = "1 month ago"
-                else:
-                    label = f"{months_ago} months ago"
-
-                # Handle both new dict format and old string format for backward compatibility
-                if isinstance(memory_item, dict):
-                    memory_text = f"{label}:\n{memory_item['summary']}"
-                    memory_text += format_period_technical_indicators(
-                        memory_item["technical_stats"], "Monthly"
-                    )
-                else:
-                    # Backward compatibility: old string format
-                    memory_text = f"{label}:\n{memory_item}"
-
-                labeled_monthly.append(memory_text)
-            monthly_block = "Monthly memory (most recent first)\n" + "\n\n".join(
-                labeled_monthly
-            )
-        else:
-            monthly_block = "No monthly summaries yet."
-
-        if quarterly_memory:
-            # Add relative time labels to quarterly summaries (most recent first)
-            labeled_quarterly = []
-            for i, memory_item in enumerate(
-                quarterly_memory[::-1]
-            ):  # Reverse to get most recent first
-                quarters_ago = i + 1
-                if quarters_ago == 1:
-                    label = "1 quarter ago"
-                else:
-                    label = f"{quarters_ago} quarters ago"
-
-                # Handle both new dict format and old string format for backward compatibility
-                if isinstance(memory_item, dict):
-                    memory_text = f"{label}:\n{memory_item['summary']}"
-                    memory_text += format_period_technical_indicators(
-                        memory_item["technical_stats"], "Quarterly"
-                    )
-                else:
-                    # Backward compatibility: old string format
-                    memory_text = f"{label}:\n{memory_item}"
-
-                labeled_quarterly.append(memory_text)
-            quarterly_block = "Quarterly memory (most recent first)\n" + "\n\n".join(
-                labeled_quarterly
-            )
-        else:
-            quarterly_block = "No quarterly summaries yet."
-
-        if yearly_memory:
-            # Add relative time labels to yearly summaries (most recent first)
-            labeled_yearly = []
-            for i, memory_item in enumerate(
-                yearly_memory[::-1]
-            ):  # Reverse to get most recent first
-                years_ago = i + 1
-                if years_ago == 1:
-                    label = "1 year ago"
-                else:
-                    label = f"{years_ago} years ago"
-
-                # Handle both new dict format and old string format for backward compatibility
-                if isinstance(memory_item, dict):
-                    memory_text = f"{label}:\n{memory_item['summary']}"
-                    memory_text += format_period_technical_indicators(
-                        memory_item["technical_stats"], "Yearly"
-                    )
-                else:
-                    # Backward compatibility: old string format
-                    memory_text = f"{label}:\n{memory_item}"
-
-                labeled_yearly.append(memory_text)
-            yearly_block = "Yearly memory (most recent first)\n" + "\n\n".join(
-                labeled_yearly
-            )
-        else:
-            yearly_block = "No yearly summaries yet."
+        # Generate memory blocks using unified system
+        memory_blocks = memory_manager.get_all_memory_blocks()
+        weekly_block = memory_blocks['weekly']
+        monthly_block = memory_blocks['monthly']
+        quarterly_block = memory_blocks['quarterly']
+        yearly_block = memory_blocks['yearly']
 
         # Full trading history block (always enabled if feature is on)
         if ENABLE_FULL_TRADING_HISTORY and trading_history:
@@ -704,54 +466,33 @@ def run_single_model(
         if daily_return > 0:
             win_count += 1
 
-        # Update period stats for current date
-        week_stats["strategy_return"] += daily_return
-        week_stats["index_return"] += row["next_return_1d"]
-        week_stats["days"] += 1
-        if daily_return > 0:
-            week_stats["wins"] += 1
-        if decision == "BUY":
-            week_stats["buys"] += 1
-        elif decision == "HOLD":
-            week_stats["holds"] += 1
-        elif decision == "SELL":
-            week_stats["sells"] += 1
+        # Update period stats using unified system
+        period_manager.update_stats('weekly', strategy_return=daily_return, index_return=row["next_return_1d"], days=1)
+        period_manager.update_stats('monthly', strategy_return=daily_return, index_return=row["next_return_1d"], days=1)
+        period_manager.update_stats('quarterly', strategy_return=daily_return, index_return=row["next_return_1d"], days=1)
+        period_manager.update_stats('yearly', strategy_return=daily_return, index_return=row["next_return_1d"], days=1)
 
-        month_stats["strategy_return"] += daily_return
-        month_stats["index_return"] += row["next_return_1d"]
-        month_stats["days"] += 1
         if daily_return > 0:
-            month_stats["wins"] += 1
-        if decision == "BUY":
-            month_stats["buys"] += 1
-        elif decision == "HOLD":
-            month_stats["holds"] += 1
-        elif decision == "SELL":
-            month_stats["sells"] += 1
+            period_manager.update_stats('weekly', wins=1)
+            period_manager.update_stats('monthly', wins=1)
+            period_manager.update_stats('quarterly', wins=1)
+            period_manager.update_stats('yearly', wins=1)
 
-        quarter_stats["strategy_return"] += daily_return
-        quarter_stats["index_return"] += row["next_return_1d"]
-        quarter_stats["days"] += 1
-        if daily_return > 0:
-            quarter_stats["wins"] += 1
         if decision == "BUY":
-            quarter_stats["buys"] += 1
+            period_manager.update_stats('weekly', buys=1)
+            period_manager.update_stats('monthly', buys=1)
+            period_manager.update_stats('quarterly', buys=1)
+            period_manager.update_stats('yearly', buys=1)
         elif decision == "HOLD":
-            quarter_stats["holds"] += 1
+            period_manager.update_stats('weekly', holds=1)
+            period_manager.update_stats('monthly', holds=1)
+            period_manager.update_stats('quarterly', holds=1)
+            period_manager.update_stats('yearly', holds=1)
         elif decision == "SELL":
-            quarter_stats["sells"] += 1
-
-        year_stats["strategy_return"] += daily_return
-        year_stats["index_return"] += row["next_return_1d"]
-        year_stats["days"] += 1
-        if daily_return > 0:
-            year_stats["wins"] += 1
-        if decision == "BUY":
-            year_stats["buys"] += 1
-        elif decision == "HOLD":
-            year_stats["holds"] += 1
-        elif decision == "SELL":
-            year_stats["sells"] += 1
+            period_manager.update_stats('weekly', sells=1)
+            period_manager.update_stats('monthly', sells=1)
+            period_manager.update_stats('quarterly', sells=1)
+            period_manager.update_stats('yearly', sells=1)
 
         last_date = current_date
 

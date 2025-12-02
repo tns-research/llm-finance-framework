@@ -3,6 +3,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from typing import Union
 
 from .config import (
     DEBUG_SHOW_FULL_PROMPT,
@@ -10,6 +11,7 @@ from .config import (
     SHOW_DATE_TO_LLM,
     USE_DUMMY_MODEL,
 )
+from .memory_classes import PeriodStats
 from .openrouter_model import call_openrouter
 
 
@@ -155,7 +157,7 @@ def compute_period_technical_stats(
 def generate_llm_period_summary(
     period_label: str,
     end_date,
-    stats: dict,
+    stats: Union[dict, PeriodStats],
     router_model: str,
     model_tag: str,
     technical_stats: dict = None,
@@ -166,7 +168,19 @@ def generate_llm_period_summary(
 
     If USE_DUMMY_MODEL or router_model is None, we fall back to a simple
     template summary.
+
+    Args:
+        period_label: "Week", "Month", "Quarter", or "Year"
+        end_date: End date of the period
+        stats: Statistics dict or PeriodStats object
+        router_model: Model identifier for LLM calls
+        model_tag: Model tag for identification
+        technical_stats: Optional technical indicators data
     """
+    # Convert PeriodStats to dict for backward compatibility
+    if hasattr(stats, 'to_dict'):
+        stats = stats.to_dict()
+
     if stats["days"] == 0:
         return f"{period_label} ending {end_date.strftime('%Y-%m-%d')}  no trading activity recorded."
 

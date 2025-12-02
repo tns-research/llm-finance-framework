@@ -21,7 +21,7 @@
 
 # MODEL SELECTION
 # ---------------
-USE_DUMMY_MODEL = True  # Set to True for testing (no API key needed)
+USE_DUMMY_MODEL = False  # Set to True for testing (no API key needed)
 # Set to False to run real LLM experiments via OpenRouter
 
 # EXPERIMENT TYPE
@@ -44,7 +44,7 @@ DATA_END = "2023-12-31"  # End date for historical data
 # ----------------
 TEST_MODE = True  # Set to True for quick tests, False for full experiments
 TEST_LIMIT = (
-    500  # Number of days to run when TEST_MODE = True (test on at least 3 days)
+    5  # Number of days to run when TEST_MODE = True (test on at least 3 days)
 )
 # Set TEST_MODE = False for complete ~2700 day analysis
 
@@ -70,7 +70,7 @@ ENABLE_FULL_TRADING_HISTORY = True
 # DEBUGGING & DEVELOPMENT
 # -----------------------
 # Show full LLM prompts during execution (helpful for understanding what the AI sees)
-DEBUG_SHOW_FULL_PROMPT = False
+DEBUG_SHOW_FULL_PROMPT = True
 
 # DATA SUBSET FOR TESTING
 # -----------------------
