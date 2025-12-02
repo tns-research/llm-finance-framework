@@ -494,6 +494,7 @@ def evaluate_hold_decisions_dual_criteria(parsed_df: pd.DataFrame) -> Dict:
 
     # ===== CRITERION 1: QUIET MARKET SUCCESS =====
     quiet_threshold = 0.002  # 0.2% very quiet market
+    risk_avoidance_threshold = 0.02  # 2% significant loss to avoid
     market_returns = hold_data["next_return_1d"]
     quiet_markets = market_returns.abs() < quiet_threshold
 
@@ -526,7 +527,7 @@ def evaluate_hold_decisions_dual_criteria(parsed_df: pd.DataFrame) -> Dict:
 
         # Risk avoidance: Did HOLD avoid a loss that would have occurred?
         directional_loss = min(buy_return, sell_return)
-        risk_avoided = directional_loss < -0.005  # Would have lost >0.5%
+        risk_avoided = directional_loss < -0.02  # Would have lost >2%
 
         # Score based on volatility-adjusted performance
         vol_adjusted_score = 0
@@ -552,14 +553,30 @@ def evaluate_hold_decisions_dual_criteria(parsed_df: pd.DataFrame) -> Dict:
     )
     risk_avoidance_rate = np.mean(risk_avoidance_scores) if risk_avoidance_scores else 0
 
-    # For backward compatibility, keep old context calculation
-    contexts = [
-        {"score": 1.0, "reasons": ["legacy"], "max_reason": "legacy"}
-        for _ in hold_data.iterrows()
-    ]
-    context_scores = [c["score"] for c in contexts]
-    avg_context_score = 1.0
-    context_success_rate = 1.0  # Always "successful" for legacy compatibility
+    # Context scores based on risk avoidance and relative performance
+    context_scores = []
+    context_reasons = []
+
+    for i, vol_adjusted_score in enumerate(relative_performance_scores):
+        score = vol_adjusted_score  # Use the volatility-adjusted score directly
+        reasons = []
+
+        if vol_adjusted_score == 1.0:
+            reasons.append("avoided_significant_loss")
+        elif vol_adjusted_score == 0.5:
+            reasons.append("reasonable_in_volatility")
+        elif vol_adjusted_score == 0.3:
+            reasons.append("quiet_market_timing")
+
+        context_scores.append(score)
+        context_reasons.append({
+            "score": score,
+            "reasons": reasons,
+            "max_reason": reasons[0] if reasons else "no_credit"
+        })
+
+    avg_context_score = np.mean(context_scores) if context_scores else 0
+    context_success_rate = np.mean([s > 0.3 for s in context_scores]) if context_scores else 0
 
     # ===== COMBINED SCORING =====
     quiet_weight = 0.6
@@ -591,10 +608,10 @@ def evaluate_hold_decisions_dual_criteria(parsed_df: pd.DataFrame) -> Dict:
     })
 
     # ===== CONTEXT REASONS BREAKDOWN =====
-    context_reasons = {}
-    for context in contexts:
+    context_reasons_breakdown = {}
+    for context in context_reasons:
         for reason in context["reasons"]:
-            context_reasons[reason] = context_reasons.get(reason, 0) + 1
+            context_reasons_breakdown[reason] = context_reasons_breakdown.get(reason, 0) + 1
 
     # ===== PERFORMANCE CATEGORY =====
     def categorize_hold_performance(success_rate: float) -> str:
@@ -635,8 +652,8 @@ def evaluate_hold_decisions_dual_criteria(parsed_df: pd.DataFrame) -> Dict:
         "contextual_correctness": {
             "avg_context_score": avg_context_score,
             "context_success_rate": context_success_rate,
-            "reason_breakdown": {},
-            "interpretation": f"Legacy context evaluation: {context_success_rate:.1%} success rate",
+            "reason_breakdown": context_reasons_breakdown,
+            "interpretation": f"Risk-adjusted context evaluation: {context_success_rate:.1%} success rate",
         },
         # Combined assessment
         "combined_assessment": {
