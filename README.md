@@ -212,6 +212,10 @@ Every commit is automatically checked by our CI/CD pipeline:
 ![Rolling Performance](example_results/plots/dummy_model_memory_feeling_rolling_performance.png)
 *Rolling Sharpe ratio and performance metrics over different time windows*
 
+### Technical Indicators Timeline
+![Technical Indicators Timeline](example_results/plots/dummy_model_memory_feeling_technical_timeline.png)
+*Evolution of RSI, MACD, Stochastic, and Bollinger Bands with trading decision overlays*
+
 ## 📈 Data Source
 
 **Data Sources**: The framework works with publicly available financial market data in standard CSV format.

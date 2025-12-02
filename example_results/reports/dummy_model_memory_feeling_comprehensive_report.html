@@ -224,7 +224,7 @@
     <div class="container">
         <div class="header">
             <h1>🚀 LLM Trading Strategy Experiment Report</h1>
-            <div class="subtitle">Model: dummy_model_memory_feeling | Generated: 2025-11-29 03:27</div>
+            <div class="subtitle">Model: dummy_model_memory_feeling | Generated: 2025-12-02 18:16</div>
         </div>
         <div class="content">
             <div class="section">
@@ -233,22 +233,22 @@
 
                     <div class="metric-card">
                         <div class="label">Total Return</div>
-                        <div class="value">-2.62%</div>
-                        <small>vs Index: 30.45%</small>
+                        <div class="value">-2.67%</div>
+                        <small>vs Index: 14.17%</small>
                     </div>
                     <div class="metric-card">
                         <div class="label">Trading Period</div>
-                        <div class="value">1000 days</div>
+                        <div class="value">500 days</div>
                     </div>
 
                     <div class="metric-card">
                         <div class="label">Statistical Significance</div>
                         <div class="value">❌ Not significant</div>
-                        <small>p-value: 0.3844</small>
+                        <small>p-value: 0.5260</small>
                     </div>
                     <div class="metric-card">
                         <div class="label">Effect Size</div>
-                        <div class="value">-0.882</div>
+                        <div class="value">-0.630</div>
                         <small>Cohen's d</small>
                     </div>
 
@@ -259,7 +259,45 @@
 
                 </div>
             </div>
-            <div class="section">
+
+    <div class="section">
+        <h2>🔬 Methodology & Technical Implementation</h2>
+
+        <h3>Technical Indicator Framework</h3>
+        <ul>
+            <li><strong>RSI(14):</strong> Momentum oscillator for overbought/oversold conditions (thresholds: 30/70)</li>
+            <li><strong>MACD(12,26,9):</strong> Trend-following momentum indicator with signal line crossovers</li>
+            <li><strong>Stochastic(14,3):</strong> Price momentum relative to recent trading range (thresholds: 20/80)</li>
+            <li><strong>Bollinger Bands(20,2):</strong> Volatility-based support/resistance levels with position tracking</li>
+        </ul>
+
+        <h3>Enhanced HOLD Evaluation</h3>
+        <p><strong>Previous Method:</strong> Simple next-day return > 0 (resulted in 0% success rate)</p>
+
+        <p><strong>New Dual Criteria:</strong></p>
+        <ol>
+            <li><strong>Quiet Market Success:</strong> Performance in low-volatility environments (<0.2% daily moves)</li>
+            <li><strong>Risk Avoidance:</strong> Protection against significant losses in uncertain conditions (>2% potential loss)</li>
+            <li><strong>Context Adjustment:</strong> Volatility and regime-aware evaluation with weighted scoring</li>
+        </ol>
+
+        <h3>Signal Integration Approach</h3>
+        <ul>
+            <li><strong>Consensus Framework:</strong> Multiple indicators must align for high-confidence signals</li>
+            <li><strong>Weighting System:</strong> Different indicators weighted by historical effectiveness</li>
+            <li><strong>Contrarian Filtering:</strong> System identifies when to fade vs. follow technical extremes</li>
+            <li><strong>Adaptive Thresholds:</strong> Dynamic signal strength based on market volatility</li>
+        </ul>
+
+        <h3>Decision Framework Architecture</h3>
+        <ul>
+            <li><strong>Multi-Modal Input:</strong> Technical indicators + LLM reasoning + risk metrics</li>
+            <li><strong>Probabilistic Outputs:</strong> Confidence scores for BUY/HOLD/SELL decisions</li>
+            <li><strong>Context Awareness:</strong> Market regime detection and volatility adjustment</li>
+            <li><strong>Memory Integration:</strong> Historical performance feedback for adaptive learning</li>
+        </ul>
+    </div>
+                <div class="section">
                 <h2>🎯 Performance Overview</h2>
 
                 <div class="chart-container">
@@ -280,28 +318,28 @@
                 <div class="metric-grid">
                     <div class="metric-card">
                         <div class="label">Beta (Market Sensitivity)</div>
-                        <div class="value">0.052</div>
+                        <div class="value">-0.036</div>
                         <small>Low systematic risk</small>
                     </div>
                     <div class="metric-card">
                         <div class="label">Alpha (Excess Return)</div>
-                        <div class="value negative">-1.06%</div>
+                        <div class="value negative">-1.09%</div>
                         <small>Risk-adjusted performance</small>
                     </div>
                     <div class="metric-card">
                         <div class="label">Market Correlation</div>
-                        <div class="value">0.065</div>
+                        <div class="value">-0.044</div>
                         <small>Low correlated</small>
                     </div>
                     <div class="metric-card">
                         <div class="label">Total Volatility</div>
-                        <div class="value">11.03%</div>
+                        <div class="value">11.13%</div>
                         <small>Annualized strategy volatility</small>
                     </div>
                 </div>
 
                 <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                    <strong>Risk Decomposition:</strong> 0.4% systematic risk, 99.6% idiosyncratic risk
+                    <strong>Risk Decomposition:</strong> 0.2% systematic risk, 99.8% idiosyncratic risk
                 </div>
 
                 <h3>Risk Metrics Visualization</h3>
@@ -324,19 +362,19 @@
 
                     <div class="metric-card">
                         <div class="label">Low Volatility</div>
-                        <div class="value negative">-9.54%</div>
+                        <div class="value negative">-0.65%</div>
                         <small>Excess Return</small>
                     </div>
 
                     <div class="metric-card">
                         <div class="label">Moderate Volatility</div>
-                        <div class="value positive">+10.04%</div>
+                        <div class="value negative">-10.87%</div>
                         <small>Excess Return</small>
                     </div>
 
                     <div class="metric-card">
                         <div class="label">High Volatility</div>
-                        <div class="value negative">-20.28%</div>
+                        <div class="value negative">-11.96%</div>
                         <small>Excess Return</small>
                     </div>
 
@@ -345,8 +383,8 @@
                 <h3>Key Regime Insights</h3>
                 <ul class="insights-list">
 
-                    <li><strong>Best Performance:</strong> Moderate Volatility regime (+10.04% excess return)</li>
-                    <li><strong>Worst Performance:</strong> High Volatility regime (-20.28% excess return)</li>
+                    <li><strong>Best Performance:</strong> Low Volatility regime (-0.65% excess return)</li>
+                    <li><strong>Worst Performance:</strong> High Volatility regime (-11.96% excess return)</li>
                     <li><strong>Strategy Adaptation:</strong> ⚠️ Performance varies significantly by regime</li>
                 </ul>
 
@@ -365,22 +403,22 @@
 STATISTICAL VALIDATION REPORT - dummy_model_memory_feeling
 ================================================================================
 
-Dataset: 1000 periods (2015-03-18 00:00:00 to 2019-03-07 00:00:00)
-Strategy Return: -2.62% | Index Return: 30.45%
+Dataset: 500 periods (2015-04-17 00:00:00 to 2017-04-10 00:00:00)
+Strategy Return: -2.67% | Index Return: 14.17%
 
 OUT-OF-SAMPLE VALIDATION:
-  Train Period: -0.029 Sharpe (700 periods)
-  Test Period:  -0.116 Sharpe (300 periods)
-  Sharpe Decay: -300.0%
+  Train Period: -0.537 Sharpe (350 periods)
+  Test Period:  1.621 Sharpe (150 periods)
+  Sharpe Decay: +401.9%
   Overfitting Detected: YES
   Generalizes Well: NO
 
 BOOTSTRAP TEST VS INDEX:
-  Strategy Sharpe: -0.060
-  Index Sharpe: 0.562
-  Difference: -0.622
-  p-value (two-sided): 0.3844
-  95% CI: [-2.000, +0.754]
+  Strategy Sharpe: -0.121
+  Index Sharpe: 0.522
+  Difference: -0.643
+  p-value (two-sided): 0.5260
+  95% CI: [-2.690, +1.306]
   RESULT: No significant difference detected 🤔
 
 SUMMARY ASSESSMENT:
@@ -390,7 +428,7 @@ SUMMARY ASSESSMENT:
     ⚠️  Strategy shows signs of overfitting or poor generalization
     🚨 Moderate overfitting detected
     🤔 Strategy performance vs index is not statistically significant
-    📈 Large effect size indicates substantial performance difference
+    📊 Moderate effect size indicates meaningful performance difference
   Recommendations:
     • Consider model regularization or simpler strategy
 ================================================================================
@@ -412,6 +450,30 @@ SUMMARY ASSESSMENT:
                     <div class="chart-caption">Figure: Calibration analysis by decision type (BUY/HOLD/SELL)</div>
                 </div>
 
+                <h3>Technical Indicators Analysis</h3>
+                <p>This section analyzes how the model utilized technical indicators.</p>
+
+                <h4>Technical Indicator Overview</h4>
+                <div class="chart-container">
+                    <img src="../plots/dummy_model_memory_feeling_technical_indicators.png" alt="Technical Indicators">
+                    <div class="chart-caption">Figure: Price action with available technical indicators and trading signals</div>
+                </div>
+
+                <h4>RSI Performance Analysis</h4>
+                <div class="chart-container">
+                    <img src="../plots/dummy_model_memory_feeling_rsi_performance.png" alt="RSI Analysis">
+                    <div class="chart-caption">Figure: RSI distribution by decision type and performance correlation</div>
+                </div>
+
+                <h4>Key RSI Insights</h4>
+                <ul>
+                    <li><strong>Decision Distribution</strong>: How BUY/HOLD/SELL decisions correlate with RSI levels</li>
+                    <li><strong>Performance by RSI Range</strong>: Win rates across different RSI ranges (0-30, 30-70, 70-100)</li>
+                    <li><strong>Winning vs Losing Trades</strong>: RSI distribution comparison between profitable and unprofitable trades</li>
+                    <li><strong>RSI Momentum</strong>: Performance based on RSI directional changes and momentum</li>
+                </ul>
+                <p><strong>RSI Strategy Effectiveness</strong>: RSI-based strategies provide momentum signals that complement trend and volatility indicators.</p>
+
                 <h3>Decision Pattern Analysis</h3>
                 <div class="chart-container">
                     <img src="../plots/dummy_model_memory_feeling_decision_patterns.png" alt="Decision Patterns">
@@ -423,20 +485,20 @@ SUMMARY ASSESSMENT:
 
                     <div class="metric-card">
                         <div class="label">BUY Decisions</div>
-                        <div class="value">339</div>
-                        <small>33.9% of total</small>
+                        <div class="value">164</div>
+                        <small>32.8% of total</small>
                     </div>
 
                     <div class="metric-card">
                         <div class="label">HOLD Decisions</div>
-                        <div class="value">333</div>
-                        <small>33.3% of total</small>
+                        <div class="value">173</div>
+                        <small>34.6% of total</small>
                     </div>
 
                     <div class="metric-card">
                         <div class="label">SELL Decisions</div>
-                        <div class="value">328</div>
-                        <small>32.8% of total</small>
+                        <div class="value">163</div>
+                        <small>32.6% of total</small>
                     </div>
 
                 </div>
@@ -445,20 +507,20 @@ SUMMARY ASSESSMENT:
                 <div class="metric-grid">
                     <div class="metric-card">
                         <div class="label">Total Decisions</div>
-                        <div class="value">1000</div>
+                        <div class="value">500</div>
                     </div>
                     <div class="metric-card">
                         <div class="label">Overall Win Rate</div>
-                        <div class="value negative">35.0%</div>
+                        <div class="value negative">32.2%</div>
                         <small>Profitable decisions</small>
                     </div>
                     <div class="metric-card">
                         <div class="label">Avg Daily Return</div>
-                        <div class="value negative">-0.003%</div>
+                        <div class="value negative">-0.005%</div>
                     </div>
                     <div class="metric-card">
                         <div class="label">Sharpe Ratio</div>
-                        <div class="value negative">-0.06</div>
+                        <div class="value negative">-0.12</div>
                         <small>Risk-adjusted return</small>
                     </div>
                 </div>
@@ -474,13 +536,13 @@ SUMMARY ASSESSMENT:
 
                     <div class="metric-card">
                         <div class="label">HOLD Performance</div>
-                        <div class="value negative">-7.3%</div>
+                        <div class="value negative">-8.0%</div>
                         <small>Annual excess return</small>
                     </div>
 
                     <div class="metric-card">
                         <div class="label">SELL Performance</div>
-                        <div class="value negative">-18.0%</div>
+                        <div class="value negative">-17.6%</div>
                         <small>Annual excess return</small>
                     </div>
 
@@ -500,10 +562,10 @@ SUMMARY ASSESSMENT:
 
                         <tr>
                             <td style="padding: 10px; border: 1px solid #e2e8f0; font-weight: bold;">BUY</td>
-                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">55.5%</td>
-                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">0.027%</td>
-                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">0.48</td>
-                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">33.9%</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">51.2%</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">0.018%</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">0.35</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">32.8%</td>
                         </tr>
 
                         <tr>
@@ -511,15 +573,15 @@ SUMMARY ASSESSMENT:
                             <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">0.0%</td>
                             <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">0.000%</td>
                             <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">0.00</td>
-                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">33.3%</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">34.6%</td>
                         </tr>
 
                         <tr>
                             <td style="padding: 10px; border: 1px solid #e2e8f0; font-weight: bold;">SELL</td>
-                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">49.4%</td>
-                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">-0.036%</td>
-                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">-0.69</td>
-                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">32.8%</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">47.2%</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">-0.035%</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">-0.62</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">32.6%</td>
                         </tr>
 
                     </tbody>
@@ -535,7 +597,7 @@ SUMMARY ASSESSMENT:
                     <div class="metric-card">
                         <div class="label">Worst Decision</div>
                         <div class="value">SELL</div>
-                        <small>-18.0% excess return</small>
+                        <small>-17.6% excess return</small>
                     </div>
                     <div class="metric-card">
                         <div class="label">Consistency</div>
@@ -548,15 +610,15 @@ SUMMARY ASSESSMENT:
                 <div class="metric-grid">
                     <div class="metric-card">
                         <div class="label">HOLD Success Rate</div>
-                        <div class="value negative">40.0%</div>
+                        <div class="value negative">9.6%</div>
                         <small>Poor</small>
                     </div>
                 </div>
 
                 <h4>Quiet Market Performance</h4>
                 <ul class="insights-list">
-                    <li><strong>Success Rate:</strong> 0.0%</li>
-                    <li><strong>Assessment:</strong> HOLD succeeded in 0.0% of very quiet markets (<0.2% daily mo...</li>
+                    <li><strong>Success Rate:</strong> 0.6%</li>
+                    <li><strong>Assessment:</strong> HOLD succeeded in 0.6% of very quiet markets (<0.2% daily mo...</li>
                 </ul>
             </div>
             <div class="section">
@@ -567,7 +629,7 @@ SUMMARY ASSESSMENT:
                 <div class="metric-grid">
                     <div class="metric-card">
                         <div class="label">Trading Frequency</div>
-                        <div class="value">65.1%</div>
+                        <div class="value">65.0%</div>
                         <small>Days with position changes</small>
                     </div>
                     <div class="metric-card">
@@ -577,7 +639,7 @@ SUMMARY ASSESSMENT:
                     </div>
                     <div class="metric-card">
                         <div class="label">Trading Costs</div>
-                        <div class="value">2461 bps</div>
+                        <div class="value">2457 bps</div>
                         <small>Significant impact</small>
                     </div>
                 </div>
@@ -635,7 +697,7 @@ SUMMARY ASSESSMENT:
                     <li>⚠️  Strategy shows signs of overfitting or poor generalization</li>
                     <li>🚨 Moderate overfitting detected</li>
                     <li>🤔 Strategy performance vs index is not statistically significant</li>
-                    <li>📈 Large effect size indicates substantial performance difference</li>
+                    <li>📊 Moderate effect size indicates meaningful performance difference</li>
                 </ul>
 
                 <h3>Recommendations</h3>
@@ -666,7 +728,7 @@ SUMMARY ASSESSMENT:
                     </div>
                     <div class="metric-card">
                         <div class="label">Generated</div>
-                        <div class="value">2025-11-29 03:27:12</div>
+                        <div class="value">2025-12-02 18:16:53</div>
                     </div>
                 </div>
 
@@ -676,10 +738,12 @@ SUMMARY ASSESSMENT:
                     <div class="data-source-item">Baseline Comparison: Performance vs multiple strategies</div>
                     <div class="data-source-item">Calibration Analysis: Available</div>
                     <div class="data-source-item">Pattern Analysis: Available</div>
-                    <div class="data-source-item">Parsed Data: 1000 trading periods</div>
-                    <div class="data-source-item">Plots: 7 chart files</div>
+                    <div class="data-source-item">Parsed Data: 500 trading periods</div>
+                    <div class="data-source-item">Features Data: Available</div>
+                    <div class="data-source-item">Plots: 10 chart files</div>
                     <div class="data-source-item">Rolling Performance Plots: Available</div>
                     <div class="data-source-item">Risk Analysis Plots: Available</div>
+                    <div class="data-source-item">Technical Plots: Available</div>
                     <div class="data-source-item">Statistical Plots: Available</div>
                 </div>
 
@@ -698,7 +762,7 @@ SUMMARY ASSESSMENT:
         <div class="footer">
             <p><strong>LLM Finance Experiment Framework</strong></p>
             <p>This report was automatically generated. For questions about methodology or results, refer to the technical documentation.</p>
-            <p>Generated on 2025-11-29 at 03:27:12</p>
+            <p>Generated on 2025-12-02 at 18:16:53</p>
         </div>
     </div>
 </body>

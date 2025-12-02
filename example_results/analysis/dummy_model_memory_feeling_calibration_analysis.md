@@ -9,15 +9,15 @@ measuring how well predicted probabilities match actual outcomes.
 
 ## Overall Calibration Metrics
 
-**Total Trading Days:** 1000
-**Overall Win Rate:** 35.0%
-**Mean Predicted Probability:** 65.2%
+**Total Trading Days:** 500
+**Overall Win Rate:** 32.2%
+**Mean Predicted Probability:** 65.7%
 
 ### Calibration Quality Indicators
 
-- **Expected Calibration Error (ECE):** 30.2%
-- **Maximum Calibration Error:** 50.7%
-- **Overconfidence Score:** 43.4%
+- **Expected Calibration Error (ECE):** 33.6%
+- **Maximum Calibration Error:** 52.3%
+- **Overconfidence Score:** 48.0%
 
 - **Calibration Quality:** **POOR** - Model shows significant calibration problems
 
@@ -33,24 +33,24 @@ This analysis shows if the model has different calibration characteristics for B
 
 ### BUY Decisions
 
-- **Count:** 339 decisions
-- **Actual Win Rate:** 55.5%
-- **Mean Predicted Probability:** 65.6%
-- **Overconfidence:** +10.1% (overconfident)
+- **Count:** 164 decisions
+- **Actual Win Rate:** 51.2%
+- **Mean Predicted Probability:** 65.4%
+- **Overconfidence:** +14.2% (overconfident)
 
 ### HOLD Decisions
 
-- **Count:** 333 decisions
-- **Actual Win Rate:** 0.0%
-- **Mean Predicted Probability:** 63.9%
-- **Overconfidence:** +63.9% (overconfident)
+- **Count:** 173 decisions
+- **Actual Win Rate:** 23.1%
+- **Mean Predicted Probability:** 66.5%
+- **Overconfidence:** +43.3% (overconfident)
 
 ### SELL Decisions
 
-- **Count:** 328 decisions
-- **Actual Win Rate:** 49.4%
-- **Mean Predicted Probability:** 66.0%
-- **Overconfidence:** +16.6% (overconfident)
+- **Count:** 163 decisions
+- **Actual Win Rate:** 47.2%
+- **Mean Predicted Probability:** 65.0%
+- **Overconfidence:** +17.8% (overconfident)
 
 ---
 
