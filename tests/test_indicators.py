@@ -20,7 +20,7 @@ class TestTechnicalIndicators:
     @pytest.fixture
     def sample_data(self):
         """Create sample OHLC data for testing."""
-        dates = pd.date_range('2023-01-01', periods=100, freq='D')
+        dates = pd.date_range("2023-01-01", periods=100, freq="D")
         np.random.seed(42)
 
         # Generate realistic price data with trend
@@ -34,17 +34,19 @@ class TestTechnicalIndicators:
         low = close - np.abs(np.random.randn(100) * 1.5)
         open_price = close + np.random.randn(100) * 0.5
 
-        return pd.DataFrame({
-            'date': dates,
-            'open': open_price,
-            'high': high,
-            'low': low,
-            'close': close
-        })
+        return pd.DataFrame(
+            {
+                "date": dates,
+                "open": open_price,
+                "high": high,
+                "low": low,
+                "close": close,
+            }
+        )
 
     def test_macd_calculation(self, sample_data):
         """Test MACD computation produces expected outputs."""
-        prices = sample_data['close']
+        prices = sample_data["close"]
         macd_line, signal_line, histogram = compute_macd(prices)
 
         assert len(macd_line) == len(prices)
@@ -68,9 +70,9 @@ class TestTechnicalIndicators:
 
     def test_stochastic_calculation(self, sample_data):
         """Test Stochastic Oscillator computation."""
-        high = sample_data['high']
-        low = sample_data['low']
-        close = sample_data['close']
+        high = sample_data["high"]
+        low = sample_data["low"]
+        close = sample_data["close"]
 
         k_percent, d_percent = compute_stochastic(high, low, close)
 
@@ -82,14 +84,16 @@ class TestTechnicalIndicators:
         valid_d = d_percent.dropna()
 
         if len(valid_k) > 0:
-            assert (valid_k >= -1).all() and (valid_k <= 101).all()  # Small tolerance for floating point
+            assert (valid_k >= -1).all() and (
+                valid_k <= 101
+            ).all()  # Small tolerance for floating point
 
         if len(valid_d) > 0:
             assert (valid_d >= -1).all() and (valid_d <= 101).all()
 
     def test_bollinger_bands_calculation(self, sample_data):
         """Test Bollinger Bands computation."""
-        prices = sample_data['close']
+        prices = sample_data["close"]
         upper, middle, lower = compute_bollinger_bands(prices)
 
         assert len(upper) == len(prices)
@@ -116,7 +120,9 @@ class TestTechnicalIndicators:
         prices = pd.Series([100, 101, 102, 103, 104, 105] * 10)  # 60 periods
 
         # Test with different parameters
-        macd_line, signal_line, histogram = compute_macd(prices, fast=8, slow=21, signal=5)
+        macd_line, signal_line, histogram = compute_macd(
+            prices, fast=8, slow=21, signal=5
+        )
 
         assert len(macd_line) == len(prices)
         assert len(signal_line) == len(prices)
@@ -124,19 +130,21 @@ class TestTechnicalIndicators:
 
     def test_stochastic_with_custom_parameters(self, sample_data):
         """Test Stochastic with custom parameters."""
-        high = sample_data['high']
-        low = sample_data['low']
-        close = sample_data['close']
+        high = sample_data["high"]
+        low = sample_data["low"]
+        close = sample_data["close"]
 
         # Test with different periods
-        k_percent, d_percent = compute_stochastic(high, low, close, k_period=10, d_period=5, smooth_k=2)
+        k_percent, d_percent = compute_stochastic(
+            high, low, close, k_period=10, d_period=5, smooth_k=2
+        )
 
         assert len(k_percent) == len(close)
         assert len(d_percent) == len(close)
 
     def test_bollinger_with_custom_parameters(self, sample_data):
         """Test Bollinger Bands with custom parameters."""
-        prices = sample_data['close']
+        prices = sample_data["close"]
 
         # Test with different parameters
         upper, middle, lower = compute_bollinger_bands(prices, window=10, std_dev=1.5)
@@ -162,7 +170,9 @@ class TestTechnicalIndicators:
         # Stochastic should be 50 for constant prices (middle of range)
         high_const = pd.Series([100] * 50)
         low_const = pd.Series([100] * 50)
-        k_percent, d_percent = compute_stochastic(high_const, low_const, constant_prices)
+        k_percent, d_percent = compute_stochastic(
+            high_const, low_const, constant_prices
+        )
         assert len(k_percent) == len(constant_prices)
         # Should be NaN initially, then some value (could be 50 or NaN depending on calculation)
 

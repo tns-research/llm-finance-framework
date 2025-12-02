@@ -138,7 +138,9 @@ def compute_ema(prices: pd.Series, period: int) -> pd.Series:
     return prices.ewm(span=period, adjust=False).mean()
 
 
-def compute_macd(prices: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9) -> tuple:
+def compute_macd(
+    prices: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9
+) -> tuple:
     """
     Calculate MACD (Moving Average Convergence Divergence).
 
@@ -159,8 +161,14 @@ def compute_macd(prices: pd.Series, fast: int = 12, slow: int = 26, signal: int 
     return macd_line, signal_line, histogram
 
 
-def compute_stochastic(high: pd.Series, low: pd.Series, close: pd.Series,
-                      k_period: int = 14, d_period: int = 3, smooth_k: int = 1) -> tuple:
+def compute_stochastic(
+    high: pd.Series,
+    low: pd.Series,
+    close: pd.Series,
+    k_period: int = 14,
+    d_period: int = 3,
+    smooth_k: int = 1,
+) -> tuple:
     """
     Calculate Stochastic Oscillator.
 
@@ -189,7 +197,9 @@ def compute_stochastic(high: pd.Series, low: pd.Series, close: pd.Series,
     return k_percent, d_percent
 
 
-def compute_bollinger_bands(prices: pd.Series, window: int = 20, std_dev: float = 2) -> tuple:
+def compute_bollinger_bands(
+    prices: pd.Series, window: int = 20, std_dev: float = 2
+) -> tuple:
     """
     Calculate Bollinger Bands.
 
@@ -230,18 +240,29 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # Advanced Technical Indicators - always calculated for baselines and analysis
     # MACD
-    macd_line, macd_signal, macd_hist = compute_macd(df["close"], config.MACD_FAST, config.MACD_SLOW, config.MACD_SIGNAL)
+    macd_line, macd_signal, macd_hist = compute_macd(
+        df["close"], config.MACD_FAST, config.MACD_SLOW, config.MACD_SIGNAL
+    )
     df["macd_line"] = macd_line
     df["macd_signal"] = macd_signal
     df["macd_histogram"] = macd_hist
 
     # Stochastic Oscillator
-    stoch_k, stoch_d = compute_stochastic(df["high"], df["low"], df["close"], config.STOCH_K, config.STOCH_D, config.STOCH_SMOOTH_K)
+    stoch_k, stoch_d = compute_stochastic(
+        df["high"],
+        df["low"],
+        df["close"],
+        config.STOCH_K,
+        config.STOCH_D,
+        config.STOCH_SMOOTH_K,
+    )
     df["stoch_k"] = stoch_k
     df["stoch_d"] = stoch_d
 
     # Bollinger Bands
-    bb_upper, bb_middle, bb_lower = compute_bollinger_bands(df["close"], config.BB_WINDOW, config.BB_STD)
+    bb_upper, bb_middle, bb_lower = compute_bollinger_bands(
+        df["close"], config.BB_WINDOW, config.BB_STD
+    )
     df["bb_upper"] = bb_upper
     df["bb_middle"] = bb_middle
     df["bb_lower"] = bb_lower

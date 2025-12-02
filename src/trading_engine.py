@@ -52,37 +52,54 @@ def format_period_technical_indicators(technical_stats: dict, period_name: str) 
     lines = []
 
     # RSI
-    if 'rsi_avg' in technical_stats:
+    if "rsi_avg" in technical_stats:
         rsi_parts = [f"Average {technical_stats['rsi_avg']:.1f}"]
-        if 'rsi_overbought_pct' in technical_stats:
+        if "rsi_overbought_pct" in technical_stats:
             rsi_parts.append(f"{technical_stats['rsi_overbought_pct']:.0f}% overbought")
-        if 'rsi_oversold_pct' in technical_stats:
+        if "rsi_oversold_pct" in technical_stats:
             rsi_parts.append(f"{technical_stats['rsi_oversold_pct']:.0f}% oversold")
-        if 'rsi_min' in technical_stats and 'rsi_max' in technical_stats:
-            rsi_parts.append(f"range {technical_stats['rsi_min']:.1f}-{technical_stats['rsi_max']:.1f}")
+        if "rsi_min" in technical_stats and "rsi_max" in technical_stats:
+            rsi_parts.append(
+                f"range {technical_stats['rsi_min']:.1f}-{technical_stats['rsi_max']:.1f}"
+            )
         lines.append(f"RSI(14): {' ('.join(rsi_parts)})")
 
     # MACD
-    if 'macd_bullish_pct' in technical_stats:
+    if "macd_bullish_pct" in technical_stats:
         macd_parts = [f"{technical_stats['macd_bullish_pct']:.0f}% bullish periods"]
-        if 'macd_avg_histogram' in technical_stats:
-            macd_parts.append(f"avg histogram {technical_stats['macd_avg_histogram']:.3f}")
-        if 'macd_crossovers' in technical_stats and technical_stats['macd_crossovers'] > 0:
+        if "macd_avg_histogram" in technical_stats:
+            macd_parts.append(
+                f"avg histogram {technical_stats['macd_avg_histogram']:.3f}"
+            )
+        if (
+            "macd_crossovers" in technical_stats
+            and technical_stats["macd_crossovers"] > 0
+        ):
             macd_parts.append(f"{technical_stats['macd_crossovers']} crossovers")
         lines.append(f"MACD: {', '.join(macd_parts)}")
 
     # Stochastic
-    if 'stoch_overbought_pct' in technical_stats:
-        stoch_parts = [f"{technical_stats['stoch_overbought_pct']:.0f}% overbought days"]
-        if 'stoch_oversold_pct' in technical_stats:
-            stoch_parts.append(f"{technical_stats['stoch_oversold_pct']:.0f}% oversold days")
+    if "stoch_overbought_pct" in technical_stats:
+        stoch_parts = [
+            f"{technical_stats['stoch_overbought_pct']:.0f}% overbought days"
+        ]
+        if "stoch_oversold_pct" in technical_stats:
+            stoch_parts.append(
+                f"{technical_stats['stoch_oversold_pct']:.0f}% oversold days"
+            )
         lines.append(f"Stochastic: {', '.join(stoch_parts)}")
 
     # Bollinger Bands
-    if 'bb_avg_position' in technical_stats:
+    if "bb_avg_position" in technical_stats:
         bb_parts = [f"Avg position {technical_stats['bb_avg_position']:.2f}"]
-        if 'bb_upper_touch_pct' in technical_stats and 'bb_lower_touch_pct' in technical_stats:
-            total_touches = technical_stats['bb_upper_touch_pct'] + technical_stats['bb_lower_touch_pct']
+        if (
+            "bb_upper_touch_pct" in technical_stats
+            and "bb_lower_touch_pct" in technical_stats
+        ):
+            total_touches = (
+                technical_stats["bb_upper_touch_pct"]
+                + technical_stats["bb_lower_touch_pct"]
+            )
             bb_parts.append(f"band touches {total_touches:.0f}%")
         lines.append(f"Bollinger Bands: {', '.join(bb_parts)}")
 
@@ -170,20 +187,36 @@ def format_journal_entry(trade_data, current_date, show_dates):
         if trade_data.get("rsi_14") is not None and not pd.isna(trade_data["rsi_14"]):
             tech_indicators.append(f"RSI(14): {trade_data['rsi_14']:.1f}")
 
-        if (trade_data.get("macd_line") is not None and
-            trade_data.get("macd_signal") is not None and
-            trade_data.get("macd_histogram") is not None and
-            not any(pd.isna([trade_data["macd_line"], trade_data["macd_signal"], trade_data["macd_histogram"]]))):
+        if (
+            trade_data.get("macd_line") is not None
+            and trade_data.get("macd_signal") is not None
+            and trade_data.get("macd_histogram") is not None
+            and not any(
+                pd.isna(
+                    [
+                        trade_data["macd_line"],
+                        trade_data["macd_signal"],
+                        trade_data["macd_histogram"],
+                    ]
+                )
+            )
+        ):
             tech_indicators.append(
                 f"MACD: {trade_data['macd_line']:.2f}/{trade_data['macd_signal']:.2f}/{trade_data['macd_histogram']:.3f}"
             )
 
-        if (trade_data.get("stoch_k") is not None and
-            trade_data.get("stoch_d") is not None and
-            not any(pd.isna([trade_data["stoch_k"], trade_data["stoch_d"]]))):
-            tech_indicators.append(f"Stochastic: {trade_data['stoch_k']:.1f}/{trade_data['stoch_d']:.1f}")
+        if (
+            trade_data.get("stoch_k") is not None
+            and trade_data.get("stoch_d") is not None
+            and not any(pd.isna([trade_data["stoch_k"], trade_data["stoch_d"]]))
+        ):
+            tech_indicators.append(
+                f"Stochastic: {trade_data['stoch_k']:.1f}/{trade_data['stoch_d']:.1f}"
+            )
 
-        if trade_data.get("bb_position") is not None and not pd.isna(trade_data["bb_position"]):
+        if trade_data.get("bb_position") is not None and not pd.isna(
+            trade_data["bb_position"]
+        ):
             tech_indicators.append(f"BB Position: {trade_data['bb_position']:.2f}")
 
         if tech_indicators:
@@ -287,8 +320,10 @@ def run_single_model(
                     technical_stats = None
                     if ENABLE_TECHNICAL_INDICATORS:
                         # Load features data to compute technical stats for the week
-                        features_path = os.path.join(base_dir, "data", "processed", "features.csv")
-                        features_df = pd.read_csv(features_path, parse_dates=['date'])
+                        features_path = os.path.join(
+                            base_dir, "data", "processed", "features.csv"
+                        )
+                        features_df = pd.read_csv(features_path, parse_dates=["date"])
                         technical_stats = compute_period_technical_stats(
                             features_df, last_date - pd.Timedelta(days=6), last_date
                         )
@@ -301,10 +336,9 @@ def run_single_model(
                         model_tag,
                         technical_stats,
                     )
-                    weekly_memory.append({
-                        "summary": summary,
-                        "technical_stats": technical_stats
-                    })
+                    weekly_memory.append(
+                        {"summary": summary, "technical_stats": technical_stats}
+                    )
                     weekly_memory = weekly_memory[-5:]  # keep last 5
                     week_stats = make_empty_stats()
 
@@ -314,8 +348,10 @@ def run_single_model(
                     technical_stats = None
                     if ENABLE_TECHNICAL_INDICATORS:
                         # Load features data to compute technical stats for the month
-                        features_path = os.path.join(base_dir, "data", "processed", "features.csv")
-                        features_df = pd.read_csv(features_path, parse_dates=['date'])
+                        features_path = os.path.join(
+                            base_dir, "data", "processed", "features.csv"
+                        )
+                        features_df = pd.read_csv(features_path, parse_dates=["date"])
                         technical_stats = compute_period_technical_stats(
                             features_df, last_date - pd.Timedelta(days=30), last_date
                         )
@@ -328,10 +364,9 @@ def run_single_model(
                         model_tag,
                         technical_stats,
                     )
-                    monthly_memory.append({
-                        "summary": summary,
-                        "technical_stats": technical_stats
-                    })
+                    monthly_memory.append(
+                        {"summary": summary, "technical_stats": technical_stats}
+                    )
                     monthly_memory = monthly_memory[-5:]
                     month_stats = make_empty_stats()
 
@@ -341,8 +376,10 @@ def run_single_model(
                     technical_stats = None
                     if ENABLE_TECHNICAL_INDICATORS:
                         # Load features data to compute technical stats for the quarter
-                        features_path = os.path.join(base_dir, "data", "processed", "features.csv")
-                        features_df = pd.read_csv(features_path, parse_dates=['date'])
+                        features_path = os.path.join(
+                            base_dir, "data", "processed", "features.csv"
+                        )
+                        features_df = pd.read_csv(features_path, parse_dates=["date"])
                         technical_stats = compute_period_technical_stats(
                             features_df, last_date - pd.Timedelta(days=90), last_date
                         )
@@ -355,10 +392,9 @@ def run_single_model(
                         model_tag,
                         technical_stats,
                     )
-                    quarterly_memory.append({
-                        "summary": summary,
-                        "technical_stats": technical_stats
-                    })
+                    quarterly_memory.append(
+                        {"summary": summary, "technical_stats": technical_stats}
+                    )
                     quarterly_memory = quarterly_memory[-5:]
                     quarter_stats = make_empty_stats()
 
@@ -368,8 +404,10 @@ def run_single_model(
                     technical_stats = None
                     if ENABLE_TECHNICAL_INDICATORS:
                         # Load features data to compute technical stats for the year
-                        features_path = os.path.join(base_dir, "data", "processed", "features.csv")
-                        features_df = pd.read_csv(features_path, parse_dates=['date'])
+                        features_path = os.path.join(
+                            base_dir, "data", "processed", "features.csv"
+                        )
+                        features_df = pd.read_csv(features_path, parse_dates=["date"])
                         technical_stats = compute_period_technical_stats(
                             features_df, last_date - pd.Timedelta(days=365), last_date
                         )
@@ -382,10 +420,9 @@ def run_single_model(
                         model_tag,
                         technical_stats,
                     )
-                    yearly_memory.append({
-                        "summary": summary,
-                        "technical_stats": technical_stats
-                    })
+                    yearly_memory.append(
+                        {"summary": summary, "technical_stats": technical_stats}
+                    )
                     yearly_memory = yearly_memory[-5:]
                     year_stats = make_empty_stats()
 
@@ -444,7 +481,9 @@ def run_single_model(
                 # Handle both new dict format and old string format for backward compatibility
                 if isinstance(memory_item, dict):
                     memory_text = f"{label}:\n{memory_item['summary']}"
-                    memory_text += format_period_technical_indicators(memory_item['technical_stats'], "Weekly")
+                    memory_text += format_period_technical_indicators(
+                        memory_item["technical_stats"], "Weekly"
+                    )
                 else:
                     # Backward compatibility: old string format
                     memory_text = f"{label}:\n{memory_item}"
@@ -471,7 +510,9 @@ def run_single_model(
                 # Handle both new dict format and old string format for backward compatibility
                 if isinstance(memory_item, dict):
                     memory_text = f"{label}:\n{memory_item['summary']}"
-                    memory_text += format_period_technical_indicators(memory_item['technical_stats'], "Monthly")
+                    memory_text += format_period_technical_indicators(
+                        memory_item["technical_stats"], "Monthly"
+                    )
                 else:
                     # Backward compatibility: old string format
                     memory_text = f"{label}:\n{memory_item}"
@@ -498,7 +539,9 @@ def run_single_model(
                 # Handle both new dict format and old string format for backward compatibility
                 if isinstance(memory_item, dict):
                     memory_text = f"{label}:\n{memory_item['summary']}"
-                    memory_text += format_period_technical_indicators(memory_item['technical_stats'], "Quarterly")
+                    memory_text += format_period_technical_indicators(
+                        memory_item["technical_stats"], "Quarterly"
+                    )
                 else:
                     # Backward compatibility: old string format
                     memory_text = f"{label}:\n{memory_item}"
@@ -525,7 +568,9 @@ def run_single_model(
                 # Handle both new dict format and old string format for backward compatibility
                 if isinstance(memory_item, dict):
                     memory_text = f"{label}:\n{memory_item['summary']}"
-                    memory_text += format_period_technical_indicators(memory_item['technical_stats'], "Yearly")
+                    memory_text += format_period_technical_indicators(
+                        memory_item["technical_stats"], "Yearly"
+                    )
                 else:
                     # Backward compatibility: old string format
                     memory_text = f"{label}:\n{memory_item}"
@@ -726,15 +771,17 @@ def run_single_model(
 
         # Add technical indicators to trade data when enabled
         if ENABLE_TECHNICAL_INDICATORS:
-            trade_data.update({
-                "rsi_14": row.get("rsi_14"),
-                "macd_line": row.get("macd_line"),
-                "macd_signal": row.get("macd_signal"),
-                "macd_histogram": row.get("macd_histogram"),
-                "stoch_k": row.get("stoch_k"),
-                "stoch_d": row.get("stoch_d"),
-                "bb_position": row.get("bb_position"),
-            })
+            trade_data.update(
+                {
+                    "rsi_14": row.get("rsi_14"),
+                    "macd_line": row.get("macd_line"),
+                    "macd_signal": row.get("macd_signal"),
+                    "macd_histogram": row.get("macd_histogram"),
+                    "stoch_k": row.get("stoch_k"),
+                    "stoch_d": row.get("stoch_d"),
+                    "bb_position": row.get("bb_position"),
+                }
+            )
 
         journal_entries.append(trade_data)
 
@@ -895,18 +942,20 @@ def run_single_model(
 
     # Load features data for technical indicators analysis
     features_path = os.path.join(base_dir, "data", "processed", "features.csv")
-    features_df = pd.read_csv(features_path, parse_dates=['date'])
+    features_df = pd.read_csv(features_path, parse_dates=["date"])
 
     # Check if technical indicators are available
-    has_rsi = 'rsi_14' in features_df.columns
-    has_macd = 'macd_line' in features_df.columns
-    has_stoch = 'stoch_k' in features_df.columns
-    has_bb = 'bb_upper' in features_df.columns
+    has_rsi = "rsi_14" in features_df.columns
+    has_macd = "macd_line" in features_df.columns
+    has_stoch = "stoch_k" in features_df.columns
+    has_bb = "bb_upper" in features_df.columns
 
     # Create technical indicators plots (conditionally)
     if has_rsi or has_macd or has_stoch or has_bb:
         print("Generating technical indicators plots...")
-        technical_plot_path = os.path.join(plots_dir, f"{model_tag}_technical_indicators.png")
+        technical_plot_path = os.path.join(
+            plots_dir, f"{model_tag}_technical_indicators.png"
+        )
         create_technical_indicators_plot(
             features_df, parsed_df, model_tag, technical_plot_path
         )

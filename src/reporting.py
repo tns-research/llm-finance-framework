@@ -82,7 +82,9 @@ def build_period_summary(period_label: str, end_date, stats: dict) -> str:
     )
 
 
-def compute_period_technical_stats(features_df: pd.DataFrame, start_date, end_date) -> dict:
+def compute_period_technical_stats(
+    features_df: pd.DataFrame, start_date, end_date
+) -> dict:
     """
     Compute technical indicator statistics for a time period.
 
@@ -100,49 +102,52 @@ def compute_period_technical_stats(features_df: pd.DataFrame, start_date, end_da
     """
     # Filter data for the period
     period_data = features_df[
-        (features_df['date'] >= start_date) &
-        (features_df['date'] <= end_date)
+        (features_df["date"] >= start_date) & (features_df["date"] <= end_date)
     ].copy()
 
     stats = {}
 
     # RSI Statistics
-    if 'rsi_14' in period_data.columns:
-        rsi_valid = period_data['rsi_14'].dropna()
+    if "rsi_14" in period_data.columns:
+        rsi_valid = period_data["rsi_14"].dropna()
         if len(rsi_valid) > 0:
-            stats['rsi_avg'] = rsi_valid.mean()
-            stats['rsi_overbought_pct'] = (rsi_valid > 70).sum() / len(rsi_valid) * 100
-            stats['rsi_oversold_pct'] = (rsi_valid < 30).sum() / len(rsi_valid) * 100
-            stats['rsi_min'] = rsi_valid.min()
-            stats['rsi_max'] = rsi_valid.max()
+            stats["rsi_avg"] = rsi_valid.mean()
+            stats["rsi_overbought_pct"] = (rsi_valid > 70).sum() / len(rsi_valid) * 100
+            stats["rsi_oversold_pct"] = (rsi_valid < 30).sum() / len(rsi_valid) * 100
+            stats["rsi_min"] = rsi_valid.min()
+            stats["rsi_max"] = rsi_valid.max()
 
     # MACD Statistics
-    if 'macd_histogram' in period_data.columns:
-        hist_valid = period_data['macd_histogram'].dropna()
+    if "macd_histogram" in period_data.columns:
+        hist_valid = period_data["macd_histogram"].dropna()
         if len(hist_valid) > 0:
-            stats['macd_bullish_pct'] = (hist_valid > 0).sum() / len(hist_valid) * 100
-            stats['macd_avg_histogram'] = hist_valid.mean()
+            stats["macd_bullish_pct"] = (hist_valid > 0).sum() / len(hist_valid) * 100
+            stats["macd_avg_histogram"] = hist_valid.mean()
             # Count signal line crossovers (histogram changes sign)
             hist_sign_changes = ((hist_valid > 0) != (hist_valid.shift(1) > 0)).sum()
-            stats['macd_crossovers'] = hist_sign_changes
+            stats["macd_crossovers"] = hist_sign_changes
 
     # Stochastic Statistics
-    if 'stoch_k' in period_data.columns:
-        stoch_valid = period_data['stoch_k'].dropna()
+    if "stoch_k" in period_data.columns:
+        stoch_valid = period_data["stoch_k"].dropna()
         if len(stoch_valid) > 0:
-            stats['stoch_overbought_pct'] = (stoch_valid > 80).sum() / len(stoch_valid) * 100
-            stats['stoch_oversold_pct'] = (stoch_valid < 20).sum() / len(stoch_valid) * 100
-            stats['stoch_min'] = stoch_valid.min()
-            stats['stoch_max'] = stoch_valid.max()
+            stats["stoch_overbought_pct"] = (
+                (stoch_valid > 80).sum() / len(stoch_valid) * 100
+            )
+            stats["stoch_oversold_pct"] = (
+                (stoch_valid < 20).sum() / len(stoch_valid) * 100
+            )
+            stats["stoch_min"] = stoch_valid.min()
+            stats["stoch_max"] = stoch_valid.max()
 
     # Bollinger Bands Statistics
-    if 'bb_position' in period_data.columns:
-        bb_valid = period_data['bb_position'].dropna()
+    if "bb_position" in period_data.columns:
+        bb_valid = period_data["bb_position"].dropna()
         if len(bb_valid) > 0:
             # Near upper band (position > 0.95) or near lower band (position < 0.05)
-            stats['bb_upper_touch_pct'] = (bb_valid > 0.95).sum() / len(bb_valid) * 100
-            stats['bb_lower_touch_pct'] = (bb_valid < 0.05).sum() / len(bb_valid) * 100
-            stats['bb_avg_position'] = bb_valid.mean()
+            stats["bb_upper_touch_pct"] = (bb_valid > 0.95).sum() / len(bb_valid) * 100
+            stats["bb_lower_touch_pct"] = (bb_valid < 0.05).sum() / len(bb_valid) * 100
+            stats["bb_avg_position"] = bb_valid.mean()
 
     return stats
 
@@ -198,13 +203,13 @@ def generate_llm_period_summary(
 
         # Add technical analysis to explanation if available
         if technical_stats:
-            if 'rsi_avg' in technical_stats:
+            if "rsi_avg" in technical_stats:
                 explanation += f" RSI averaged {technical_stats['rsi_avg']:.1f} with {technical_stats['rsi_overbought_pct']:.1f}% overbought days."
-            if 'macd_bullish_pct' in technical_stats:
+            if "macd_bullish_pct" in technical_stats:
                 explanation += f" MACD was bullish {technical_stats['macd_bullish_pct']:.1f}% of the time."
-            if 'stoch_overbought_pct' in technical_stats:
+            if "stoch_overbought_pct" in technical_stats:
                 explanation += f" Stochastic showed {technical_stats['stoch_overbought_pct']:.1f}% overbought conditions."
-            if 'bb_upper_touch_pct' in technical_stats:
+            if "bb_upper_touch_pct" in technical_stats:
                 explanation += f" Price touched Bollinger upper band on {technical_stats['bb_upper_touch_pct']:.1f}% of days."
 
         journal = (
@@ -217,20 +222,38 @@ def generate_llm_period_summary(
             journal += "Technical indicators provided "
             tech_signals = []
 
-            if 'rsi_avg' in technical_stats:
-                rsi_signal = "bullish signals" if technical_stats['rsi_avg'] < 50 else "bearish signals"
+            if "rsi_avg" in technical_stats:
+                rsi_signal = (
+                    "bullish signals"
+                    if technical_stats["rsi_avg"] < 50
+                    else "bearish signals"
+                )
                 tech_signals.append(f"RSI {rsi_signal}")
 
-            if 'macd_bullish_pct' in technical_stats:
-                macd_signal = "mostly bullish momentum" if technical_stats['macd_bullish_pct'] > 50 else "mostly bearish momentum"
+            if "macd_bullish_pct" in technical_stats:
+                macd_signal = (
+                    "mostly bullish momentum"
+                    if technical_stats["macd_bullish_pct"] > 50
+                    else "mostly bearish momentum"
+                )
                 tech_signals.append(f"MACD showing {macd_signal}")
 
-            if 'stoch_overbought_pct' in technical_stats:
-                stoch_signal = "frequent overbought conditions" if technical_stats['stoch_overbought_pct'] > 20 else "limited overbought conditions"
+            if "stoch_overbought_pct" in technical_stats:
+                stoch_signal = (
+                    "frequent overbought conditions"
+                    if technical_stats["stoch_overbought_pct"] > 20
+                    else "limited overbought conditions"
+                )
                 tech_signals.append(f"Stochastic with {stoch_signal}")
 
-            if 'bb_upper_touch_pct' in technical_stats:
-                bb_signal = "frequent band touches" if technical_stats['bb_upper_touch_pct'] + technical_stats['bb_lower_touch_pct'] > 10 else "rare band extremes"
+            if "bb_upper_touch_pct" in technical_stats:
+                bb_signal = (
+                    "frequent band touches"
+                    if technical_stats["bb_upper_touch_pct"]
+                    + technical_stats["bb_lower_touch_pct"]
+                    > 10
+                    else "rare band extremes"
+                )
                 tech_signals.append(f"Bollinger Bands with {bb_signal}")
 
             if tech_signals:
@@ -273,7 +296,7 @@ def generate_llm_period_summary(
     if technical_stats:
         technical_info = "\nTechnical indicators summary for this period:\n"
 
-        if 'rsi_avg' in technical_stats:
+        if "rsi_avg" in technical_stats:
             technical_info += (
                 f"- RSI(14): Average {technical_stats['rsi_avg']:.1f}, "
                 f"{technical_stats['rsi_overbought_pct']:.1f}% overbought days (>70), "
@@ -281,21 +304,21 @@ def generate_llm_period_summary(
                 f"range {technical_stats['rsi_min']:.1f}-{technical_stats['rsi_max']:.1f}\n"
             )
 
-        if 'macd_bullish_pct' in technical_stats:
+        if "macd_bullish_pct" in technical_stats:
             technical_info += (
                 f"- MACD(12,26,9): {technical_stats['macd_bullish_pct']:.1f}% bullish periods, "
                 f"avg histogram {technical_stats['macd_avg_histogram']:.3f}, "
                 f"{technical_stats.get('macd_crossovers', 0)} signal crossovers\n"
             )
 
-        if 'stoch_overbought_pct' in technical_stats:
+        if "stoch_overbought_pct" in technical_stats:
             technical_info += (
                 f"- Stochastic(14,3): {technical_stats['stoch_overbought_pct']:.1f}% overbought days (>80), "
                 f"{technical_stats['stoch_oversold_pct']:.1f}% oversold days (<20), "
                 f"range {technical_stats['stoch_min']:.1f}-{technical_stats['stoch_max']:.1f}\n"
             )
 
-        if 'bb_upper_touch_pct' in technical_stats:
+        if "bb_upper_touch_pct" in technical_stats:
             technical_info += (
                 f"- Bollinger Bands(20,2): {technical_stats['bb_upper_touch_pct']:.1f}% days touched upper band, "
                 f"{technical_stats['bb_lower_touch_pct']:.1f}% touched lower band, "
@@ -639,7 +662,9 @@ def create_risk_analysis_chart(
 
     ax2.set_title("Rolling Value at Risk", fontweight="bold")
     ax2.set_ylabel("VaR (%)")
-    if ax2.get_legend_handles_labels()[1]:  # Only show legend if there are labeled artists
+    if ax2.get_legend_handles_labels()[
+        1
+    ]:  # Only show legend if there are labeled artists
         ax2.legend()
     ax2.grid(alpha=0.3)
 
@@ -717,7 +742,9 @@ def create_rolling_performance_chart(
 
     ax1.set_title("Rolling Sharpe Ratio", fontweight="bold")
     ax1.set_ylabel("Annualized Sharpe Ratio")
-    if ax1.get_legend_handles_labels()[1]:  # Only show legend if there are labeled artists
+    if ax1.get_legend_handles_labels()[
+        1
+    ]:  # Only show legend if there are labeled artists
         ax1.legend()
     ax1.grid(alpha=0.3)
 
@@ -732,7 +759,9 @@ def create_rolling_performance_chart(
 
     ax2.set_title("Rolling Total Returns", fontweight="bold")
     ax2.set_ylabel("Total Return (%)")
-    if ax2.get_legend_handles_labels()[1]:  # Only show legend if there are labeled artists
+    if ax2.get_legend_handles_labels()[
+        1
+    ]:  # Only show legend if there are labeled artists
         ax2.legend()
     ax2.grid(alpha=0.3)
 
@@ -747,7 +776,9 @@ def create_rolling_performance_chart(
 
     ax3.set_title("Rolling Maximum Drawdown", fontweight="bold")
     ax3.set_ylabel("Drawdown (%)")
-    if ax3.get_legend_handles_labels()[1]:  # Only show legend if there are labeled artists
+    if ax3.get_legend_handles_labels()[
+        1
+    ]:  # Only show legend if there are labeled artists
         ax3.legend()
     ax3.grid(alpha=0.3)
 
@@ -1031,10 +1062,12 @@ def generate_calibration_analysis_report(
     }
 
 
-def create_technical_indicators_plot(features_df: pd.DataFrame,
-                                   decisions_df: pd.DataFrame = None,
-                                   model_tag: str = "indicators",
-                                   output_path: str = None):
+def create_technical_indicators_plot(
+    features_df: pd.DataFrame,
+    decisions_df: pd.DataFrame = None,
+    model_tag: str = "indicators",
+    output_path: str = None,
+):
     """
     Create comprehensive technical indicators plot.
 
@@ -1042,49 +1075,71 @@ def create_technical_indicators_plot(features_df: pd.DataFrame,
     Gracefully handles missing indicator data.
     """
     # Check what indicators are available
-    has_rsi = 'rsi_14' in features_df.columns
-    has_macd = 'macd_line' in features_df.columns
-    has_stoch = 'stoch_k' in features_df.columns
-    has_bb = 'bb_upper' in features_df.columns
+    has_rsi = "rsi_14" in features_df.columns
+    has_macd = "macd_line" in features_df.columns
+    has_stoch = "stoch_k" in features_df.columns
+    has_bb = "bb_upper" in features_df.columns
 
     # Determine subplot layout based on available indicators
     n_indicators = sum([has_rsi, has_macd, has_stoch, has_bb])
     if n_indicators == 0:
         # No indicators available - just show price
         fig, ax1 = plt.subplots(1, 1, figsize=(15, 8))
-        ax1.plot(features_df['date'], features_df['close'],
-                 label='Close Price', color='black', alpha=0.8)
-        ax1.set_title(f'Price Chart - {model_tag} (No Technical Indicators)')
-        ax1.set_ylabel('Price')
+        ax1.plot(
+            features_df["date"],
+            features_df["close"],
+            label="Close Price",
+            color="black",
+            alpha=0.8,
+        )
+        ax1.set_title(f"Price Chart - {model_tag} (No Technical Indicators)")
+        ax1.set_ylabel("Price")
         ax1.legend()
         ax1.grid(True, alpha=0.3)
         axes = [ax1]
     else:
         # Create subplots for price + indicators
-        fig, axes = plt.subplots(n_indicators + 1, 1, figsize=(15, 8 + 3*n_indicators))
+        fig, axes = plt.subplots(
+            n_indicators + 1, 1, figsize=(15, 8 + 3 * n_indicators)
+        )
 
         # Price subplot (always first)
-        axes[0].plot(features_df['date'], features_df['close'],
-                     label='Close Price', color='black', alpha=0.8)
-        axes[0].set_title(f'Technical Indicators - {model_tag}')
-        axes[0].set_ylabel('Price')
+        axes[0].plot(
+            features_df["date"],
+            features_df["close"],
+            label="Close Price",
+            color="black",
+            alpha=0.8,
+        )
+        axes[0].set_title(f"Technical Indicators - {model_tag}")
+        axes[0].set_ylabel("Price")
         axes[0].legend()
         axes[0].grid(True, alpha=0.3)
 
         # RSI subplot (if available)
         subplot_idx = 1
         if has_rsi:
-            axes[subplot_idx].plot(features_df['date'], features_df['rsi_14'],
-                                   label='RSI(14)', color='purple', linewidth=1.5)
-            axes[subplot_idx].axhline(y=70, color='red', linestyle='--', alpha=0.7,
-                                      label='Overbought (70)')
-            axes[subplot_idx].axhline(y=30, color='green', linestyle='--', alpha=0.7,
-                                      label='Oversold (30)')
-            axes[subplot_idx].axhline(y=50, color='gray', linestyle='-', alpha=0.5,
-                                      label='Neutral (50)')
-            axes[subplot_idx].fill_between(features_df['date'], 30, 70, alpha=0.1, color='yellow')
-            axes[subplot_idx].set_title('RSI(14)')
-            axes[subplot_idx].set_ylabel('RSI Value')
+            axes[subplot_idx].plot(
+                features_df["date"],
+                features_df["rsi_14"],
+                label="RSI(14)",
+                color="purple",
+                linewidth=1.5,
+            )
+            axes[subplot_idx].axhline(
+                y=70, color="red", linestyle="--", alpha=0.7, label="Overbought (70)"
+            )
+            axes[subplot_idx].axhline(
+                y=30, color="green", linestyle="--", alpha=0.7, label="Oversold (30)"
+            )
+            axes[subplot_idx].axhline(
+                y=50, color="gray", linestyle="-", alpha=0.5, label="Neutral (50)"
+            )
+            axes[subplot_idx].fill_between(
+                features_df["date"], 30, 70, alpha=0.1, color="yellow"
+            )
+            axes[subplot_idx].set_title("RSI(14)")
+            axes[subplot_idx].set_ylabel("RSI Value")
             axes[subplot_idx].legend()
             axes[subplot_idx].grid(True, alpha=0.3)
             subplot_idx += 1
@@ -1092,53 +1147,110 @@ def create_technical_indicators_plot(features_df: pd.DataFrame,
         # MACD subplot (if available)
         if has_macd:
             # Plot MACD line and signal
-            axes[subplot_idx].plot(features_df['date'], features_df['macd_line'],
-                                   label='MACD Line', color='blue', linewidth=1.5)
-            axes[subplot_idx].plot(features_df['date'], features_df['macd_signal'],
-                                   label='Signal Line', color='red', linewidth=1.5)
+            axes[subplot_idx].plot(
+                features_df["date"],
+                features_df["macd_line"],
+                label="MACD Line",
+                color="blue",
+                linewidth=1.5,
+            )
+            axes[subplot_idx].plot(
+                features_df["date"],
+                features_df["macd_signal"],
+                label="Signal Line",
+                color="red",
+                linewidth=1.5,
+            )
             # Plot histogram
-            colors = ['green' if x >= 0 else 'red' for x in features_df['macd_histogram']]
-            axes[subplot_idx].bar(features_df['date'], features_df['macd_histogram'],
-                                  color=colors, alpha=0.7, label='Histogram')
-            axes[subplot_idx].set_title('MACD')
-            axes[subplot_idx].set_ylabel('MACD Value')
+            colors = [
+                "green" if x >= 0 else "red" for x in features_df["macd_histogram"]
+            ]
+            axes[subplot_idx].bar(
+                features_df["date"],
+                features_df["macd_histogram"],
+                color=colors,
+                alpha=0.7,
+                label="Histogram",
+            )
+            axes[subplot_idx].set_title("MACD")
+            axes[subplot_idx].set_ylabel("MACD Value")
             axes[subplot_idx].legend()
             axes[subplot_idx].grid(True, alpha=0.3)
             subplot_idx += 1
 
         # Stochastic subplot (if available)
         if has_stoch:
-            axes[subplot_idx].plot(features_df['date'], features_df['stoch_k'],
-                                   label='%K', color='orange', linewidth=1.5)
-            axes[subplot_idx].plot(features_df['date'], features_df['stoch_d'],
-                                   label='%D', color='purple', linewidth=1.5)
-            axes[subplot_idx].axhline(y=80, color='red', linestyle='--', alpha=0.7,
-                                      label='Overbought (80)')
-            axes[subplot_idx].axhline(y=20, color='green', linestyle='--', alpha=0.7,
-                                      label='Oversold (20)')
-            axes[subplot_idx].fill_between(features_df['date'], 20, 80, alpha=0.1, color='yellow')
-            axes[subplot_idx].set_title('Stochastic Oscillator')
-            axes[subplot_idx].set_ylabel('Stochastic Value')
+            axes[subplot_idx].plot(
+                features_df["date"],
+                features_df["stoch_k"],
+                label="%K",
+                color="orange",
+                linewidth=1.5,
+            )
+            axes[subplot_idx].plot(
+                features_df["date"],
+                features_df["stoch_d"],
+                label="%D",
+                color="purple",
+                linewidth=1.5,
+            )
+            axes[subplot_idx].axhline(
+                y=80, color="red", linestyle="--", alpha=0.7, label="Overbought (80)"
+            )
+            axes[subplot_idx].axhline(
+                y=20, color="green", linestyle="--", alpha=0.7, label="Oversold (20)"
+            )
+            axes[subplot_idx].fill_between(
+                features_df["date"], 20, 80, alpha=0.1, color="yellow"
+            )
+            axes[subplot_idx].set_title("Stochastic Oscillator")
+            axes[subplot_idx].set_ylabel("Stochastic Value")
             axes[subplot_idx].legend()
             axes[subplot_idx].grid(True, alpha=0.3)
             subplot_idx += 1
 
         # Bollinger Bands subplot (if available)
         if has_bb:
-            axes[subplot_idx].plot(features_df['date'], features_df['close'],
-                                   label='Close Price', color='black', alpha=0.8)
-            axes[subplot_idx].plot(features_df['date'], features_df['bb_upper'],
-                                   label='Upper Band', color='red', linestyle='--', alpha=0.7)
-            axes[subplot_idx].plot(features_df['date'], features_df['bb_middle'],
-                                   label='Middle Band', color='blue', linestyle='-', alpha=0.7)
-            axes[subplot_idx].plot(features_df['date'], features_df['bb_lower'],
-                                   label='Lower Band', color='green', linestyle='--', alpha=0.7)
-            axes[subplot_idx].fill_between(features_df['date'],
-                                           features_df['bb_lower'],
-                                           features_df['bb_upper'],
-                                           alpha=0.1, color='yellow')
-            axes[subplot_idx].set_title('Bollinger Bands')
-            axes[subplot_idx].set_ylabel('Price')
+            axes[subplot_idx].plot(
+                features_df["date"],
+                features_df["close"],
+                label="Close Price",
+                color="black",
+                alpha=0.8,
+            )
+            axes[subplot_idx].plot(
+                features_df["date"],
+                features_df["bb_upper"],
+                label="Upper Band",
+                color="red",
+                linestyle="--",
+                alpha=0.7,
+            )
+            axes[subplot_idx].plot(
+                features_df["date"],
+                features_df["bb_middle"],
+                label="Middle Band",
+                color="blue",
+                linestyle="-",
+                alpha=0.7,
+            )
+            axes[subplot_idx].plot(
+                features_df["date"],
+                features_df["bb_lower"],
+                label="Lower Band",
+                color="green",
+                linestyle="--",
+                alpha=0.7,
+            )
+            axes[subplot_idx].fill_between(
+                features_df["date"],
+                features_df["bb_lower"],
+                features_df["bb_upper"],
+                alpha=0.1,
+                color="yellow",
+            )
+            axes[subplot_idx].set_title("Bollinger Bands")
+            axes[subplot_idx].set_ylabel("Price")
             axes[subplot_idx].legend()
             axes[subplot_idx].grid(True, alpha=0.3)
 
@@ -1150,63 +1262,96 @@ def create_technical_indicators_plot(features_df: pd.DataFrame,
         # Use RSI if available, otherwise just use basic signals
         if has_rsi:
             decisions_with_indicators = decisions_df.merge(
-                features_df[['date', 'rsi_14']], on='date', how='left'
+                features_df[["date", "rsi_14"]], on="date", how="left"
             )
         else:
             decisions_with_indicators = decisions_df.copy()
 
-        buy_signals = decisions_with_indicators[decisions_with_indicators['decision'] == 'BUY']
-        sell_signals = decisions_with_indicators[decisions_with_indicators['decision'] == 'SELL']
+        buy_signals = decisions_with_indicators[
+            decisions_with_indicators["decision"] == "BUY"
+        ]
+        sell_signals = decisions_with_indicators[
+            decisions_with_indicators["decision"] == "SELL"
+        ]
 
         # Add buy/sell signals to the most relevant subplot
         if has_rsi:
             # Find RSI subplot (should be axes[1] if it exists)
             rsi_ax_idx = 1 if has_rsi else None
             if rsi_ax_idx is not None:
-                axes[rsi_ax_idx].scatter(buy_signals['date'], buy_signals['rsi_14'],
-                                       marker='^', color='green', s=80, label='BUY Signal', zorder=5)
-                axes[rsi_ax_idx].scatter(sell_signals['date'], sell_signals['rsi_14'],
-                                       marker='v', color='red', s=80, label='SELL Signal', zorder=5)
+                axes[rsi_ax_idx].scatter(
+                    buy_signals["date"],
+                    buy_signals["rsi_14"],
+                    marker="^",
+                    color="green",
+                    s=80,
+                    label="BUY Signal",
+                    zorder=5,
+                )
+                axes[rsi_ax_idx].scatter(
+                    sell_signals["date"],
+                    sell_signals["rsi_14"],
+                    marker="v",
+                    color="red",
+                    s=80,
+                    label="SELL Signal",
+                    zorder=5,
+                )
                 # Update RSI subplot title to include signals
-                axes[rsi_ax_idx].set_title('RSI(14) with Trading Signals')
+                axes[rsi_ax_idx].set_title("RSI(14) with Trading Signals")
         else:
             # No RSI - add signals to price chart instead
-            price_ax.scatter(buy_signals['date'], buy_signals['close'],
-                           marker='^', color='green', s=100, label='BUY Signal', zorder=5)
-            price_ax.scatter(sell_signals['date'], sell_signals['close'],
-                           marker='v', color='red', s=100, label='SELL Signal', zorder=5)
+            price_ax.scatter(
+                buy_signals["date"],
+                buy_signals["close"],
+                marker="^",
+                color="green",
+                s=100,
+                label="BUY Signal",
+                zorder=5,
+            )
+            price_ax.scatter(
+                sell_signals["date"],
+                sell_signals["close"],
+                marker="v",
+                color="red",
+                s=100,
+                label="SELL Signal",
+                zorder=5,
+            )
 
     # Set date formatting for x-axis
     import matplotlib.dates as mdates
+
     for ax in axes:
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
         ax.xaxis.set_major_locator(mdates.MonthLocator(interval=6))
         plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
 
     plt.tight_layout()
     if output_path:
-        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.savefig(output_path, dpi=300, bbox_inches="tight")
         print(f"[INFO] Technical indicators plot saved to: {output_path}")
     plt.close()
 
 
-def create_rsi_performance_analysis(parsed_df: pd.DataFrame,
-                                   features_df: pd.DataFrame,
-                                   model_tag: str,
-                                   output_path: str):
+def create_rsi_performance_analysis(
+    parsed_df: pd.DataFrame, features_df: pd.DataFrame, model_tag: str, output_path: str
+):
     """
     Analyze RSI distribution by decision type and performance correlation.
     Only generates analysis if RSI data is available.
     """
     # Check if RSI data is available
-    if 'rsi_14' not in features_df.columns:
-        print(f"[WARNING] RSI data not available for {model_tag} - skipping RSI performance analysis")
+    if "rsi_14" not in features_df.columns:
+        print(
+            f"[WARNING] RSI data not available for {model_tag} - skipping RSI performance analysis"
+        )
         return
 
     # Merge data
     analysis_df = parsed_df.merge(
-        features_df[['date', 'rsi_14']],
-        on='date', how='left'
+        features_df[["date", "rsi_14"]], on="date", how="left"
     ).dropna()
 
     if len(analysis_df) == 0:
@@ -1214,77 +1359,107 @@ def create_rsi_performance_analysis(parsed_df: pd.DataFrame,
         return
 
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
-    fig.suptitle(f'RSI Performance Analysis - {model_tag}', fontsize=14)
+    fig.suptitle(f"RSI Performance Analysis - {model_tag}", fontsize=14)
 
     # 1. RSI distribution by decision
-    decisions = ['BUY', 'HOLD', 'SELL']
-    colors = ['green', 'blue', 'red']
+    decisions = ["BUY", "HOLD", "SELL"]
+    colors = ["green", "blue", "red"]
 
     for decision, color in zip(decisions, colors):
-        rsi_values = analysis_df[analysis_df['decision'] == decision]['rsi_14']
+        rsi_values = analysis_df[analysis_df["decision"] == decision]["rsi_14"]
         if len(rsi_values) > 0:
-            axes[0,0].hist(rsi_values, alpha=0.7,
-                          label=f'{decision} (n={len(rsi_values)})',
-                          color=color, bins=15, density=True)
+            axes[0, 0].hist(
+                rsi_values,
+                alpha=0.7,
+                label=f"{decision} (n={len(rsi_values)})",
+                color=color,
+                bins=15,
+                density=True,
+            )
 
-    axes[0,0].set_title('RSI Distribution by Decision Type')
-    axes[0,0].set_xlabel('RSI Value')
-    axes[0,0].set_ylabel('Density')
-    axes[0,0].legend()
-    axes[0,0].axvline(x=70, color='red', linestyle='--', alpha=0.7)
-    axes[0,0].axvline(x=30, color='green', linestyle='--', alpha=0.7)
-    axes[0,0].grid(True, alpha=0.3)
+    axes[0, 0].set_title("RSI Distribution by Decision Type")
+    axes[0, 0].set_xlabel("RSI Value")
+    axes[0, 0].set_ylabel("Density")
+    axes[0, 0].legend()
+    axes[0, 0].axvline(x=70, color="red", linestyle="--", alpha=0.7)
+    axes[0, 0].axvline(x=30, color="green", linestyle="--", alpha=0.7)
+    axes[0, 0].grid(True, alpha=0.3)
 
     # 2. Win rate by RSI range
-    rsi_bins = pd.cut(analysis_df['rsi_14'], bins=10)
-    win_rates = analysis_df.groupby(rsi_bins, observed=True)['strategy_return'].apply(
+    rsi_bins = pd.cut(analysis_df["rsi_14"], bins=10)
+    win_rates = analysis_df.groupby(rsi_bins, observed=True)["strategy_return"].apply(
         lambda x: (x > 0).mean() * 100
     )
 
-    bin_labels = [f'{interval.left:.0f}-{interval.right:.0f}'
-                 for interval in win_rates.index]
-    axes[0,1].bar(range(len(win_rates)), win_rates.values,
-                  tick_label=bin_labels, color='skyblue', alpha=0.8)
-    axes[0,1].set_title('Win Rate by RSI Range')
-    axes[0,1].set_xlabel('RSI Range')
-    axes[0,1].set_ylabel('Win Rate (%)')
-    axes[0,1].tick_params(axis='x', rotation=45)
-    axes[0,1].grid(True, alpha=0.3)
+    bin_labels = [
+        f"{interval.left:.0f}-{interval.right:.0f}" for interval in win_rates.index
+    ]
+    axes[0, 1].bar(
+        range(len(win_rates)),
+        win_rates.values,
+        tick_label=bin_labels,
+        color="skyblue",
+        alpha=0.8,
+    )
+    axes[0, 1].set_title("Win Rate by RSI Range")
+    axes[0, 1].set_xlabel("RSI Range")
+    axes[0, 1].set_ylabel("Win Rate (%)")
+    axes[0, 1].tick_params(axis="x", rotation=45)
+    axes[0, 1].grid(True, alpha=0.3)
 
     # 3. RSI levels for winning vs losing trades
-    winning_trades = analysis_df[analysis_df['strategy_return'] > 0]
-    losing_trades = analysis_df[analysis_df['strategy_return'] < 0]
+    winning_trades = analysis_df[analysis_df["strategy_return"] > 0]
+    losing_trades = analysis_df[analysis_df["strategy_return"] < 0]
 
-    axes[1,0].hist(winning_trades['rsi_14'], alpha=0.7,
-                   label=f'Winning (n={len(winning_trades)})',
-                   color='green', bins=15, density=True)
-    axes[1,0].hist(losing_trades['rsi_14'], alpha=0.7,
-                   label=f'Losing (n={len(losing_trades)})',
-                   color='red', bins=15, density=True)
-    axes[1,0].set_title('RSI Distribution: Winning vs Losing Trades')
-    axes[1,0].set_xlabel('RSI Value')
-    axes[1,0].set_ylabel('Density')
-    axes[1,0].legend()
-    axes[1,0].axvline(x=70, color='red', linestyle='--', alpha=0.5)
-    axes[1,0].axvline(x=30, color='green', linestyle='--', alpha=0.5)
-    axes[1,0].grid(True, alpha=0.3)
+    axes[1, 0].hist(
+        winning_trades["rsi_14"],
+        alpha=0.7,
+        label=f"Winning (n={len(winning_trades)})",
+        color="green",
+        bins=15,
+        density=True,
+    )
+    axes[1, 0].hist(
+        losing_trades["rsi_14"],
+        alpha=0.7,
+        label=f"Losing (n={len(losing_trades)})",
+        color="red",
+        bins=15,
+        density=True,
+    )
+    axes[1, 0].set_title("RSI Distribution: Winning vs Losing Trades")
+    axes[1, 0].set_xlabel("RSI Value")
+    axes[1, 0].set_ylabel("Density")
+    axes[1, 0].legend()
+    axes[1, 0].axvline(x=70, color="red", linestyle="--", alpha=0.5)
+    axes[1, 0].axvline(x=30, color="green", linestyle="--", alpha=0.5)
+    axes[1, 0].grid(True, alpha=0.3)
 
     # 4. RSI momentum analysis
-    analysis_df['rsi_change'] = analysis_df['rsi_14'].diff()
-    rsi_momentum_bins = pd.cut(analysis_df['rsi_change'], bins=5)
-    momentum_returns = analysis_df.groupby(rsi_momentum_bins, observed=True)['strategy_return'].mean()
+    analysis_df["rsi_change"] = analysis_df["rsi_14"].diff()
+    rsi_momentum_bins = pd.cut(analysis_df["rsi_change"], bins=5)
+    momentum_returns = analysis_df.groupby(rsi_momentum_bins, observed=True)[
+        "strategy_return"
+    ].mean()
 
-    momentum_labels = [f'{interval.left:.2f}-{interval.right:.2f}'
-                      for interval in momentum_returns.index]
-    axes[1,1].bar(range(len(momentum_returns)), momentum_returns.values * 100,
-                  tick_label=momentum_labels, color='orange', alpha=0.8)
-    axes[1,1].set_title('Average Return by RSI Momentum')
-    axes[1,1].set_xlabel('RSI Change (Daily)')
-    axes[1,1].set_ylabel('Average Return (%)')
-    axes[1,1].tick_params(axis='x', rotation=45)
-    axes[1,1].grid(True, alpha=0.3)
+    momentum_labels = [
+        f"{interval.left:.2f}-{interval.right:.2f}"
+        for interval in momentum_returns.index
+    ]
+    axes[1, 1].bar(
+        range(len(momentum_returns)),
+        momentum_returns.values * 100,
+        tick_label=momentum_labels,
+        color="orange",
+        alpha=0.8,
+    )
+    axes[1, 1].set_title("Average Return by RSI Momentum")
+    axes[1, 1].set_xlabel("RSI Change (Daily)")
+    axes[1, 1].set_ylabel("Average Return (%)")
+    axes[1, 1].tick_params(axis="x", rotation=45)
+    axes[1, 1].grid(True, alpha=0.3)
 
     plt.tight_layout()
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.savefig(output_path, dpi=300, bbox_inches="tight")
     print(f"[INFO] RSI performance analysis plot saved to: {output_path}")
     plt.close()

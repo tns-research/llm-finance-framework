@@ -2210,9 +2210,10 @@ def generate_technical_details(data_sources: Dict, model_tag: str) -> List[str]:
 def generate_rsi_analysis_section(data_sources: Dict, model_tag: str) -> List[str]:
     """Generate RSI analysis section for markdown reports."""
     # Check if any technical indicator plots are available
-    has_technical_plots = ("plots" in data_sources and
-                          ("technical_indicators" in data_sources["plots"] or
-                           "rsi_performance" in data_sources["plots"]))
+    has_technical_plots = "plots" in data_sources and (
+        "technical_indicators" in data_sources["plots"]
+        or "rsi_performance" in data_sources["plots"]
+    )
 
     if not has_technical_plots:
         return [
@@ -2231,44 +2232,52 @@ def generate_rsi_analysis_section(data_sources: Dict, model_tag: str) -> List[st
 
     # Technical indicators overview plot
     if "plots" in data_sources and "technical_indicators" in data_sources["plots"]:
-        section.extend([
-            "#### Technical Indicator Overview",
-            "",
-            f"![Technical Indicators]({data_sources['plots']['technical_indicators']})",
-            "*Figure: Price action with available technical indicators and trading signals*",
-            "",
-        ])
+        section.extend(
+            [
+                "#### Technical Indicator Overview",
+                "",
+                f"![Technical Indicators]({data_sources['plots']['technical_indicators']})",
+                "*Figure: Price action with available technical indicators and trading signals*",
+                "",
+            ]
+        )
 
     # RSI performance analysis plot (only if RSI-specific analysis was generated)
     if "plots" in data_sources and "rsi_performance" in data_sources["plots"]:
-        section.extend([
-            "#### RSI Performance Analysis",
-            "",
-            f"![RSI Analysis]({data_sources['plots']['rsi_performance']})",
-            "*Figure: RSI distribution by decision type and performance correlation*",
-            "",
-        ])
+        section.extend(
+            [
+                "#### RSI Performance Analysis",
+                "",
+                f"![RSI Analysis]({data_sources['plots']['rsi_performance']})",
+                "*Figure: RSI distribution by decision type and performance correlation*",
+                "",
+            ]
+        )
 
     # Key insights (conditional based on what analysis was performed)
     if "plots" in data_sources and "rsi_performance" in data_sources["plots"]:
-        section.extend([
-        "#### Key RSI Insights",
-        "",
-        "- **Decision Distribution**: How BUY/HOLD/SELL decisions correlate with RSI levels",
-        "- **Performance by RSI Range**: Win rates across different RSI ranges (0-30, 30-70, 70-100)",
-        "- **Winning vs Losing Trades**: RSI distribution comparison between profitable and unprofitable trades",
-        "- **RSI Momentum**: Performance based on RSI directional changes and momentum",
-        "",
-        "**RSI Strategy Effectiveness**: RSI-based strategies provide momentum signals that complement trend and volatility indicators.",
-        "",
-    ])
+        section.extend(
+            [
+                "#### Key RSI Insights",
+                "",
+                "- **Decision Distribution**: How BUY/HOLD/SELL decisions correlate with RSI levels",
+                "- **Performance by RSI Range**: Win rates across different RSI ranges (0-30, 30-70, 70-100)",
+                "- **Winning vs Losing Trades**: RSI distribution comparison between profitable and unprofitable trades",
+                "- **RSI Momentum**: Performance based on RSI directional changes and momentum",
+                "",
+                "**RSI Strategy Effectiveness**: RSI-based strategies provide momentum signals that complement trend and volatility indicators.",
+                "",
+            ]
+        )
     elif "plots" in data_sources and "technical_indicators" in data_sources["plots"]:
-        section.extend([
-            "#### Technical Indicator Analysis",
-            "",
-            "Technical indicators were included in this experiment. The overview plot above shows available indicators alongside price action and trading decisions.",
-            "",
-        ])
+        section.extend(
+            [
+                "#### Technical Indicator Analysis",
+                "",
+                "Technical indicators were included in this experiment. The overview plot above shows available indicators alongside price action and trading decisions.",
+                "",
+            ]
+        )
 
     return section
 
@@ -2276,9 +2285,10 @@ def generate_rsi_analysis_section(data_sources: Dict, model_tag: str) -> List[st
 def generate_rsi_analysis_section_html(data_sources: Dict, model_tag: str) -> str:
     """Generate RSI analysis section for HTML reports."""
     # Check if any technical indicator plots are available
-    has_technical_plots = ("plots" in data_sources and
-                          ("technical_indicators" in data_sources["plots"] or
-                           "rsi_performance" in data_sources["plots"]))
+    has_technical_plots = "plots" in data_sources and (
+        "technical_indicators" in data_sources["plots"]
+        or "rsi_performance" in data_sources["plots"]
+    )
 
     if not has_technical_plots:
         return """

@@ -43,7 +43,9 @@ DATA_END = "2023-12-31"  # End date for historical data
 # TEST vs FULL RUN
 # ----------------
 TEST_MODE = True  # Set to True for quick tests, False for full experiments
-TEST_LIMIT = 500  # Number of days to run when TEST_MODE = True (test on at least 3 days)
+TEST_LIMIT = (
+    4  # Number of days to run when TEST_MODE = True (test on at least 3 days)
+)
 # Set TEST_MODE = False for complete ~2700 day analysis
 
 # =================================================================================
@@ -81,19 +83,19 @@ START_ROW = 33
 # Configure which LLM models to benchmark via OpenRouter API
 # Uncomment/comment models as needed. Requires USE_DUMMY_MODEL = False
 LLM_MODELS = [
-    #{
+    # {
     #    "tag": "bert",  # Model identifier (used in filenames)
     #    "router_model": "openrouter/bert-nebulon-alpha",  # OpenRouter model ID
-    #},
-    #{
+    # },
+    # {
     #    "tag": "chimera",  # Model identifier (used in filenames)
     #    "router_model": "tngtech/tng-r1t-chimera:free",  # OpenRouter model ID
-    #},
+    # },
     # Add more models here:
-     {
-         "tag": "gpt-oss-20b",
-         "router_model": "openai/gpt-oss-20b:free",
-     },
+    {
+        "tag": "gpt-oss-20b",
+        "router_model": "openai/gpt-oss-20b:free",
+    },
     # {
     #     "tag": "claude",
     #     "router_model": "anthropic/claude-3-sonnet",
@@ -229,7 +231,6 @@ else:
         print(
             f"[CONFIG] Warning: Unknown experiment '{ACTIVE_EXPERIMENT}', using manual settings"
         )
-
 
 
 # (USE_DUMMY_MODEL moved to top of file)
