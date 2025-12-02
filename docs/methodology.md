@@ -242,6 +242,11 @@ The implementation includes comprehensive technical indicators alongside basic p
 - **Stochastic Oscillator**: Momentum timing indicator (0-100 scale)
 - **Bollinger Bands**: Volatility-based support/resistance levels
 
+**Technical Memory Integration:**
+- **Historical Series**: 20-day lagged values for pattern recognition and trend analysis
+- **Aggregated Memory**: Weekly/monthly summaries with technical statistics (averages, percentages, ranges)
+- **Multi-Timeframe Analysis**: Enables correlation of technical signals across daily, weekly, and monthly periods
+
 ```python
 # Daily returns
 df["return_1d"] = df["close"].pct_change() * 100.0

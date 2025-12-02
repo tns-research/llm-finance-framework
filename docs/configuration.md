@@ -47,6 +47,22 @@ BB_STD = 2              # Standard deviations for Bollinger Bands
 ENABLE_TECHNICAL_INDICATORS = True  # Show indicators to LLM
 ```
 
+### Technical Indicators Memory System
+```python
+# Historical technical indicators (automatically enabled with ENABLE_TECHNICAL_INDICATORS)
+# These create 20-day lagged series for enhanced pattern recognition in daily prompts:
+# RSI_LAG_1 through RSI_LAG_20: Historical RSI values for trend analysis
+# MACD_HIST_LAG_1 through MACD_HIST_LAG_20: Historical MACD histogram values for momentum analysis
+# STOCH_K_LAG_1 through STOCH_K_LAG_20: Historical Stochastic %K values for cycle analysis
+# BB_POSITION_LAG_1 through BB_POSITION_LAG_20: Historical Bollinger Band positions for volatility analysis
+
+# Memory system aggregates these for weekly/monthly/quarterly/yearly summaries:
+# - Weekly RSI: Average RSI with overbought/oversold percentages and range
+# - Monthly MACD: Bullish percentage and average histogram strength
+# - Quarterly Stochastic: Overbought/oversold conditions over period
+# - Yearly Bollinger Bands: Average position and band touch frequency
+```
+
 ## 🧪 Experiment Configurations
 
 The framework provides 6 predefined experiment configurations to systematically test different aspects of LLM trading:

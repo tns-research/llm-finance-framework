@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Enhanced Technical Indicators Memory System**:
+  - Historical technical indicator series (20-day lags) in daily prompts
+  - Aggregated technical statistics in weekly/monthly/quarterly/yearly memory
+  - Comprehensive technical context across multiple timeframes
+  - Token-efficient memory representation with backward compatibility
+
 ## [0.2.0] - 2025-12-02
 
 ### Added

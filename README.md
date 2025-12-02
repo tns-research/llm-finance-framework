@@ -31,14 +31,14 @@ The framework follows a systematic 5-step process:
 5. **📋 Analysis & Reporting**: Generate comprehensive reports with statistical validation, behavioral pattern analysis, and performance comparisons
 
 ### Technical Indicator Memory System**
-**Advanced context integration with historical technical analysis**
+**Comprehensive technical analysis with historical context and aggregated insights**
 
-The framework implements a sophisticated memory system that includes historical technical indicators alongside traditional memory components:
+The framework implements a dual-layer technical indicator system for maximum analytical depth:
 
-- **📈 Current Day Analysis**: RSI, MACD, Stochastic Oscillator, and Bollinger Bands for immediate decision-making
-- **📅 Historical Context**: Daily memory entries include technical indicator values from past days for pattern recognition
-- **📊 Period Summaries**: Weekly, monthly, quarterly, and yearly summaries analyze technical indicator performance and trends
-- **🧠 Enhanced Learning**: LLMs can correlate technical signals across timeframes for improved decision quality
+- **📈 Daily Historical Series**: 20-day lagged technical indicator values (RSI, MACD histogram, Stochastic %K, Bollinger Band position) in daily prompts for detailed pattern analysis
+- **📊 Aggregated Memory Context**: Weekly/monthly/quarterly/yearly memory includes aggregated technical statistics (averages, percentages, ranges) for efficient token usage
+- **🎯 Current Day Analysis**: Real-time RSI, MACD, Stochastic Oscillator, and Bollinger Bands for immediate decision-making
+- **🧠 Multi-Timeframe Correlation**: LLMs can analyze technical signals across daily trends, weekly averages, and monthly patterns for sophisticated decision-making
 
 ### Research Capabilities
 - **🧪 Compare LLMs vs Traditional Strategies**: Test any LLM against momentum, mean-reversion, volatility timing, and other proven approaches
