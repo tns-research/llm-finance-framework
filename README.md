@@ -45,7 +45,7 @@ The framework implements a dual-layer technical indicator system for maximum ana
 - **🧠 Hierarchical Memory & Adaptation**: Study how LLMs learn from experience with multi-level memory system (daily, weekly, monthly, quarterly, yearly), strategic journals, feeling logs, and optional complete trading history
 - **🎯 Calibration Analysis**: Assess if LLM confidence matches actual performance
 - **🧮 Behavioral Biases**: Detect human-like trading biases in AI decisions
-- **📊 Statistical Rigor**: Bootstrap testing, out-of-sample validation, dual-criteria HOLD evaluation
+- **📊 Statistical Rigor**: Bootstrap testing, out-of-sample validation, risk-based HOLD evaluation
 
 ---
 

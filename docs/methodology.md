@@ -78,18 +78,22 @@ HOLD positions are evaluated using two complementary criteria:
 **Rationale**: In quiet markets, cash performs similarly to any directional bet
 **Scoring**: Binary (1 if quiet, 0 if volatile)
 
-#### 2. Contextual Decision Correctness
-**High Volatility Context**: >75th percentile of 20-day volatility
-**Regime Change**: Significant 10-day trend direction shifts (>0.1% change)
-**Decision Uncertainty**: Mixed recent decisions (>60% entropy)
-**Extreme Conditions**: Large recent moves (>3% in 3 days)
-
-**Scoring**: Weighted combination of contextual factors (0-2.0 scale)
+#### 2. Risk Avoidance Success
+**Definition**: HOLD prevents significant losses (>2%) that directional bets would incur
+**Logic**: Simulates BUY vs SELL performance and awards credit when HOLD avoids meaningful losses
+**Threshold**: Requires avoiding losses >2% (increased from 0.5% for genuine risk management)
+**Scoring**:
+- 1.0: Avoided significant loss (>2%) in volatile conditions
+- 0.5: Reasonable performance despite volatility
+- 0.0: No risk avoidance benefit
 
 #### Combined Evaluation
 ```python
-overall_score = (0.6 × quiet_success) + (0.4 × context_correctness)
+overall_score = (0.6 × quiet_success) + (0.4 × risk_avoidance_score)
+success_threshold = 0.4  # HOLD successful if score >= 0.4
 ```
+
+**Win Rate Calculation**: HOLD decisions are considered successful when the combined score meets the success threshold, providing meaningful calibration analysis instead of always returning 0% win rates.
 
 ## 🤖 Behavioral Analysis Framework
 
