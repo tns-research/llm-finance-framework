@@ -7,37 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2025-12-02
+
 ### Added
-- Initial framework setup for LLM finance experiments
-- Baseline trading strategies (Buy & Hold, Momentum, Mean Reversion, etc.)
-- Statistical validation with bootstrap testing
-- Comprehensive reporting and visualization
-- GitHub Actions CI/CD pipeline with automated testing and linting
-- Development tools: dev.bat (Windows), Makefile (Unix/Linux)
-- Cross-platform development workflow scripts
-- Version management system with semantic versioning
-- Collaboration tools for team development
-- Modern Python packaging with pyproject.toml
-- Comprehensive documentation and contribution guidelines
-- Code of conduct and research ethics guidelines
-- GitHub issue and PR templates for standardized contributions
-- Automated dependency management with Dependabot
+- Complete technical indicators suite (RSI, MACD, Stochastic Oscillator, Bollinger Bands)
+- Multi-model LLM testing framework with Chimera, GPT-OSS-20B, and Dummy Model support
+- Enhanced technical indicators memory system for improved LLM context
+- Neutral and factual RSI system prompts for better AI decision-making
+- Comprehensive technical analysis integration in LLM prompts
 
 ### Changed
-- Migrated from master to main branch
-- Updated to modern Python project structure
-- Replaced seaborn dependency with core visualization libraries
-- Reorganized utility scripts into dedicated scripts/ directory
-- Enhanced CI/CD pipeline with comprehensive quality checks
+- Redesigned HOLD decision analysis with meaningful performance metrics
+- Enhanced comprehensive reporting with improved structure and decision analysis
+- Updated CI/CD pipeline to Python 3.11 with relaxed type checking for compatibility
+- Improved project documentation and collaboration guidelines
 
 ### Fixed
-- Removed unused dependencies and cleaned up requirements.txt
-- Fixed repository placeholder URLs to point to correct repository
-- Organized .gitignore with proper exclusions and removed duplicates
+- HOLD decision context success rate calculation accuracy
+- Syntax errors in development workflow scripts
+- CI pipeline formatting and style check compatibility issues
+- Repository URL placeholders and documentation references
 
 ### Technical Details
-- Python 3.8+ compatibility
 - Core dependencies: pandas, scipy, matplotlib, requests
+- Python 3.8+ compatibility maintained
+- Removed seaborn dependency for cleaner requirements
 
 ## [0.1.0] - 2025-01-28
 
