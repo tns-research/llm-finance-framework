@@ -21,6 +21,7 @@ from .config_compat import (
 from .memory_manager import MemoryManager
 from .period_manager import PeriodManager
 from .configuration_manager import ConfigurationManager
+from .performance_tracker import PerformanceTracker
 from .decision_analysis import (
     analyze_decisions_after_outcomes,
     analyze_position_duration_stats,
@@ -184,19 +185,10 @@ def run_single_model(
     trading_history = []  # Will store all past trades as data for full history feature
     rows = []
 
-    # Performance tracking over the whole backtest
-    cumulative_return = 0.0
-    index_cumulative_return = 0.0
+    # Unified performance tracking system
+    performance_tracker = PerformanceTracker()
 
-    decision_count = 0
-    buy_count = 0
-    hold_count = 0
-    sell_count = 0
-    win_count = 0  # days with positive strategy return
-
-    # Position duration tracking
-    current_decision = None
-    current_position_duration = 0
+    # Position duration tracking for backward compatibility
     previous_decision = None
     previous_return = None
 
@@ -253,27 +245,7 @@ def run_single_model(
             journal_text = "No past trades yet. You are starting your strategy."
 
         # Performance summary based only on past days
-        if decision_count == 0:
-            performance_summary = (
-                "No trades executed yet.\n"
-                "Strategy cumulative return so far  0.00 percent.\n"
-                "S and P 500 cumulative return so far  0.00 percent.\n"
-                "BUY 0, HOLD 0, SELL 0.\n"
-                "Win rate undefined."
-            )
-        else:
-            edge = cumulative_return - index_cumulative_return
-            outperform_word = "outperforming" if edge > 0 else "underperforming"
-            win_rate_pct = (win_count / decision_count) * 100.0
-
-            performance_summary = (
-                f"Total strategy return so far  {cumulative_return:.2f} percent.\n"
-                f"Total S and P 500 return so far  {index_cumulative_return:.2f} percent.\n"
-                f"You are {outperform_word} the index by {edge:.2f} percent.\n"
-                f"Number of decisions so far  {decision_count} "
-                f"(BUY {buy_count}, HOLD {hold_count}, SELL {sell_count}).\n"
-                f"Win rate so far  {win_rate_pct:.1f} percent."
-            )
+        performance_summary = performance_tracker.get_performance_summary()
 
         # Generate memory blocks using unified system
         memory_blocks = memory_manager.get_all_memory_blocks()
@@ -371,38 +343,15 @@ def run_single_model(
 
         position = POSITION_MAP[decision]
 
-        # Track position duration and changes
-        if current_decision is None:
-            # First day
-            current_decision = decision
-            current_position_duration = 1
-            position_changed = False
-        elif decision == current_decision:
-            # Same position as yesterday
-            current_position_duration += 1
-            position_changed = False
-        else:
-            # Position changed
-            current_decision = decision
-            current_position_duration = 1
-            position_changed = True
-
-        # Daily performance
+        # Daily performance calculation
         daily_return = position * row["next_return_1d"]
-        cumulative_return += daily_return
-        index_cumulative_return += row["next_return_1d"]
 
-        # Update global decision statistics
-        decision_count += 1
-        if decision == "BUY":
-            buy_count += 1
-        elif decision == "HOLD":
-            hold_count += 1
-        elif decision == "SELL":
-            sell_count += 1
+        # Update performance tracker with decision and returns
+        performance_tracker.update_daily_performance(decision, daily_return, row["next_return_1d"])
 
-        if daily_return > 0:
-            win_count += 1
+        # Get position duration info for backward compatibility
+        current_decision, current_position_duration = performance_tracker.get_position_duration_info()
+        position_changed = (previous_decision is not None and decision != previous_decision)
 
         # Update period stats using unified system
         period_manager.update_stats('weekly', strategy_return=daily_return, index_return=row["next_return_1d"], days=1)
@@ -435,14 +384,15 @@ def run_single_model(
         last_date = current_date
 
         # Store trade data for dynamic journal formatting
+        final_metrics = performance_tracker.get_final_metrics()
         trade_data = {
             "date": row["date"],
             "decision": decision,
             "prob": prob,
             "next_return_1d": row["next_return_1d"],
             "strategy_return": daily_return,
-            "cumulative_return": cumulative_return,
-            "index_cumulative_return": index_cumulative_return,
+            "cumulative_return": final_metrics["total_return"],
+            "index_cumulative_return": final_metrics["index_return"],
             "explanation": explanation,
             "strategic_journal": strategic_journal,
             "feeling_log": feeling_log,
@@ -501,7 +451,7 @@ def run_single_model(
                 "position": position,
                 "next_return_1d": row["next_return_1d"],
                 "strategy_return": daily_return,
-                "cumulative_return": cumulative_return,
+                "cumulative_return": final_metrics["total_return"],
                 "position_duration": current_position_duration,
                 "position_changed": position_changed,
                 "previous_decision": previous_decision,
@@ -521,7 +471,7 @@ def run_single_model(
         print(f"Decision:     {decision}   (probability {prob:.2f})")
         print(f"Index return: {row['next_return_1d']:.2f} percent")
         print(
-            f"Strat return: {daily_return:.2f} percent   Cumulative: {cumulative_return:.2f} percent"
+            f"Strat return: {daily_return:.2f} percent   Cumulative: {final_metrics['total_return']:.2f} percent"
         )
         print("\nExplanation (today's decision):")
         print(explanation)
