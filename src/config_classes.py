@@ -171,6 +171,11 @@ class GlobalConfig:
     start_row: Optional[int] = None
     openrouter_api_base: str = "https://openrouter.ai/api/v1/chat/completions"
 
+    # Technical indicator windows
+    ma20_window: int = 20
+    ret_5d_window: int = 5
+    vol20_window: int = 20
+
     # Nested configurations
     data: DataSettings = field(default_factory=DataSettings)
     models: ModelSettings = field(default_factory=ModelSettings)

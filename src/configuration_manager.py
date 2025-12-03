@@ -68,6 +68,9 @@ class ConfigurationManager:
             config.debug_show_full_prompt = getattr(legacy_config, 'DEBUG_SHOW_FULL_PROMPT', True)
             config.start_row = getattr(legacy_config, 'START_ROW', None)
             config.openrouter_api_base = getattr(legacy_config, 'OPENROUTER_API_BASE', "https://openrouter.ai/api/v1/chat/completions")
+            config.ma20_window = getattr(legacy_config, 'MA20_WINDOW', 20)
+            config.ret_5d_window = getattr(legacy_config, 'RET_5D_WINDOW', 5)
+            config.vol20_window = getattr(legacy_config, 'VOL20_WINDOW', 20)
             config.active_experiment = getattr(legacy_config, 'ACTIVE_EXPERIMENT', 'memory_feeling')
 
             # Apply data settings

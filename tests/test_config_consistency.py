@@ -12,6 +12,9 @@ from src.config_compat import (
     DEBUG_SHOW_FULL_PROMPT,
     START_ROW,
     OPENROUTER_API_BASE,
+    MA20_WINDOW,
+    RET_5D_WINDOW,
+    VOL20_WINDOW,
     USE_DUMMY_MODEL,
     TEST_MODE,
     TEST_LIMIT,
@@ -65,6 +68,25 @@ class TestConfigConsistency:
         expected = "https://openrouter.ai/api/v1/chat/completions"
         assert config_manager._config.openrouter_api_base == expected
         assert OPENROUTER_API_BASE == expected
+
+    def test_window_constants_transferred(self):
+        """Test that window constants are read from legacy config"""
+        config_manager = ConfigurationManager()
+
+        # Should have the fields in new system
+        assert hasattr(config_manager._config, 'ma20_window')
+        assert hasattr(config_manager._config, 'ret_5d_window')
+        assert hasattr(config_manager._config, 'vol20_window')
+
+        # Should match legacy values (currently hardcoded)
+        assert config_manager._config.ma20_window == 20
+        assert config_manager._config.ret_5d_window == 5
+        assert config_manager._config.vol20_window == 20
+
+        # Should match compatibility layer values
+        assert MA20_WINDOW == 20
+        assert RET_5D_WINDOW == 5
+        assert VOL20_WINDOW == 20
 
     def test_core_settings_transferred(self):
         """Test that core settings are properly transferred"""

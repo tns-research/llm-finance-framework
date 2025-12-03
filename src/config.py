@@ -44,7 +44,7 @@ DATA_END = "2023-12-31"  # End date for historical data
 # ----------------
 TEST_MODE = True  # Set to True for quick tests, False for full experiments
 TEST_LIMIT = (
-    40  # Number of days to run when TEST_MODE = True (test on at least 3 days)
+    4  # Number of days to run when TEST_MODE = True (test on at least 3 days)
 )
 # Set TEST_MODE = False for complete ~2700 day analysis
 
@@ -70,7 +70,7 @@ ENABLE_FULL_TRADING_HISTORY = True
 # DEBUGGING & DEVELOPMENT
 # -----------------------
 # Show full LLM prompts during execution (helpful for understanding what the AI sees)
-DEBUG_SHOW_FULL_PROMPT = True
+DEBUG_SHOW_FULL_PROMPT = False
 
 # DATA SUBSET FOR TESTING
 # -----------------------
@@ -110,9 +110,9 @@ LLM_MODELS = [
 # --------------------
 # Advanced settings for data processing and trading features
 PAST_RET_LAGS = 20  # Number of past return lags for features
-RET_5D_WINDOW = 5  # 5-day return window
-MA20_WINDOW = 20  # 20-day moving average window
-VOL20_WINDOW = 20  # 20-day volatility window
+RET_5D_WINDOW = 5  # 5-day return window (configurable via config.py)
+MA20_WINDOW = 20  # 20-day moving average window (configurable via config.py)
+VOL20_WINDOW = 20  # 20-day volatility window (configurable via config.py)
 RSI_WINDOW = 14  # RSI period (14 days standard)
 RSI_OVERBOUGHT = 70  # RSI overbought threshold
 RSI_OVERSOLD = 30  # RSI oversold threshold

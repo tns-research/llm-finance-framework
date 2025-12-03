@@ -71,6 +71,11 @@ DEBUG_SHOW_FULL_PROMPT = _config_manager._config.debug_show_full_prompt
 START_ROW = _config_manager._config.start_row
 OPENROUTER_API_BASE = _config_manager._config.openrouter_api_base
 
+# Technical indicator windows - now read from new system
+MA20_WINDOW = _config_manager._config.ma20_window
+RET_5D_WINDOW = _config_manager._config.ret_5d_window
+VOL20_WINDOW = _config_manager._config.vol20_window
+
 # Feature flags
 ENABLE_STRATEGIC_JOURNAL = flags['ENABLE_STRATEGIC_JOURNAL']
 ENABLE_FEELING_LOG = flags['ENABLE_FEELING_LOG']
@@ -149,10 +154,7 @@ JOURNAL_SYSTEM_PROMPT = _prompt_builder.build_period_summary_prompt("Period", {}
 # For backward compatibility - these may be referenced by legacy code
 ACTIVE_EXPERIMENT = _config_manager._config.active_experiment
 
-# Technical indicator constants
-MA20_WINDOW = 20  # 20-day moving average window
-RET_5D_WINDOW = 5  # 5-day return window
-VOL20_WINDOW = 20  # 20-day volatility window
+# Technical indicator constants (now read from new system above)
 
 # Position mapping
 POSITION_MAP = {
