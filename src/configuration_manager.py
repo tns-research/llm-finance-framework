@@ -65,6 +65,9 @@ class ConfigurationManager:
             config.use_dummy_model = getattr(legacy_config, 'USE_DUMMY_MODEL', True)
             config.test_mode = getattr(legacy_config, 'TEST_MODE', True)
             config.test_limit = getattr(legacy_config, 'TEST_LIMIT', 15)
+            config.debug_show_full_prompt = getattr(legacy_config, 'DEBUG_SHOW_FULL_PROMPT', True)
+            config.start_row = getattr(legacy_config, 'START_ROW', None)
+            config.openrouter_api_base = getattr(legacy_config, 'OPENROUTER_API_BASE', "https://openrouter.ai/api/v1/chat/completions")
             config.active_experiment = getattr(legacy_config, 'ACTIVE_EXPERIMENT', 'memory_feeling')
 
             # Apply data settings

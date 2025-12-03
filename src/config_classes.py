@@ -166,6 +166,11 @@ class GlobalConfig:
     test_mode: bool = True
     test_limit: int = 15
 
+    # Debug settings
+    debug_show_full_prompt: bool = True
+    start_row: Optional[int] = None
+    openrouter_api_base: str = "https://openrouter.ai/api/v1/chat/completions"
+
     # Nested configurations
     data: DataSettings = field(default_factory=DataSettings)
     models: ModelSettings = field(default_factory=ModelSettings)

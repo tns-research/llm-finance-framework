@@ -66,6 +66,11 @@ flags = _get_feature_flags()
 data_settings = _get_data_settings()
 model_settings = _get_model_settings()
 
+# Debug settings - now read from new system
+DEBUG_SHOW_FULL_PROMPT = _config_manager._config.debug_show_full_prompt
+START_ROW = _config_manager._config.start_row
+OPENROUTER_API_BASE = _config_manager._config.openrouter_api_base
+
 # Feature flags
 ENABLE_STRATEGIC_JOURNAL = flags['ENABLE_STRATEGIC_JOURNAL']
 ENABLE_FEELING_LOG = flags['ENABLE_FEELING_LOG']
@@ -143,9 +148,6 @@ JOURNAL_SYSTEM_PROMPT = _prompt_builder.build_period_summary_prompt("Period", {}
 
 # For backward compatibility - these may be referenced by legacy code
 ACTIVE_EXPERIMENT = _config_manager._config.active_experiment
-DEBUG_SHOW_FULL_PROMPT = True  # Legacy setting, could be made configurable later
-OPENROUTER_API_BASE = "https://openrouter.ai/api/v1/chat/completions"
-START_ROW = 33  # Start from a specific row in the dataset
 
 # Technical indicator constants
 MA20_WINDOW = 20  # 20-day moving average window
