@@ -20,7 +20,7 @@ Choose your experiment based on what you want to study:
 ### Master Toggles (Fundamental Controls)
 
 | Toggle | Default | What It Controls | Research Impact |
-|---|---|---|---|---|
+|---|---|---|---|
 | **`ENABLE_TECHNICAL_INDICATORS`** | `True` | RSI, MACD, Stochastic, Bollinger in prompts | **Quantitative vs Qualitative**: `True` = technical analysis, `False` = fundamental reasoning only |
 | **`ENABLE_FULL_TRADING_HISTORY`** | `True` | Complete trading record in context | **Memory Depth**: `True` = full history, `False` = limited context window |
 | **`ENABLE_STRATEGIC_JOURNAL`** | Varies | LLM's own trading notes and reasoning | **Self-Reflection**: `True` = learns from past decisions and outcomes |
@@ -30,7 +30,7 @@ Choose your experiment based on what you want to study:
 ### Window Sizes (Now Configurable!)
 
 | Setting | Default | Research Use | Impact on Strategy |
-|---|---|---|---|---|
+|---|---|---|---|
 | `MA20_WINDOW` | 20 | Trend sensitivity testing | Smaller (10) = responsive/noisy<br>Larger (50) = smooth/slow |
 | `RET_5D_WINDOW` | 5 | Momentum horizon adjustment | Shorter (3) = fast signals<br>Longer (10) = confirmed trends |
 | `VOL20_WINDOW` | 20 | Risk assessment period | Shorter = volatile signals<br>Longer = stable risk view |
@@ -48,7 +48,7 @@ Choose your experiment based on what you want to study:
 ### Standard Outputs (All Experiments)
 
 | Output Type | Location | Content | Primary Use |
-|---|---|---|---|---|
+|---|---|---|---|
 | **Parsed Results** | `results/parsed/model_experiment_parsed.csv` | Raw decisions + explanations + confidence | Decision pattern analysis |
 | **Performance Plots** | `results/plots/` | Equity curves, risk charts, calibration plots | Visual performance assessment |
 | **Statistical Analysis** | `results/analysis/` JSON files | Bootstrap tests, significance, effect sizes | Rigorous validation |
