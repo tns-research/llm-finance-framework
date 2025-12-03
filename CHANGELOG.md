@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-12-03
+
+### Added
+- **Configurable Technical Indicator Windows**: MA20_WINDOW, RET_5D_WINDOW, VOL20_WINDOW now user-configurable for research experiments
+- **Comprehensive Configuration System Testing**: New test suite ensuring config settings work correctly
+- **Experiment Design Guide**: New `docs/experiment_design.md` with practical experiment configuration workflows
+- **Enhanced Configuration Documentation**: Updated `docs/configuration.md` with accurate configurable settings list
+
+### Fixed
+- **DEBUG_SHOW_FULL_PROMPT Configuration**: Fixed bug where setting this to False had no effect
+- **Configuration System Consistency**: All config settings now properly transferred from legacy to new system
+- **START_ROW and OPENROUTER_API_BASE**: Made fully configurable through config.py
+- **Documentation Inaccuracies**: Fixed incorrect variable references and import statements in docs
+
+### Changed
+- **Hybrid Configuration Architecture**: Stabilized hybrid system with clear documentation of what's configurable vs legacy
+- **Repository Cleanup**: Removed temporary development files and duplicate documentation
+- **COLLABORATION_GUIDE.md**: Added reference to new experiment design guide
+
+### Technical Details
+- Configuration system now supports 10 fully configurable settings
+- Comprehensive test coverage with 8 new configuration consistency tests
+- Backward compatibility maintained while adding research flexibility
+- Clean separation between user-configurable and system-internal settings
+
 ## [Unreleased]
 
 ### Added

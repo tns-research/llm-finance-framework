@@ -537,7 +537,6 @@ print(f"LLM vs Index p-value: {validation['bootstrap_vs_index']['p_value']}")
 ## 🔬 Future Research Directions
 
 ### Immediate Extensions
-- **Win Rate Analysis**: Investigate HOLD decision calibration and win rate calculations for better performance assessment
 - **Technical Indicator Baselines**: Develop new baseline strategies using MACD, Stochastic, and Bollinger Bands signals
 - **Enhanced Feature Engineering**: Improve prompt engineering with market regime detection and advanced technical analysis
 - **Chain of Thoughts Reasoning**: Implement structured step-by-step reasoning prompts to improve LLM decision quality and explainability
