@@ -224,9 +224,10 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
     # Rendement quotidien en pourcentage
     df["return_1d"] = df["close"].pct_change() * 100.0
 
-    # Retours décalés
-    for k in range(1, config.PAST_RET_LAGS + 1):
-        df[f"ret_lag_{k}"] = df["return_1d"].shift(k)
+    # Retours décalés (batch operation to avoid DataFrame fragmentation)
+    return_lags = {f"ret_lag_{k}": df["return_1d"].shift(k)
+                   for k in range(1, config.PAST_RET_LAGS + 1)}
+    df = pd.concat([df, pd.DataFrame(return_lags)], axis=1)
 
     # Momentum 20 jours
     df["ma20_pct"] = df["return_1d"].rolling(config.MA20_WINDOW).sum()
@@ -271,11 +272,14 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # Historical Technical Indicators (only when enabled)
     if config.ENABLE_TECHNICAL_INDICATORS:
+        # Batch operation to avoid DataFrame fragmentation
+        tech_lags = {}
         for k in range(1, config.PAST_RET_LAGS + 1):
-            df[f"rsi_lag_{k}"] = df["rsi_14"].shift(k)
-            df[f"macd_hist_lag_{k}"] = df["macd_histogram"].shift(k)
-            df[f"stoch_k_lag_{k}"] = df["stoch_k"].shift(k)
-            df[f"bb_position_lag_{k}"] = df["bb_position"].shift(k)
+            tech_lags[f"rsi_lag_{k}"] = df["rsi_14"].shift(k)
+            tech_lags[f"macd_hist_lag_{k}"] = df["macd_histogram"].shift(k)
+            tech_lags[f"stoch_k_lag_{k}"] = df["stoch_k"].shift(k)
+            tech_lags[f"bb_position_lag_{k}"] = df["bb_position"].shift(k)
+        df = pd.concat([df, pd.DataFrame(tech_lags)], axis=1)
 
     # Momentum 5 jours
     df["ret_5d"] = df["return_1d"].rolling(config.RET_5D_WINDOW).sum()

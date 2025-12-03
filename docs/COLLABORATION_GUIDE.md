@@ -420,7 +420,7 @@ git rebase --continue
 
 ## 📞 **Getting Help**
 
-- **Documentation First**: Check docs/ and README.md
+- **Documentation First**: Check docs/ (especially experiment_design.md for experiments), and README.md
 - **Search Issues**: Look for similar problems
 - **Ask Questions**: Use GitHub Discussions for general questions
 - **Team Communication**: Reach out to team members directly

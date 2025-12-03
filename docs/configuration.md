@@ -46,16 +46,19 @@ RSI_WINDOW = 14         # RSI period (14 days standard)
 RSI_OVERBOUGHT = 70     # RSI overbought threshold
 RSI_OVERSOLD = 30       # RSI oversold threshold
 
+# MACD (Moving Average Convergence Divergence)
 MACD_FAST = 12          # Fast EMA period for MACD
 MACD_SLOW = 26          # Slow EMA period for MACD
 MACD_SIGNAL = 9         # Signal line EMA period for MACD
 
+# Stochastic Oscillator
 STOCH_K = 14            # %K period for Stochastic Oscillator
 STOCH_D = 3             # %D smoothing period for Stochastic Oscillator
 STOCH_SMOOTH_K = 3      # %K smoothing period (optional)
 STOCH_OVERBOUGHT = 80   # Stochastic overbought threshold
 STOCH_OVERSOLD = 20     # Stochastic oversold threshold
 
+# Bollinger Bands
 BB_WINDOW = 20          # Bollinger Bands period
 BB_STD = 2              # Standard deviations for Bollinger Bands
 
