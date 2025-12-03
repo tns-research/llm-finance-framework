@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2025-12-03
+
+### Added
+- **Flexible START_ROW Configuration**: START_ROW now supports any value for testing different market time periods (bull/bear markets, different economic conditions)
+- **START_ROW Validation System**: Automatic warnings for dataset size constraints and smart capping to prevent data processing failures
+- **Comprehensive Pre-Merge Validation**: Complete testing pipeline with 148 tests, build verification, and code quality assurance
+
+### Fixed
+- **Integration Test Robustness**: Tests now handle variable START_ROW values gracefully with safe indexing
+- **START_ROW Processing Safety**: Enhanced prompts.py to prevent empty datasets from oversized START_ROW values
+- **Configuration Validation**: Improved START_ROW validation against ~2700-day dataset with TEST_MODE awareness
+
+### Technical Details
+- START_ROW flexibility enables testing different economic conditions and market regimes
+- Automatic START_ROW capping prevents data processing failures while maintaining research flexibility
+- All tests passing with enhanced safety checks and comprehensive validation
+
 ## [0.3.0] - 2025-12-03
 
 ### Added
@@ -29,8 +46,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive test coverage with 8 new configuration consistency tests
 - Backward compatibility maintained while adding research flexibility
 - Clean separation between user-configurable and system-internal settings
-
-## [Unreleased]
 
 ### Added
 - **Enhanced Technical Indicators Memory System**:
