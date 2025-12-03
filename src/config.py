@@ -68,13 +68,13 @@ ENABLE_FULL_TRADING_HISTORY = True
 # DEBUGGING & DEVELOPMENT
 # -----------------------
 # Show full LLM prompts during execution (helpful for understanding what the AI sees)
-DEBUG_SHOW_FULL_PROMPT = False
+DEBUG_SHOW_FULL_PROMPT = True
 
 # DATA SUBSET FOR TESTING
 # -----------------------
 # Start from a specific row in the dataset (useful for testing specific time periods)
 # None = use all available data, 30 = skip first 30 trading days
-START_ROW = 33
+START_ROW = 333
 
 # LLM MODELS TO TEST
 # ------------------
@@ -90,14 +90,14 @@ LLM_MODELS = [
     #    "router_model": "tngtech/tng-r1t-chimera:free",  # OpenRouter model ID
     # },
     # Add more models here:
-    {
-        "tag": "olmo-32b",
-        "router_model": "allenai/olmo-3-32b-think",
-    },
-    # {
-    #    "tag": "gpt-oss-20b",
-    #    "router_model": "openai/gpt-oss-20b:free",
-    # },
+    #{
+    #    "tag": "olmo-32b",
+    #    "router_model": "allenai/olmo-3-32b-think",
+    #},
+     {
+        "tag": "gpt-oss-20b",
+        "router_model": "openai/gpt-oss-20b:free",
+     },
     # {
     #     "tag": "claude",
     #     "router_model": "anthropic/claude-3-sonnet",

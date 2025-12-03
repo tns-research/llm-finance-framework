@@ -66,6 +66,6 @@ htmlcov/
 # Research directory (keep private until publication)
 docs/research/
 
-# Raw data files (Stooq, proprietary data sources)
+# Raw data files (data sources)
 data/raw/*.csv
 data/raw/sp500.csv

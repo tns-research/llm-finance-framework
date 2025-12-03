@@ -69,12 +69,20 @@ def run_type_checking():
         "mypy", "src/", "--ignore-missing-imports"
     ], "MyPy type checking")
 
+def run_math_validation():
+    """Run critical mathematical validation"""
+    print("\n🔢 Running mathematical validation...")
+    return run_command([
+        sys.executable, "scripts/validate_core_math.py"
+    ], "Validating core mathematical calculations")
+
 def run_full_check():
     """Run full development check suite"""
     print("🔬 Running full development check suite...")
 
     checks = [
         ("setup", setup_dev_environment),
+        ("math", run_math_validation),
         ("lint", run_linting),
         ("types", run_type_checking),
         ("tests", run_tests),
@@ -102,13 +110,15 @@ def main():
 
     parser = argparse.ArgumentParser(description='Development workflow helper')
     parser.add_argument('action', choices=[
-        'setup', 'test', 'lint', 'types', 'check', 'version'
+        'setup', 'math', 'test', 'lint', 'types', 'check', 'version'
     ], help='Action to perform')
 
     args = parser.parse_args()
 
     if args.action == 'setup':
         setup_dev_environment()
+    elif args.action == 'math':
+        run_math_validation()
     elif args.action == 'test':
         run_tests()
     elif args.action == 'lint':

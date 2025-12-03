@@ -132,7 +132,10 @@ pip install -e .
 
 ### Quick Test Run
 ```bash
-# Run with dummy model (no API key needed)
+# First, validate that core mathematical calculations are correct
+python scripts/validate_core_math.py
+
+# Then run with dummy model (no API key needed)
 python -m src.main
 ```
 
@@ -301,6 +304,7 @@ The framework implements a sophisticated 4-layer memory architecture enabling LL
 ├── 🎯 main.py                 # Pipeline orchestrator
 ├── 🤖 openrouter_model.py     # LLM API integration
 ├── 📊 backtest.py            # Strategy evaluation engine
+├── 🧮 baseline_runner.py     # Baseline comparison utilities
 ├── 🧮 baselines.py           # 7 traditional quantitative strategies
 ├── 📈 statistical_validation.py # Bootstrap testing + out-of-sample
 ├── 📋 report_generator.py    # Automated research reports
@@ -315,6 +319,7 @@ The framework implements a sophisticated 4-layer memory architecture enabling LL
 📁 src/ (Memory System Components)
 ├── 🧠 journal_manager.py     # Strategic journal management
 ├── 📊 memory_manager.py      # Period-based memory storage
+├── 📊 period_manager.py      # Unified period boundary management
 ├── 📈 performance_tracker.py # Real-time performance metrics
 ├── 📋 trade_history_manager.py # Trading history CSV formatting
 ├── 🏗️ memory_classes.py      # Memory data structures
