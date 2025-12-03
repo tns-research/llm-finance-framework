@@ -2,6 +2,25 @@
 
 This guide explains all configuration options available in the LLM Finance Experiment framework.
 
+## 🔧 Configuration System Architecture
+
+The framework uses a **hybrid configuration system** that combines simplicity for users with modern infrastructure benefits.
+
+### For Users (You)
+- **Single configuration file**: Edit `src/config.py` - all settings work
+- **Familiar interface**: Simple variable assignments as before
+- **No changes needed**: Existing configurations continue to work
+
+### System Status
+- **✅ Fully Configurable**: `DEBUG_SHOW_FULL_PROMPT`, `START_ROW`, `TEST_MODE`, `TEST_LIMIT`, `OPENROUTER_API_BASE`, `ACTIVE_EXPERIMENT`, `SHOW_DATE_TO_LLM`, `MA20_WINDOW`, `RET_5D_WINDOW`, `VOL20_WINDOW`
+- **⚠️ Legacy System**: Other technical constants (RSI_WINDOW, MACD_FAST, etc.) - still work but less robust
+- **🎯 Future**: Additional constants can be migrated if needed for research
+
+### Why This Approach?
+- **Stability**: Proven working system with minimal complexity
+- **User Experience**: No disruption to existing workflows
+- **Research Focus**: Prioritizes actual research over infrastructure perfection
+
 ## 📊 Data Configuration
 
 ### Basic Data Settings
@@ -16,30 +35,27 @@ SYMBOL = "^GSPC"  # S&P 500 index ticker (Yahoo Finance format)
 
 ### Technical Indicators
 ```python
-# Basic feature engineering parameters
-PAST_RET_LAGS = 20      # Number of lagged return features
-RET_5D_WINDOW = 5       # 5-day return calculation window
-MA20_WINDOW = 20        # 20-day moving average window
-VOL20_WINDOW = 20       # 20-day volatility window
+# ✅ FULLY CONFIGURABLE (new system - can be modified for research)
+MA20_WINDOW = 20        # 20-day moving average window (configurable)
+RET_5D_WINDOW = 5       # 5-day return calculation window (configurable)
+VOL20_WINDOW = 20       # 20-day volatility window (configurable)
 
-# RSI (Relative Strength Index)
+# ⚠️ LEGACY SYSTEM (still works, defined in config.py)
+PAST_RET_LAGS = 20      # Number of lagged return features
 RSI_WINDOW = 14         # RSI period (14 days standard)
 RSI_OVERBOUGHT = 70     # RSI overbought threshold
 RSI_OVERSOLD = 30       # RSI oversold threshold
 
-# MACD (Moving Average Convergence Divergence)
 MACD_FAST = 12          # Fast EMA period for MACD
 MACD_SLOW = 26          # Slow EMA period for MACD
 MACD_SIGNAL = 9         # Signal line EMA period for MACD
 
-# Stochastic Oscillator
 STOCH_K = 14            # %K period for Stochastic Oscillator
 STOCH_D = 3             # %D smoothing period for Stochastic Oscillator
 STOCH_SMOOTH_K = 3      # %K smoothing period (optional)
 STOCH_OVERBOUGHT = 80   # Stochastic overbought threshold
 STOCH_OVERSOLD = 20     # Stochastic oversold threshold
 
-# Bollinger Bands
 BB_WINDOW = 20          # Bollinger Bands period
 BB_STD = 2              # Standard deviations for Bollinger Bands
 
@@ -73,9 +89,9 @@ The framework provides 6 predefined experiment configurations to systematically 
 ```python
 "baseline": {
     "description": "Minimal context: no dates, no memory, no feeling",
-    "SHOW_DATE_TO_LLM": False,
-    "ENABLE_STRATEGIC_JOURNAL": False,
-    "ENABLE_FEELING_LOG": False,
+    "SHOW_DATE_TO_LLM": False,        # ✅ Configurable via ACTIVE_EXPERIMENT
+    "ENABLE_STRATEGIC_JOURNAL": False, # ✅ Configurable via ACTIVE_EXPERIMENT
+    "ENABLE_FEELING_LOG": False,      # ✅ Configurable via ACTIVE_EXPERIMENT
 }
 ```
 **Use Case**: Test pure technical analysis capability without temporal context.
@@ -160,7 +176,7 @@ ACTIVE_EXPERIMENT = "memory_feeling"  # No dates by default
 
 #### Using Predefined Configurations
 ```python
-# Choose from predefined experiments
+# ✅ FULLY CONFIGURABLE (new system)
 ACTIVE_EXPERIMENT = "memory_feeling"  # One of: baseline, memory_only, memory_feeling,
                                      #         dates_only, dates_memory, dates_full
 ```
@@ -198,16 +214,17 @@ Models are selected based on the `tag` field. The framework automatically append
 # Use dummy model for development/testing
 USE_DUMMY_MODEL = True  # Set to False for real LLM experiments
 
-# Debug options
+# ✅ FULLY CONFIGURABLE (new system)
 DEBUG_SHOW_FULL_PROMPT = False  # Show complete prompts for debugging
 
-# Performance limiting for testing
+# ✅ FULLY CONFIGURABLE (new system)
 TEST_MODE = True      # Enable test mode (limits data processing)
 TEST_LIMIT = 500       # Number of days to process in test mode
 ```
 
 ### Starting Position
 ```python
+# ✅ FULLY CONFIGURABLE (new system)
 # Override automatic start position (for testing specific periods)
 START_ROW = 30  # None = automatic, or specific row number
 ```
@@ -311,6 +328,7 @@ The framework automatically builds appropriate system prompts based on configura
 
 ### OpenRouter Settings
 ```python
+# ✅ FULLY CONFIGURABLE (new system)
 OPENROUTER_API_BASE = "https://openrouter.ai/api/v1/chat/completions"
 ```
 
@@ -324,18 +342,18 @@ export OPENROUTER_API_KEY="your_key_here"
 ### Configuration Inspection
 ```python
 # List all available experiments
-from src.config import list_experiments
+from src.config_compat import list_experiments
 list_experiments()
 
 # Get current configuration summary
-from src.config import get_current_config_summary
+from src.config_compat import get_current_config_summary
 config = get_current_config_summary()
 ```
 
 ### Experiment Naming
 ```python
 # Get experiment suffix for file naming
-from src.config import get_experiment_suffix
+from src.config_compat import get_experiment_suffix
 suffix = get_experiment_suffix()  # Returns "_memory_feeling" etc.
 ```
 
@@ -356,5 +374,26 @@ suffix = get_experiment_suffix()  # Returns "_memory_feeling" etc.
 - Start with smaller, faster models for testing
 - Use larger models for final research results
 - Compare multiple models for robustness
+
+## 🔄 Configuration System Status
+
+### What Works
+- **All settings are functional**: Modify `src/config.py` and they take effect
+- **Backward compatibility**: Existing configurations continue to work
+- **Research flexibility**: Core window sizes are now configurable for experiments
+
+### Current Architecture
+```
+src/config.py (User Interface - Single Source of Truth)
+    ↓ Legacy reading
+src/configuration_manager.py (New System Bridge)
+    ↓ Modern access
+src/config_compat.py (Backward Compatibility Layer)
+    ↓ Clean imports
+src/*.py (Application Code)
+```
+
+### Future Considerations
+The system is **stable and functional**. Additional constants (RSI_WINDOW, MACD_FAST, etc.) can be migrated to the new system if specific research needs arise, but the current hybrid approach provides the best balance of simplicity and capability.
 
 This configuration system enables systematic, reproducible research into LLM financial decision-making capabilities.
