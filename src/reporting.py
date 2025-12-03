@@ -1,9 +1,10 @@
 # src/reporting.py
 
+from typing import Union
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from typing import Union
 
 from .config_compat import (
     DEBUG_SHOW_FULL_PROMPT,
@@ -167,7 +168,7 @@ def compute_period_technical_stats(
                 stats["macd_current"] = {
                     "line": last_row["macd_line"],
                     "signal": last_row["macd_signal"],
-                    "histogram": last_row["macd_histogram"]
+                    "histogram": last_row["macd_histogram"],
                 }
 
         # Current Stochastic values
@@ -177,11 +178,13 @@ def compute_period_technical_stats(
             if not any(pd.isna(stoch_values)):
                 stats["stoch_current"] = {
                     "k": last_row["stoch_k"],
-                    "d": last_row["stoch_d"]
+                    "d": last_row["stoch_d"],
                 }
 
         # Current Bollinger Band position
-        if "bb_position" in period_data.columns and not pd.isna(last_row.get("bb_position")):
+        if "bb_position" in period_data.columns and not pd.isna(
+            last_row.get("bb_position")
+        ):
             stats["bb_current_position"] = last_row["bb_position"]
 
     return stats
@@ -233,7 +236,9 @@ def format_period_technical_indicators(technical_stats: dict, period_name: str) 
         # Fallback for short periods - show current values
         macd = technical_stats["macd_current"]
         signal = "bullish" if macd["histogram"] > 0 else "bearish"
-        lines.append(f"MACD: {macd['line']:.2f}/{macd['signal']:.2f}/{macd['histogram']:.3f} ({signal})")
+        lines.append(
+            f"MACD: {macd['line']:.2f}/{macd['signal']:.2f}/{macd['histogram']:.3f} ({signal})"
+        )
 
     # Stochastic
     if "stoch_overbought_pct" in technical_stats:
@@ -307,7 +312,7 @@ def generate_llm_period_summary(
         technical_stats: Optional technical indicators data
     """
     # Convert PeriodStats to dict for backward compatibility
-    if hasattr(stats, 'to_dict'):
+    if hasattr(stats, "to_dict"):
         stats = stats.to_dict()
 
     if stats["days"] == 0:
@@ -590,7 +595,9 @@ def calculate_decision_success(parsed_df: pd.DataFrame) -> pd.Series:
         if "hold_success_indicators" in hold_analysis:
             hold_success_df = hold_analysis["hold_success_indicators"]
             # Merge success indicators back to main dataframe
-            hold_success_map = dict(zip(hold_success_df['index'], hold_success_df['hold_success']))
+            hold_success_map = dict(
+                zip(hold_success_df["index"], hold_success_df["hold_success"])
+            )
             success.loc[hold_mask] = df.loc[hold_mask].index.map(
                 lambda idx: hold_success_map.get(idx, 0)
             )
@@ -1527,8 +1534,8 @@ def create_technical_indicators_timeline(
     Shows the evolution of RSI, MACD, Stochastic, and Bollinger Bands over time
     with trading decision overlays for better visualization of signal timing.
     """
-    import matplotlib.pyplot as plt
     import matplotlib.dates as mdates
+    import matplotlib.pyplot as plt
 
     # Check what indicators are available
     has_rsi = "rsi_14" in features_df.columns
@@ -1552,9 +1559,19 @@ def create_technical_indicators_timeline(
     # RSI subplot (if available)
     if has_rsi:
         ax = axes[subplot_idx]
-        ax.plot(features_df["date"], features_df["rsi_14"], label="RSI(14)", color="purple", linewidth=1.5)
-        ax.axhline(y=70, color="red", linestyle="--", alpha=0.7, label="Overbought (70)")
-        ax.axhline(y=30, color="green", linestyle="--", alpha=0.7, label="Oversold (30)")
+        ax.plot(
+            features_df["date"],
+            features_df["rsi_14"],
+            label="RSI(14)",
+            color="purple",
+            linewidth=1.5,
+        )
+        ax.axhline(
+            y=70, color="red", linestyle="--", alpha=0.7, label="Overbought (70)"
+        )
+        ax.axhline(
+            y=30, color="green", linestyle="--", alpha=0.7, label="Oversold (30)"
+        )
         ax.axhline(y=50, color="gray", linestyle="-", alpha=0.5, label="Neutral (50)")
         ax.fill_between(features_df["date"], 30, 70, alpha=0.1, color="yellow")
         ax.set_title(f"RSI(14) Timeline - {model_tag}", fontweight="bold")
@@ -1571,21 +1588,52 @@ def create_technical_indicators_timeline(
             buy_signals = decisions_with_rsi[decisions_with_rsi["decision"] == "BUY"]
             sell_signals = decisions_with_rsi[decisions_with_rsi["decision"] == "SELL"]
 
-            ax.scatter(buy_signals["date"], buy_signals["rsi_14"],
-                      marker="^", color="green", s=80, label="BUY Signal", zorder=5)
-            ax.scatter(sell_signals["date"], sell_signals["rsi_14"],
-                      marker="v", color="red", s=80, label="SELL Signal", zorder=5)
+            ax.scatter(
+                buy_signals["date"],
+                buy_signals["rsi_14"],
+                marker="^",
+                color="green",
+                s=80,
+                label="BUY Signal",
+                zorder=5,
+            )
+            ax.scatter(
+                sell_signals["date"],
+                sell_signals["rsi_14"],
+                marker="v",
+                color="red",
+                s=80,
+                label="SELL Signal",
+                zorder=5,
+            )
 
         subplot_idx += 1
 
     # MACD subplot (if available)
     if has_macd:
         ax = axes[subplot_idx]
-        ax.plot(features_df["date"], features_df["macd_line"], label="MACD Line", color="blue", linewidth=1.5)
-        ax.plot(features_df["date"], features_df["macd_signal"], label="Signal Line", color="red", linewidth=1.5)
-        ax.bar(features_df["date"], features_df["macd_histogram"],
-               color=["green" if x >= 0 else "red" for x in features_df["macd_histogram"]],
-               alpha=0.7, label="Histogram", width=1)
+        ax.plot(
+            features_df["date"],
+            features_df["macd_line"],
+            label="MACD Line",
+            color="blue",
+            linewidth=1.5,
+        )
+        ax.plot(
+            features_df["date"],
+            features_df["macd_signal"],
+            label="Signal Line",
+            color="red",
+            linewidth=1.5,
+        )
+        ax.bar(
+            features_df["date"],
+            features_df["macd_histogram"],
+            color=["green" if x >= 0 else "red" for x in features_df["macd_histogram"]],
+            alpha=0.7,
+            label="Histogram",
+            width=1,
+        )
         ax.set_title(f"MACD Timeline - {model_tag}", fontweight="bold")
         ax.set_ylabel("MACD Value")
         ax.legend(loc="upper left")
@@ -1595,10 +1643,26 @@ def create_technical_indicators_timeline(
     # Stochastic subplot (if available)
     if has_stoch:
         ax = axes[subplot_idx]
-        ax.plot(features_df["date"], features_df["stoch_k"], label="%K", color="orange", linewidth=1.5)
-        ax.plot(features_df["date"], features_df["stoch_d"], label="%D", color="purple", linewidth=1.5)
-        ax.axhline(y=80, color="red", linestyle="--", alpha=0.7, label="Overbought (80)")
-        ax.axhline(y=20, color="green", linestyle="--", alpha=0.7, label="Oversold (20)")
+        ax.plot(
+            features_df["date"],
+            features_df["stoch_k"],
+            label="%K",
+            color="orange",
+            linewidth=1.5,
+        )
+        ax.plot(
+            features_df["date"],
+            features_df["stoch_d"],
+            label="%D",
+            color="purple",
+            linewidth=1.5,
+        )
+        ax.axhline(
+            y=80, color="red", linestyle="--", alpha=0.7, label="Overbought (80)"
+        )
+        ax.axhline(
+            y=20, color="green", linestyle="--", alpha=0.7, label="Oversold (20)"
+        )
         ax.fill_between(features_df["date"], 20, 80, alpha=0.1, color="yellow")
         ax.set_title(f"Stochastic Oscillator Timeline - {model_tag}", fontweight="bold")
         ax.set_ylabel("Stochastic Value")
@@ -1609,11 +1673,44 @@ def create_technical_indicators_timeline(
     # Bollinger Bands subplot (if available)
     if has_bb:
         ax = axes[subplot_idx]
-        ax.plot(features_df["date"], features_df["close"], label="Close Price", color="black", alpha=0.8)
-        ax.plot(features_df["date"], features_df["bb_upper"], label="Upper Band", color="red", linestyle="--", alpha=0.7)
-        ax.plot(features_df["date"], features_df["bb_middle"], label="Middle Band", color="blue", linestyle="-", alpha=0.7)
-        ax.plot(features_df["date"], features_df["bb_lower"], label="Lower Band", color="green", linestyle="--", alpha=0.7)
-        ax.fill_between(features_df["date"], features_df["bb_lower"], features_df["bb_upper"], alpha=0.1, color="yellow")
+        ax.plot(
+            features_df["date"],
+            features_df["close"],
+            label="Close Price",
+            color="black",
+            alpha=0.8,
+        )
+        ax.plot(
+            features_df["date"],
+            features_df["bb_upper"],
+            label="Upper Band",
+            color="red",
+            linestyle="--",
+            alpha=0.7,
+        )
+        ax.plot(
+            features_df["date"],
+            features_df["bb_middle"],
+            label="Middle Band",
+            color="blue",
+            linestyle="-",
+            alpha=0.7,
+        )
+        ax.plot(
+            features_df["date"],
+            features_df["bb_lower"],
+            label="Lower Band",
+            color="green",
+            linestyle="--",
+            alpha=0.7,
+        )
+        ax.fill_between(
+            features_df["date"],
+            features_df["bb_lower"],
+            features_df["bb_upper"],
+            alpha=0.1,
+            color="yellow",
+        )
         ax.set_title(f"Bollinger Bands Timeline - {model_tag}", fontweight="bold")
         ax.set_ylabel("Price")
         ax.legend(loc="upper left")
@@ -1625,7 +1722,9 @@ def create_technical_indicators_timeline(
         ax.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
         plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
 
-    fig.suptitle(f"Technical Indicators Timeline - {model_tag}", fontsize=16, fontweight="bold")
+    fig.suptitle(
+        f"Technical Indicators Timeline - {model_tag}", fontsize=16, fontweight="bold"
+    )
     plt.tight_layout()
 
     if output_path:

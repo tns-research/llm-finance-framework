@@ -18,12 +18,7 @@ from .config_compat import (
     TEST_MODE,
     USE_DUMMY_MODEL,
 )
-from .memory_manager import MemoryManager
-from .period_manager import PeriodManager
 from .configuration_manager import ConfigurationManager
-from .performance_tracker import PerformanceTracker
-from .journal_manager import JournalManager
-from .trade_history_manager import TradeHistoryManager
 from .decision_analysis import (
     analyze_decisions_after_outcomes,
     analyze_position_duration_stats,
@@ -31,7 +26,11 @@ from .decision_analysis import (
     generate_pattern_analysis_report,
 )
 from .dummy_model import dummy_call_model
+from .journal_manager import JournalManager
+from .memory_manager import MemoryManager
 from .openrouter_model import call_openrouter
+from .performance_tracker import PerformanceTracker
+from .period_manager import PeriodManager
 from .report_generator import generate_comprehensive_report
 from .reporting import (
     compute_period_technical_stats,
@@ -47,6 +46,7 @@ from .statistical_validation import (
     print_validation_report,
     save_validation_report,
 )
+from .trade_history_manager import TradeHistoryManager
 
 
 def run_single_model(
@@ -113,22 +113,26 @@ def run_single_model(
 
         # Check period boundaries and generate summaries using unified system
         if last_date is not None:
-            period_manager.check_all_periods(current_date, last_date, router_model, model_tag)
+            period_manager.check_all_periods(
+                current_date, last_date, router_model, model_tag
+            )
 
         base_prompt = row["prompt_text"]
 
         # Short term journal based on past daily trades
-        journal_text = journal_manager.get_journal_block(current_date, SHOW_DATE_TO_LLM, ENABLE_TECHNICAL_INDICATORS)
+        journal_text = journal_manager.get_journal_block(
+            current_date, SHOW_DATE_TO_LLM, ENABLE_TECHNICAL_INDICATORS
+        )
 
         # Performance summary based only on past days
         performance_summary = performance_tracker.get_performance_summary()
 
         # Generate memory blocks using unified system
         memory_blocks = memory_manager.get_all_memory_blocks()
-        weekly_block = memory_blocks['weekly']
-        monthly_block = memory_blocks['monthly']
-        quarterly_block = memory_blocks['quarterly']
-        yearly_block = memory_blocks['yearly']
+        weekly_block = memory_blocks["weekly"]
+        monthly_block = memory_blocks["monthly"]
+        quarterly_block = memory_blocks["quarterly"]
+        yearly_block = memory_blocks["yearly"]
 
         # Full trading history block (always enabled if feature is on)
         trading_history_block = trade_history_manager.get_history_block(
@@ -208,39 +212,65 @@ def run_single_model(
         daily_return = position * row["next_return_1d"]
 
         # Update performance tracker with decision and returns
-        performance_tracker.update_daily_performance(decision, daily_return, row["next_return_1d"])
+        performance_tracker.update_daily_performance(
+            decision, daily_return, row["next_return_1d"]
+        )
 
         # Get position duration info for backward compatibility
-        current_decision, current_position_duration = performance_tracker.get_position_duration_info()
-        position_changed = (previous_decision is not None and decision != previous_decision)
+        current_decision, current_position_duration = (
+            performance_tracker.get_position_duration_info()
+        )
+        position_changed = (
+            previous_decision is not None and decision != previous_decision
+        )
 
         # Update period stats using unified system
-        period_manager.update_stats('weekly', strategy_return=daily_return, index_return=row["next_return_1d"], days=1)
-        period_manager.update_stats('monthly', strategy_return=daily_return, index_return=row["next_return_1d"], days=1)
-        period_manager.update_stats('quarterly', strategy_return=daily_return, index_return=row["next_return_1d"], days=1)
-        period_manager.update_stats('yearly', strategy_return=daily_return, index_return=row["next_return_1d"], days=1)
+        period_manager.update_stats(
+            "weekly",
+            strategy_return=daily_return,
+            index_return=row["next_return_1d"],
+            days=1,
+        )
+        period_manager.update_stats(
+            "monthly",
+            strategy_return=daily_return,
+            index_return=row["next_return_1d"],
+            days=1,
+        )
+        period_manager.update_stats(
+            "quarterly",
+            strategy_return=daily_return,
+            index_return=row["next_return_1d"],
+            days=1,
+        )
+        period_manager.update_stats(
+            "yearly",
+            strategy_return=daily_return,
+            index_return=row["next_return_1d"],
+            days=1,
+        )
 
         if daily_return > 0:
-            period_manager.update_stats('weekly', wins=1)
-            period_manager.update_stats('monthly', wins=1)
-            period_manager.update_stats('quarterly', wins=1)
-            period_manager.update_stats('yearly', wins=1)
+            period_manager.update_stats("weekly", wins=1)
+            period_manager.update_stats("monthly", wins=1)
+            period_manager.update_stats("quarterly", wins=1)
+            period_manager.update_stats("yearly", wins=1)
 
         if decision == "BUY":
-            period_manager.update_stats('weekly', buys=1)
-            period_manager.update_stats('monthly', buys=1)
-            period_manager.update_stats('quarterly', buys=1)
-            period_manager.update_stats('yearly', buys=1)
+            period_manager.update_stats("weekly", buys=1)
+            period_manager.update_stats("monthly", buys=1)
+            period_manager.update_stats("quarterly", buys=1)
+            period_manager.update_stats("yearly", buys=1)
         elif decision == "HOLD":
-            period_manager.update_stats('weekly', holds=1)
-            period_manager.update_stats('monthly', holds=1)
-            period_manager.update_stats('quarterly', holds=1)
-            period_manager.update_stats('yearly', holds=1)
+            period_manager.update_stats("weekly", holds=1)
+            period_manager.update_stats("monthly", holds=1)
+            period_manager.update_stats("quarterly", holds=1)
+            period_manager.update_stats("yearly", holds=1)
         elif decision == "SELL":
-            period_manager.update_stats('weekly', sells=1)
-            period_manager.update_stats('monthly', sells=1)
-            period_manager.update_stats('quarterly', sells=1)
-            period_manager.update_stats('yearly', sells=1)
+            period_manager.update_stats("weekly", sells=1)
+            period_manager.update_stats("monthly", sells=1)
+            period_manager.update_stats("quarterly", sells=1)
+            period_manager.update_stats("yearly", sells=1)
 
         last_date = current_date
 

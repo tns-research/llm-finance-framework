@@ -2,8 +2,10 @@
 Unit tests for TradeHistoryManager class
 """
 
-import pytest
 from datetime import datetime
+
+import pytest
+
 from src.trade_history_manager import TradeHistoryManager
 
 
@@ -56,11 +58,7 @@ class TestTradeHistoryManager:
         manager = TradeHistoryManager()
 
         dates = [datetime(2023, 1, i) for i in range(1, 4)]
-        trades = [
-            ("BUY", 1.0, 1.5),
-            ("HOLD", 0.0, 0.0),
-            ("SELL", -1.0, -0.8)
-        ]
+        trades = [("BUY", 1.0, 1.5), ("HOLD", 0.0, 0.0), ("SELL", -1.0, -0.8)]
 
         for date, (decision, position, result) in zip(dates, trades):
             manager.add_trade_entry(date, decision, position, result, show_dates=True)
@@ -82,7 +80,9 @@ class TestTradeHistoryManager:
         manager = TradeHistoryManager()
 
         # Test with more precision than 6 decimals
-        manager.add_trade_entry(datetime(2023, 1, 1), "BUY", 1.0, 1.123456789, show_dates=True)
+        manager.add_trade_entry(
+            datetime(2023, 1, 1), "BUY", 1.0, 1.123456789, show_dates=True
+        )
 
         assert manager.entries[0]["result"] == 1.123457  # Rounded to 6 decimals
 
@@ -91,7 +91,9 @@ class TestTradeHistoryManager:
         manager = TradeHistoryManager()
 
         manager.add_trade_entry(datetime(2023, 1, 1), "BUY", 1.0, 1.5, show_dates=True)
-        manager.add_trade_entry(datetime(2023, 1, 2), "SELL", -1.0, -0.8, show_dates=True)
+        manager.add_trade_entry(
+            datetime(2023, 1, 2), "SELL", -1.0, -0.8, show_dates=True
+        )
 
         block = manager.get_history_block(show_dates=True, enabled=True)
 
@@ -109,7 +111,9 @@ class TestTradeHistoryManager:
         manager = TradeHistoryManager()
 
         manager.add_trade_entry(datetime(2023, 1, 1), "BUY", 1.0, 1.5, show_dates=False)
-        manager.add_trade_entry(datetime(2023, 1, 2), "HOLD", 0.0, 0.0, show_dates=False)
+        manager.add_trade_entry(
+            datetime(2023, 1, 2), "HOLD", 0.0, 0.0, show_dates=False
+        )
 
         block = manager.get_history_block(show_dates=False, enabled=True)
 
@@ -160,11 +164,13 @@ class TestTradeHistoryManager:
         ]
 
         for decision, position, result in test_cases:
-            manager.add_trade_entry(datetime(2023, 1, 1), decision, position, result, show_dates=True)
+            manager.add_trade_entry(
+                datetime(2023, 1, 1), decision, position, result, show_dates=True
+            )
 
         block = manager.get_history_block(show_dates=True, enabled=True)
 
-        lines = block.split('\n')
+        lines = block.split("\n")
         assert "2023-01-01,BUY,1.0,2.5" in lines
         assert "2023-01-01,HOLD,0.0,0.0" in lines
         assert "2023-01-01,SELL,-1.0,-1.2" in lines
@@ -184,7 +190,9 @@ class TestTradeHistoryManager:
         assert manager.get_entry_count() == 50
 
         block = manager.get_history_block(show_dates=True, enabled=True)
-        lines = [line for line in block.split('\n') if line.strip()]  # Remove empty lines
+        lines = [
+            line for line in block.split("\n") if line.strip()
+        ]  # Remove empty lines
 
         # Should have: TRADING_HISTORY: + csv_header + 50 data lines = 52 lines
         assert len(lines) == 52
@@ -198,7 +206,9 @@ class TestTradeHistoryManager:
 
         # Add entries with different show_dates settings
         manager.add_trade_entry(datetime(2023, 1, 1), "BUY", 1.0, 1.5, show_dates=True)
-        manager.add_trade_entry(datetime(2023, 1, 2), "SELL", -1.0, -0.8, show_dates=False)
+        manager.add_trade_entry(
+            datetime(2023, 1, 2), "SELL", -1.0, -0.8, show_dates=False
+        )
 
         # Both should be able to display with dates
         block_with_dates = manager.get_history_block(show_dates=True, enabled=True)

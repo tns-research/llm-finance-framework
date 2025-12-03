@@ -7,7 +7,7 @@ replacing the duplicated memory logic throughout the codebase.
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 
 @dataclass
@@ -17,6 +17,7 @@ class MemoryItem:
 
     Replaces the inconsistent mix of string and dict formats used previously.
     """
+
     summary: str
     technical_stats: Optional[dict] = None
     timestamp: datetime = field(default_factory=datetime.now)
@@ -24,21 +25,15 @@ class MemoryItem:
 
     def to_dict(self) -> dict:
         """Convert to dict for backward compatibility"""
-        return {
-            "summary": self.summary,
-            "technical_stats": self.technical_stats
-        }
+        return {"summary": self.summary, "technical_stats": self.technical_stats}
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'MemoryItem':
+    def from_dict(cls, data: dict) -> "MemoryItem":
         """Create from dict format (backward compatibility)"""
-        return cls(
-            summary=data["summary"],
-            technical_stats=data.get("technical_stats")
-        )
+        return cls(summary=data["summary"], technical_stats=data.get("technical_stats"))
 
     @classmethod
-    def from_string(cls, text: str) -> 'MemoryItem':
+    def from_string(cls, text: str) -> "MemoryItem":
         """Create from old string format (backward compatibility)"""
         return cls(summary=text)
 
@@ -50,6 +45,7 @@ class PeriodStats:
 
     Replaces the duplicated stats objects for each period type.
     """
+
     strategy_return: float = 0.0
     index_return: float = 0.0
     days: int = 0
@@ -81,7 +77,7 @@ class PeriodStats:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'PeriodStats':
+    def from_dict(cls, data: dict) -> "PeriodStats":
         """Create from dict format"""
         return cls(**data)
 
@@ -93,6 +89,7 @@ class PeriodConfig:
 
     Centralizes period-specific settings that were previously hardcoded.
     """
+
     name: str
     max_memory_items: int = 5
     date_offset_days: int = 7  # For computing technical stats

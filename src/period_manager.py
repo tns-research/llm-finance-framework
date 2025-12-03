@@ -5,15 +5,16 @@ Unified period boundary management and statistics tracking that replaces
 the duplicated logic for weekly, monthly, quarterly, and yearly periods.
 """
 
+import os
 from datetime import datetime
 from typing import Dict, Optional, Tuple
-import os
+
 import pandas as pd
 
+from .configuration_manager import ConfigurationManager
 from .memory_classes import PeriodStats
 from .memory_manager import MemoryManager
-from .reporting import generate_llm_period_summary, compute_period_technical_stats
-from .configuration_manager import ConfigurationManager
+from .reporting import compute_period_technical_stats, generate_llm_period_summary
 
 
 class PeriodManager:
@@ -24,7 +25,9 @@ class PeriodManager:
     and period management logic that existed for each period type.
     """
 
-    def __init__(self, memory_manager: MemoryManager, config_manager: ConfigurationManager = None):
+    def __init__(
+        self, memory_manager: MemoryManager, config_manager: ConfigurationManager = None
+    ):
         """
         Initialize period manager with memory manager and config manager dependencies.
 
@@ -35,16 +38,16 @@ class PeriodManager:
         self.memory_manager = memory_manager
         self.config_manager = config_manager or ConfigurationManager()
         self.stats: Dict[str, PeriodStats] = {
-            'weekly': PeriodStats(),
-            'monthly': PeriodStats(),
-            'quarterly': PeriodStats(),
-            'yearly': PeriodStats(),
+            "weekly": PeriodStats(),
+            "monthly": PeriodStats(),
+            "quarterly": PeriodStats(),
+            "yearly": PeriodStats(),
         }
         self.last_dates: Dict[str, Optional[datetime]] = {
-            'weekly': None,
-            'monthly': None,
-            'quarterly': None,
-            'yearly': None,
+            "weekly": None,
+            "monthly": None,
+            "quarterly": None,
+            "yearly": None,
         }
 
     def update_stats(self, period: str, **kwargs):
@@ -67,7 +70,9 @@ class PeriodManager:
                 else:
                     setattr(stats, key, value)
 
-    def should_summarize_period(self, period: str, current_date: datetime, last_date: Optional[datetime]) -> bool:
+    def should_summarize_period(
+        self, period: str, current_date: datetime, last_date: Optional[datetime]
+    ) -> bool:
         """
         Check if period boundary has been crossed.
 
@@ -84,15 +89,20 @@ class PeriodManager:
         if last_date is None:
             return False
 
-        if period == 'weekly':
+        if period == "weekly":
             return self._is_week_boundary(current_date, last_date)
-        elif period == 'monthly':
-            return current_date.month != last_date.month or current_date.year != last_date.year
-        elif period == 'quarterly':
+        elif period == "monthly":
+            return (
+                current_date.month != last_date.month
+                or current_date.year != last_date.year
+            )
+        elif period == "quarterly":
             current_quarter = (current_date.month - 1) // 3 + 1
             last_quarter = (last_date.month - 1) // 3 + 1
-            return current_quarter != last_quarter or current_date.year != last_date.year
-        elif period == 'yearly':
+            return (
+                current_quarter != last_quarter or current_date.year != last_date.year
+            )
+        elif period == "yearly":
             return current_date.year != last_date.year
 
         return False
@@ -107,8 +117,9 @@ class PeriodManager:
         last_iso = last_date.isocalendar()
         return current_iso[1] != last_iso[1] or current_iso[0] != last_iso[0]
 
-    def generate_period_summary(self, period: str, end_date: datetime,
-                               router_model: str, model_tag: str) -> str:
+    def generate_period_summary(
+        self, period: str, end_date: datetime, router_model: str, model_tag: str
+    ) -> str:
         """
         Generate period summary and add to memory.
 
@@ -131,7 +142,7 @@ class PeriodManager:
         # Compute technical stats if enabled
         technical_stats = None
         flags = self.config_manager.get_feature_flags()
-        if flags['ENABLE_TECHNICAL_INDICATORS']:
+        if flags["ENABLE_TECHNICAL_INDICATORS"]:
             technical_stats = self._compute_technical_stats(period, end_date)
 
         # Generate LLM summary
@@ -141,7 +152,7 @@ class PeriodManager:
             stats.to_dict(),  # Convert to dict for compatibility
             router_model,
             model_tag,
-            technical_stats
+            technical_stats,
         )
 
         # Add to memory
@@ -152,7 +163,9 @@ class PeriodManager:
 
         return summary
 
-    def _compute_technical_stats(self, period: str, end_date: datetime) -> Optional[dict]:
+    def _compute_technical_stats(
+        self, period: str, end_date: datetime
+    ) -> Optional[dict]:
         """
         Compute technical stats for the period.
 
@@ -166,7 +179,7 @@ class PeriodManager:
         try:
             base_dir = os.path.dirname(os.path.dirname(__file__))
             features_path = os.path.join(base_dir, "data", "processed", "features.csv")
-            features_df = pd.read_csv(features_path, parse_dates=['date'])
+            features_df = pd.read_csv(features_path, parse_dates=["date"])
 
             config = self.memory_manager.period_configs[period]
             start_date = end_date - pd.Timedelta(days=config.date_offset_days)
@@ -176,8 +189,13 @@ class PeriodManager:
             print(f"Warning: Could not compute technical stats for {period}: {e}")
             return None
 
-    def check_all_periods(self, current_date: datetime, last_date: Optional[datetime],
-                         router_model: str, model_tag: str):
+    def check_all_periods(
+        self,
+        current_date: datetime,
+        last_date: Optional[datetime],
+        router_model: str,
+        model_tag: str,
+    ):
         """
         Check all period boundaries and generate summaries as needed.
 

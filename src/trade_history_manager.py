@@ -5,8 +5,8 @@ Manages the complete trading history that provides LLMs with full chronological
 context of all past trades for pattern recognition and learning.
 """
 
-from typing import List, Dict, Any
 from datetime import datetime
+from typing import Any, Dict, List
 
 
 class TradeHistoryManager:
@@ -24,8 +24,14 @@ class TradeHistoryManager:
         """
         self.entries: List[Dict[str, Any]] = []
 
-    def add_trade_entry(self, date: datetime, decision: str, position: float,
-                       daily_return: float, show_dates: bool) -> None:
+    def add_trade_entry(
+        self,
+        date: datetime,
+        decision: str,
+        position: float,
+        daily_return: float,
+        show_dates: bool,
+    ) -> None:
         """
         Add a trade entry to the history, storing complete information for flexible formatting.
 

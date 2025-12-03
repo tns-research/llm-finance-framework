@@ -5,9 +5,10 @@ Manages the strategic journal entries that provide LLMs with short-term memory
 of their recent trading decisions and outcomes.
 """
 
-import pandas as pd
-from typing import List, Dict, Any
 from datetime import datetime
+from typing import Any, Dict, List
+
+import pandas as pd
 
 
 class JournalManager:
@@ -102,8 +103,13 @@ class JournalManager:
             else:
                 return f"{years} years ago"
 
-    def format_single_entry(self, trade_data: Dict[str, Any], current_date: datetime,
-                          show_dates: bool, enable_technical_indicators: bool) -> str:
+    def format_single_entry(
+        self,
+        trade_data: Dict[str, Any],
+        current_date: datetime,
+        show_dates: bool,
+        enable_technical_indicators: bool,
+    ) -> str:
         """
         Format a single journal entry with appropriate date labeling.
 
@@ -120,7 +126,9 @@ class JournalManager:
             entry_prefix = f"Date {trade_data['date'].strftime('%Y-%m-%d')}: "
         else:
             # Use relative time in 'no date' mode
-            relative_label = self.get_relative_time_label(trade_data["date"], current_date)
+            relative_label = self.get_relative_time_label(
+                trade_data["date"], current_date
+            )
             entry_prefix = f"{relative_label}: "
 
         base_entry = (
@@ -136,7 +144,9 @@ class JournalManager:
         if enable_technical_indicators and "rsi_14" in trade_data:
             tech_indicators = []
 
-            if trade_data.get("rsi_14") is not None and not pd.isna(trade_data["rsi_14"]):
+            if trade_data.get("rsi_14") is not None and not pd.isna(
+                trade_data["rsi_14"]
+            ):
                 tech_indicators.append(f"RSI(14): {trade_data['rsi_14']:.1f}")
 
             if (
@@ -178,8 +188,12 @@ class JournalManager:
 
         return base_entry
 
-    def get_journal_block(self, current_date: datetime, show_dates: bool,
-                         enable_technical_indicators: bool) -> str:
+    def get_journal_block(
+        self,
+        current_date: datetime,
+        show_dates: bool,
+        enable_technical_indicators: bool,
+    ) -> str:
         """
         Get formatted journal block for LLM prompt.
 
@@ -198,7 +212,9 @@ class JournalManager:
         recent_entries = self.entries[-10:]
 
         formatted_entries = [
-            self.format_single_entry(entry, current_date, show_dates, enable_technical_indicators)
+            self.format_single_entry(
+                entry, current_date, show_dates, enable_technical_indicators
+            )
             for entry in recent_entries
         ]
 

@@ -3,6 +3,7 @@ Unit tests for PerformanceTracker class
 """
 
 import pytest
+
 from src.performance_tracker import PerformanceTracker
 
 
@@ -116,9 +117,9 @@ class TestPerformanceTracker:
         tracker = PerformanceTracker()
 
         # Mix of decisions
-        tracker.update_daily_performance("BUY", 1.0, 0.5)   # Win
+        tracker.update_daily_performance("BUY", 1.0, 0.5)  # Win
         tracker.update_daily_performance("HOLD", 0.0, 0.3)  # No win
-        tracker.update_daily_performance("SELL", -0.5, 0.2) # Loss
+        tracker.update_daily_performance("SELL", -0.5, 0.2)  # Loss
         tracker.update_daily_performance("BUY", 2.0, -0.1)  # Win
 
         assert tracker.decision_count == 4
@@ -284,8 +285,7 @@ class TestPerformanceTracker:
 
         # Mixed results
         tracker.reset()
-        tracker.update_daily_performance("BUY", 1.0, 0.5)   # Win
-        tracker.update_daily_performance("SELL", -1.0, 0.3) # Loss
+        tracker.update_daily_performance("BUY", 1.0, 0.5)  # Win
+        tracker.update_daily_performance("SELL", -1.0, 0.3)  # Loss
         tracker.update_daily_performance("HOLD", 0.0, 0.2)  # No win (0.0 not > 0)
         assert tracker.get_final_metrics()["win_rate"] == 0.3333333333333333  # 1/3
-

@@ -8,7 +8,7 @@ This allows existing code to continue working while we migrate to the new system
 """
 
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
 
 # Import the new configuration system
 from .configuration_manager import ConfigurationManager
@@ -19,6 +19,7 @@ _config_manager = ConfigurationManager()
 _prompt_builder = PromptBuilder(_config_manager)
 _logger = logging.getLogger(__name__)
 
+
 def _get_feature_flags() -> Dict[str, bool]:
     """Get current feature flags"""
     try:
@@ -26,15 +27,16 @@ def _get_feature_flags() -> Dict[str, bool]:
     except Exception as e:
         _logger.warning(f"Failed to get feature flags, using defaults: {e}")
         return {
-            'ENABLE_STRATEGIC_JOURNAL': True,
-            'ENABLE_FEELING_LOG': True,
-            'ENABLE_FULL_TRADING_HISTORY': True,
-            'ENABLE_TECHNICAL_INDICATORS': True,
-            'SHOW_DATE_TO_LLM': False,
-            'ENABLE_COMPREHENSIVE_REPORTS': True,
-            'ENABLE_PLOTS': True,
-            'ENABLE_STATISTICAL_VALIDATION': True,
+            "ENABLE_STRATEGIC_JOURNAL": True,
+            "ENABLE_FEELING_LOG": True,
+            "ENABLE_FULL_TRADING_HISTORY": True,
+            "ENABLE_TECHNICAL_INDICATORS": True,
+            "SHOW_DATE_TO_LLM": False,
+            "ENABLE_COMPREHENSIVE_REPORTS": True,
+            "ENABLE_PLOTS": True,
+            "ENABLE_STATISTICAL_VALIDATION": True,
         }
+
 
 def _get_data_settings() -> Dict[str, Any]:
     """Get current data settings"""
@@ -43,10 +45,11 @@ def _get_data_settings() -> Dict[str, Any]:
     except Exception as e:
         _logger.warning(f"Failed to get data settings, using defaults: {e}")
         return {
-            'SYMBOL': '^GSPC',
-            'DATA_START': '2015-01-01',
-            'DATA_END': '2023-12-31',
+            "SYMBOL": "^GSPC",
+            "DATA_START": "2015-01-01",
+            "DATA_END": "2023-12-31",
         }
+
 
 def _get_model_settings() -> Dict[str, Any]:
     """Get current model settings"""
@@ -55,11 +58,12 @@ def _get_model_settings() -> Dict[str, Any]:
     except Exception as e:
         _logger.warning(f"Failed to get model settings, using defaults: {e}")
         return {
-            'USE_DUMMY_MODEL': True,
-            'TEST_MODE': True,
-            'TEST_LIMIT': 15,
-            'LLM_MODELS': [],
+            "USE_DUMMY_MODEL": True,
+            "TEST_MODE": True,
+            "TEST_LIMIT": 15,
+            "LLM_MODELS": [],
         }
+
 
 # Legacy global variables - now computed from ConfigurationManager
 flags = _get_feature_flags()
@@ -77,35 +81,39 @@ RET_5D_WINDOW = _config_manager._config.ret_5d_window
 VOL20_WINDOW = _config_manager._config.vol20_window
 
 # Feature flags
-ENABLE_STRATEGIC_JOURNAL = flags['ENABLE_STRATEGIC_JOURNAL']
-ENABLE_FEELING_LOG = flags['ENABLE_FEELING_LOG']
-ENABLE_FULL_TRADING_HISTORY = flags['ENABLE_FULL_TRADING_HISTORY']
-ENABLE_TECHNICAL_INDICATORS = flags['ENABLE_TECHNICAL_INDICATORS']
-SHOW_DATE_TO_LLM = flags['SHOW_DATE_TO_LLM']
+ENABLE_STRATEGIC_JOURNAL = flags["ENABLE_STRATEGIC_JOURNAL"]
+ENABLE_FEELING_LOG = flags["ENABLE_FEELING_LOG"]
+ENABLE_FULL_TRADING_HISTORY = flags["ENABLE_FULL_TRADING_HISTORY"]
+ENABLE_TECHNICAL_INDICATORS = flags["ENABLE_TECHNICAL_INDICATORS"]
+SHOW_DATE_TO_LLM = flags["SHOW_DATE_TO_LLM"]
 
 # Data settings
-SYMBOL = data_settings['SYMBOL']
-DATA_START = data_settings['DATA_START']
-DATA_END = data_settings['DATA_END']
+SYMBOL = data_settings["SYMBOL"]
+DATA_START = data_settings["DATA_START"]
+DATA_END = data_settings["DATA_END"]
 
 # Model settings
-USE_DUMMY_MODEL = model_settings['USE_DUMMY_MODEL']
-TEST_MODE = model_settings['TEST_MODE']
-TEST_LIMIT = model_settings['TEST_LIMIT']
-LLM_MODELS = model_settings['LLM_MODELS']
+USE_DUMMY_MODEL = model_settings["USE_DUMMY_MODEL"]
+TEST_MODE = model_settings["TEST_MODE"]
+TEST_LIMIT = model_settings["TEST_LIMIT"]
+LLM_MODELS = model_settings["LLM_MODELS"]
+
 
 # Utility functions for backward compatibility
 def get_experiment_suffix():
     """Get experiment suffix for file naming"""
     return _config_manager.get_experiment_suffix()
 
+
 def get_current_config_summary():
     """Get configuration summary for display"""
     return _config_manager.get_current_config_summary()
 
+
 def list_experiments():
     """List available experiments with descriptions"""
     return _config_manager.list_experiments()
+
 
 # Legacy experiment configs (for reference only - now managed by ConfigurationManager)
 EXPERIMENT_CONFIGS = {

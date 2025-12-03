@@ -5,26 +5,27 @@ Tests to ensure legacy config.py settings are properly transferred to new system
 and that changing values in config.py actually affects behavior.
 """
 
-import pytest
 from unittest.mock import patch
 
+import pytest
+
 from src.config_compat import (
-    DEBUG_SHOW_FULL_PROMPT,
-    START_ROW,
-    OPENROUTER_API_BASE,
-    MA20_WINDOW,
-    RET_5D_WINDOW,
-    VOL20_WINDOW,
-    USE_DUMMY_MODEL,
-    TEST_MODE,
-    TEST_LIMIT,
-    SYMBOL,
-    DATA_START,
     DATA_END,
-    ENABLE_TECHNICAL_INDICATORS,
-    ENABLE_STRATEGIC_JOURNAL,
+    DATA_START,
+    DEBUG_SHOW_FULL_PROMPT,
     ENABLE_FEELING_LOG,
+    ENABLE_STRATEGIC_JOURNAL,
+    ENABLE_TECHNICAL_INDICATORS,
+    MA20_WINDOW,
+    OPENROUTER_API_BASE,
+    RET_5D_WINDOW,
     SHOW_DATE_TO_LLM,
+    START_ROW,
+    SYMBOL,
+    TEST_LIMIT,
+    TEST_MODE,
+    USE_DUMMY_MODEL,
+    VOL20_WINDOW,
 )
 from src.configuration_manager import ConfigurationManager
 
@@ -37,7 +38,7 @@ class TestConfigConsistency:
         config_manager = ConfigurationManager()
 
         # The new system should have the field
-        assert hasattr(config_manager._config, 'debug_show_full_prompt')
+        assert hasattr(config_manager._config, "debug_show_full_prompt")
 
         # The compatibility layer should expose the value from new system
         # Should match the value set in config.py (currently True for testing)
@@ -51,7 +52,7 @@ class TestConfigConsistency:
         config_manager = ConfigurationManager()
 
         # Should have the field in new system
-        assert hasattr(config_manager._config, 'start_row')
+        assert hasattr(config_manager._config, "start_row")
 
         # Should match legacy value (33)
         assert config_manager._config.start_row == 33
@@ -62,7 +63,7 @@ class TestConfigConsistency:
         config_manager = ConfigurationManager()
 
         # Should have the field in new system
-        assert hasattr(config_manager._config, 'openrouter_api_base')
+        assert hasattr(config_manager._config, "openrouter_api_base")
 
         # Should match legacy value
         expected = "https://openrouter.ai/api/v1/chat/completions"
@@ -74,9 +75,9 @@ class TestConfigConsistency:
         config_manager = ConfigurationManager()
 
         # Should have the fields in new system
-        assert hasattr(config_manager._config, 'ma20_window')
-        assert hasattr(config_manager._config, 'ret_5d_window')
-        assert hasattr(config_manager._config, 'vol20_window')
+        assert hasattr(config_manager._config, "ma20_window")
+        assert hasattr(config_manager._config, "ret_5d_window")
+        assert hasattr(config_manager._config, "vol20_window")
 
         # Should match legacy values (currently hardcoded)
         assert config_manager._config.ma20_window == 20
@@ -111,16 +112,16 @@ class TestConfigConsistency:
 
         # Check that feature flags match
         flags = config_manager.get_feature_flags()
-        assert flags['ENABLE_TECHNICAL_INDICATORS'] == ENABLE_TECHNICAL_INDICATORS
-        assert flags['ENABLE_STRATEGIC_JOURNAL'] == ENABLE_STRATEGIC_JOURNAL
-        assert flags['ENABLE_FEELING_LOG'] == ENABLE_FEELING_LOG
-        assert flags['SHOW_DATE_TO_LLM'] == SHOW_DATE_TO_LLM
+        assert flags["ENABLE_TECHNICAL_INDICATORS"] == ENABLE_TECHNICAL_INDICATORS
+        assert flags["ENABLE_STRATEGIC_JOURNAL"] == ENABLE_STRATEGIC_JOURNAL
+        assert flags["ENABLE_FEELING_LOG"] == ENABLE_FEELING_LOG
+        assert flags["SHOW_DATE_TO_LLM"] == SHOW_DATE_TO_LLM
 
 
 class TestConfigBehavior:
     """Test that changing config.py actually affects behavior"""
 
-    @patch('src.configuration_manager.ConfigurationManager._get_default_config_path')
+    @patch("src.configuration_manager.ConfigurationManager._get_default_config_path")
     def test_debug_show_behavior_change(self, mock_path):
         """Test that changing DEBUG_SHOW_FULL_PROMPT in config affects behavior"""
         # This test simulates changing the config file
@@ -136,7 +137,7 @@ class TestConfigBehavior:
         config_manager._config.debug_show_full_prompt = True
         assert config_manager._config.debug_show_full_prompt == True
 
-    @patch('src.configuration_manager.ConfigurationManager._get_default_config_path')
+    @patch("src.configuration_manager.ConfigurationManager._get_default_config_path")
     def test_start_row_behavior_change(self, mock_path):
         """Test that changing START_ROW in config affects behavior"""
         config_manager = ConfigurationManager()

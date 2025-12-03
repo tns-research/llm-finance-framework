@@ -5,14 +5,16 @@ Type-safe, validated configuration classes that replace the global variable spag
 This provides a clean, testable configuration management system.
 """
 
-import pandas as pd
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any
 from enum import Enum
+from typing import Any, Dict, List, Optional
+
+import pandas as pd
 
 
 class ExperimentType(Enum):
     """Enumeration of available experiment types"""
+
     BASELINE = "baseline"
     MEMORY_ONLY = "memory_only"
     MEMORY_FEELING = "memory_feeling"
@@ -24,6 +26,7 @@ class ExperimentType(Enum):
 @dataclass
 class DataSettings:
     """Data source and processing configuration"""
+
     symbol: str = "^GSPC"
     start_date: str = "2015-01-01"
     end_date: str = "2023-12-31"
@@ -60,6 +63,7 @@ class DataSettings:
 @dataclass
 class ModelSettings:
     """LLM model configuration"""
+
     use_dummy_model: bool = True
     models: List[Dict[str, str]] = field(default_factory=list)
     api_key: Optional[str] = None
@@ -71,9 +75,9 @@ class ModelSettings:
             if not self.models:
                 errors.append("Real models require at least one model configuration")
             for i, model in enumerate(self.models):
-                if not model.get('tag'):
+                if not model.get("tag"):
                     errors.append(f"Model {i} missing 'tag' field")
-                if not model.get('router_model'):
+                if not model.get("router_model"):
                     errors.append(f"Model {i} missing 'router_model' field")
         return errors
 
@@ -81,6 +85,7 @@ class ModelSettings:
 @dataclass
 class MemoryFeatures:
     """Memory and journaling feature flags"""
+
     strategic_journal: bool = True
     feeling_log: bool = True
     full_trading_history: bool = True
@@ -89,6 +94,7 @@ class MemoryFeatures:
 @dataclass
 class TechnicalFeatures:
     """Technical analysis feature flags"""
+
     indicators: bool = True
     historical_series: bool = True
     aggregated_stats: bool = True
@@ -97,6 +103,7 @@ class TechnicalFeatures:
 @dataclass
 class ReportingFeatures:
     """Reporting and visualization features"""
+
     comprehensive_reports: bool = True
     plots: bool = True
     statistical_validation: bool = True
@@ -105,6 +112,7 @@ class ReportingFeatures:
 @dataclass
 class FeatureFlags:
     """Organized feature flags by domain"""
+
     memory: MemoryFeatures = field(default_factory=MemoryFeatures)
     technical: TechnicalFeatures = field(default_factory=TechnicalFeatures)
     reporting: ReportingFeatures = field(default_factory=ReportingFeatures)
@@ -113,19 +121,22 @@ class FeatureFlags:
 @dataclass
 class ExperimentConfig:
     """Individual experiment configuration"""
+
     name: str
     description: str
     show_dates: bool = False
     features: FeatureFlags = field(default_factory=FeatureFlags)
 
     @classmethod
-    def from_dict(cls, name: str, config_dict: Dict[str, Any]) -> 'ExperimentConfig':
+    def from_dict(cls, name: str, config_dict: Dict[str, Any]) -> "ExperimentConfig":
         """Create ExperimentConfig from legacy dictionary format"""
         features = FeatureFlags(
             memory=MemoryFeatures(
                 strategic_journal=config_dict.get("ENABLE_STRATEGIC_JOURNAL", False),
                 feeling_log=config_dict.get("ENABLE_FEELING_LOG", False),
-                full_trading_history=config_dict.get("ENABLE_FULL_TRADING_HISTORY", True),
+                full_trading_history=config_dict.get(
+                    "ENABLE_FULL_TRADING_HISTORY", True
+                ),
             ),
             technical=TechnicalFeatures(
                 indicators=config_dict.get("ENABLE_TECHNICAL_INDICATORS", True),
@@ -136,14 +147,14 @@ class ExperimentConfig:
                 comprehensive_reports=True,  # Always enabled for now
                 plots=True,
                 statistical_validation=True,
-            )
+            ),
         )
 
         return cls(
             name=name,
             description=config_dict["description"],
             show_dates=config_dict.get("SHOW_DATE_TO_LLM", False),
-            features=features
+            features=features,
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -161,6 +172,7 @@ class ExperimentConfig:
 @dataclass
 class GlobalConfig:
     """Root configuration object"""
+
     # Core settings
     use_dummy_model: bool = True
     test_mode: bool = True
@@ -249,7 +261,9 @@ class GlobalConfig:
         errors.extend(self.models.validate())
 
         if self.active_experiment not in self.experiments:
-            errors.append(f"Active experiment '{self.active_experiment}' not found in available experiments: {list(self.experiments.keys())}")
+            errors.append(
+                f"Active experiment '{self.active_experiment}' not found in available experiments: {list(self.experiments.keys())}"
+            )
 
         if self.test_limit <= 0:
             errors.append("Test limit must be positive")

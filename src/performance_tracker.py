@@ -5,7 +5,7 @@ Extracted performance tracking logic from trading engine for better testability
 and maintainability.
 """
 
-from typing import Optional, Dict, Any, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 
 class PerformanceTracker:
@@ -33,7 +33,9 @@ class PerformanceTracker:
         self.current_decision: Optional[str] = None
         self.current_position_duration = 0
 
-    def update_daily_performance(self, decision: str, daily_return: float, index_return: float) -> None:
+    def update_daily_performance(
+        self, decision: str, daily_return: float, index_return: float
+    ) -> None:
         """
         Update performance metrics for a single trading day.
 
@@ -125,7 +127,11 @@ class PerformanceTracker:
             "hold_decisions": self.hold_count,
             "sell_decisions": self.sell_count,
             "win_count": self.win_count,
-            "win_rate": (self.win_count / self.decision_count) if self.decision_count > 0 else 0.0,
+            "win_rate": (
+                (self.win_count / self.decision_count)
+                if self.decision_count > 0
+                else 0.0
+            ),
             "current_position": self.current_decision,
             "current_position_duration": self.current_position_duration,
         }
@@ -133,4 +139,3 @@ class PerformanceTracker:
     def reset(self) -> None:
         """Reset all metrics to initial state (useful for testing)"""
         self.__init__()
-

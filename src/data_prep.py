@@ -225,8 +225,10 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
     df["return_1d"] = df["close"].pct_change() * 100.0
 
     # Retours décalés (batch operation to avoid DataFrame fragmentation)
-    return_lags = {f"ret_lag_{k}": df["return_1d"].shift(k)
-                   for k in range(1, config.PAST_RET_LAGS + 1)}
+    return_lags = {
+        f"ret_lag_{k}": df["return_1d"].shift(k)
+        for k in range(1, config.PAST_RET_LAGS + 1)
+    }
     df = pd.concat([df, pd.DataFrame(return_lags)], axis=1)
 
     # Momentum 20 jours

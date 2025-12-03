@@ -5,15 +5,19 @@ Unified memory management system that replaces the duplicated memory logic
 across weekly, monthly, quarterly, and yearly periods.
 """
 
-from typing import Dict, List, Optional
-from collections import defaultdict
 import os
-import pandas as pd
+from collections import defaultdict
 from datetime import datetime
+from typing import Dict, List, Optional
 
-from .memory_classes import MemoryItem, PeriodConfig
-from .reporting import compute_period_technical_stats, format_period_technical_indicators
+import pandas as pd
+
 from .config_compat import ENABLE_TECHNICAL_INDICATORS
+from .memory_classes import MemoryItem, PeriodConfig
+from .reporting import (
+    compute_period_technical_stats,
+    format_period_technical_indicators,
+)
 
 
 class MemoryManager:
@@ -28,13 +32,17 @@ class MemoryManager:
         """Initialize memory manager with period configurations"""
         self.memories: Dict[str, List[MemoryItem]] = defaultdict(list)
         self.period_configs = {
-            'weekly': PeriodConfig('weekly', max_memory_items=5, date_offset_days=6),
-            'monthly': PeriodConfig('monthly', max_memory_items=5, date_offset_days=30),
-            'quarterly': PeriodConfig('quarterly', max_memory_items=5, date_offset_days=90),
-            'yearly': PeriodConfig('yearly', max_memory_items=5, date_offset_days=365),
+            "weekly": PeriodConfig("weekly", max_memory_items=5, date_offset_days=6),
+            "monthly": PeriodConfig("monthly", max_memory_items=5, date_offset_days=30),
+            "quarterly": PeriodConfig(
+                "quarterly", max_memory_items=5, date_offset_days=90
+            ),
+            "yearly": PeriodConfig("yearly", max_memory_items=5, date_offset_days=365),
         }
 
-    def add_memory_item(self, period: str, summary: str, technical_stats: Optional[dict] = None):
+    def add_memory_item(
+        self, period: str, summary: str, technical_stats: Optional[dict] = None
+    ):
         """
         Add a memory item for the specified period.
 
@@ -46,14 +54,12 @@ class MemoryManager:
         config = self.period_configs[period]
 
         memory_item = MemoryItem(
-            summary=summary,
-            technical_stats=technical_stats,
-            period=period
+            summary=summary, technical_stats=technical_stats, period=period
         )
 
         self.memories[period].append(memory_item)
         # Keep only the most recent items (circular buffer)
-        self.memories[period] = self.memories[period][-config.max_memory_items:]
+        self.memories[period] = self.memories[period][-config.max_memory_items :]
 
     def get_memory_block(self, period: str) -> str:
         """
@@ -83,14 +89,15 @@ class MemoryManager:
             # Add technical indicators if available
             if memory_item.technical_stats:
                 tech_text = format_period_technical_indicators(
-                    memory_item.technical_stats,
-                    period.capitalize()
+                    memory_item.technical_stats, period.capitalize()
                 )
                 memory_text += tech_text
 
             labeled_items.append(memory_text)
 
-        return f"{period.capitalize()} memory (most recent first)\n" + "\n\n".join(labeled_items)
+        return f"{period.capitalize()} memory (most recent first)\n" + "\n\n".join(
+            labeled_items
+        )
 
     def get_all_memory_blocks(self) -> Dict[str, str]:
         """Get all memory blocks as a dictionary"""

@@ -5,14 +5,18 @@ Centralized configuration management with validation and type safety.
 Replaces the global variable spaghetti with a clean, testable API.
 """
 
-import os
 import logging
-from typing import Dict, Any, List, Optional
+import os
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from .config_classes import (
-    GlobalConfig, ExperimentConfig, FeatureFlags,
-    MemoryFeatures, TechnicalFeatures, ReportingFeatures
+    ExperimentConfig,
+    FeatureFlags,
+    GlobalConfig,
+    MemoryFeatures,
+    ReportingFeatures,
+    TechnicalFeatures,
 )
 
 
@@ -52,8 +56,8 @@ class ConfigurationManager:
         # Import legacy config to get current values
         try:
             # Dynamic import to avoid circular imports
-            import sys
             import importlib.util
+            import sys
 
             config_path = self._config_file
             spec = importlib.util.spec_from_file_location("legacy_config", config_path)
@@ -62,24 +66,32 @@ class ConfigurationManager:
             spec.loader.exec_module(legacy_config)
 
             # Apply basic settings
-            config.use_dummy_model = getattr(legacy_config, 'USE_DUMMY_MODEL', True)
-            config.test_mode = getattr(legacy_config, 'TEST_MODE', True)
-            config.test_limit = getattr(legacy_config, 'TEST_LIMIT', 15)
-            config.debug_show_full_prompt = getattr(legacy_config, 'DEBUG_SHOW_FULL_PROMPT', True)
-            config.start_row = getattr(legacy_config, 'START_ROW', None)
-            config.openrouter_api_base = getattr(legacy_config, 'OPENROUTER_API_BASE', "https://openrouter.ai/api/v1/chat/completions")
-            config.ma20_window = getattr(legacy_config, 'MA20_WINDOW', 20)
-            config.ret_5d_window = getattr(legacy_config, 'RET_5D_WINDOW', 5)
-            config.vol20_window = getattr(legacy_config, 'VOL20_WINDOW', 20)
-            config.active_experiment = getattr(legacy_config, 'ACTIVE_EXPERIMENT', 'memory_feeling')
+            config.use_dummy_model = getattr(legacy_config, "USE_DUMMY_MODEL", True)
+            config.test_mode = getattr(legacy_config, "TEST_MODE", True)
+            config.test_limit = getattr(legacy_config, "TEST_LIMIT", 15)
+            config.debug_show_full_prompt = getattr(
+                legacy_config, "DEBUG_SHOW_FULL_PROMPT", True
+            )
+            config.start_row = getattr(legacy_config, "START_ROW", None)
+            config.openrouter_api_base = getattr(
+                legacy_config,
+                "OPENROUTER_API_BASE",
+                "https://openrouter.ai/api/v1/chat/completions",
+            )
+            config.ma20_window = getattr(legacy_config, "MA20_WINDOW", 20)
+            config.ret_5d_window = getattr(legacy_config, "RET_5D_WINDOW", 5)
+            config.vol20_window = getattr(legacy_config, "VOL20_WINDOW", 20)
+            config.active_experiment = getattr(
+                legacy_config, "ACTIVE_EXPERIMENT", "memory_feeling"
+            )
 
             # Apply data settings
-            config.data.symbol = getattr(legacy_config, 'SYMBOL', '^GSPC')
-            config.data.start_date = getattr(legacy_config, 'DATA_START', '2015-01-01')
-            config.data.end_date = getattr(legacy_config, 'DATA_END', '2023-12-31')
+            config.data.symbol = getattr(legacy_config, "SYMBOL", "^GSPC")
+            config.data.start_date = getattr(legacy_config, "DATA_START", "2015-01-01")
+            config.data.end_date = getattr(legacy_config, "DATA_END", "2023-12-31")
 
             # Apply model settings
-            config.models.models = getattr(legacy_config, 'LLM_MODELS', [])
+            config.models.models = getattr(legacy_config, "LLM_MODELS", [])
             config.models.use_dummy_model = config.use_dummy_model
 
             # CRITICAL FIX: Apply feature flags that are set dynamically in legacy config
@@ -89,13 +101,23 @@ class ConfigurationManager:
                 exp_config = config.experiments[active_exp]
 
                 # Read the dynamically set values from legacy config
-                exp_config.features.technical.indicators = getattr(legacy_config, 'ENABLE_TECHNICAL_INDICATORS', True)
-                exp_config.features.memory.strategic_journal = getattr(legacy_config, 'ENABLE_STRATEGIC_JOURNAL', True)
-                exp_config.features.memory.feeling_log = getattr(legacy_config, 'ENABLE_FEELING_LOG', True)
-                exp_config.show_dates = getattr(legacy_config, 'SHOW_DATE_TO_LLM', False)
+                exp_config.features.technical.indicators = getattr(
+                    legacy_config, "ENABLE_TECHNICAL_INDICATORS", True
+                )
+                exp_config.features.memory.strategic_journal = getattr(
+                    legacy_config, "ENABLE_STRATEGIC_JOURNAL", True
+                )
+                exp_config.features.memory.feeling_log = getattr(
+                    legacy_config, "ENABLE_FEELING_LOG", True
+                )
+                exp_config.show_dates = getattr(
+                    legacy_config, "SHOW_DATE_TO_LLM", False
+                )
 
         except Exception as e:
-            self.logger.warning(f"Could not import legacy config from {self._config_file}, using defaults: {e}")
+            self.logger.warning(
+                f"Could not import legacy config from {self._config_file}, using defaults: {e}"
+            )
 
     def _validate_config(self):
         """Validate configuration and log errors"""
@@ -110,7 +132,9 @@ class ConfigurationManager:
         """Get the currently active experiment configuration"""
         if self._config.active_experiment not in self._config.experiments:
             available = list(self._config.experiments.keys())
-            raise ValueError(f"Active experiment '{self._config.active_experiment}' not found in available experiments: {available}")
+            raise ValueError(
+                f"Active experiment '{self._config.active_experiment}' not found in available experiments: {available}"
+            )
         return self._config.experiments[self._config.active_experiment]
 
     def get_feature_flags(self) -> Dict[str, bool]:
@@ -120,37 +144,34 @@ class ConfigurationManager:
 
         return {
             # Memory features
-            'ENABLE_STRATEGIC_JOURNAL': features.memory.strategic_journal,
-            'ENABLE_FEELING_LOG': features.memory.feeling_log,
-            'ENABLE_FULL_TRADING_HISTORY': features.memory.full_trading_history,
-
+            "ENABLE_STRATEGIC_JOURNAL": features.memory.strategic_journal,
+            "ENABLE_FEELING_LOG": features.memory.feeling_log,
+            "ENABLE_FULL_TRADING_HISTORY": features.memory.full_trading_history,
             # Technical features
-            'ENABLE_TECHNICAL_INDICATORS': features.technical.indicators,
-
+            "ENABLE_TECHNICAL_INDICATORS": features.technical.indicators,
             # Reporting features
-            'ENABLE_COMPREHENSIVE_REPORTS': features.reporting.comprehensive_reports,
-            'ENABLE_PLOTS': features.reporting.plots,
-            'ENABLE_STATISTICAL_VALIDATION': features.reporting.statistical_validation,
-
+            "ENABLE_COMPREHENSIVE_REPORTS": features.reporting.comprehensive_reports,
+            "ENABLE_PLOTS": features.reporting.plots,
+            "ENABLE_STATISTICAL_VALIDATION": features.reporting.statistical_validation,
             # Other settings
-            'SHOW_DATE_TO_LLM': experiment.show_dates,
+            "SHOW_DATE_TO_LLM": experiment.show_dates,
         }
 
     def get_data_settings(self) -> Dict[str, Any]:
         """Get data-related settings"""
         return {
-            'SYMBOL': self._config.data.symbol,
-            'DATA_START': self._config.data.start_date,
-            'DATA_END': self._config.data.end_date,
+            "SYMBOL": self._config.data.symbol,
+            "DATA_START": self._config.data.start_date,
+            "DATA_END": self._config.data.end_date,
         }
 
     def get_model_settings(self) -> Dict[str, Any]:
         """Get model-related settings"""
         return {
-            'USE_DUMMY_MODEL': self._config.use_dummy_model,
-            'TEST_MODE': self._config.test_mode,
-            'TEST_LIMIT': self._config.test_limit,
-            'LLM_MODELS': self._config.models.models,
+            "USE_DUMMY_MODEL": self._config.use_dummy_model,
+            "TEST_MODE": self._config.test_mode,
+            "TEST_LIMIT": self._config.test_limit,
+            "LLM_MODELS": self._config.models.models,
         }
 
     def update_config(self, updates: Dict[str, Any]):
@@ -169,7 +190,7 @@ class ConfigurationManager:
 
     def _update_nested_config(self, key: str, value: Any):
         """Update nested configuration attributes"""
-        parts = key.split('.')
+        parts = key.split(".")
         obj = self._config
 
         for part in parts[:-1]:
@@ -193,11 +214,11 @@ class ConfigurationManager:
             # Build suffix from flags
             flags = self.get_feature_flags()
             parts = []
-            if flags['SHOW_DATE_TO_LLM']:
+            if flags["SHOW_DATE_TO_LLM"]:
                 parts.append("dates")
-            if flags['ENABLE_STRATEGIC_JOURNAL']:
+            if flags["ENABLE_STRATEGIC_JOURNAL"]:
                 parts.append("mem")
-            if flags['ENABLE_FEELING_LOG']:
+            if flags["ENABLE_FEELING_LOG"]:
                 parts.append("feel")
             if not parts:
                 parts.append("minimal")
@@ -209,37 +230,36 @@ class ConfigurationManager:
         flags = self.get_feature_flags()
 
         return {
-            'experiment': experiment.name,
-            'description': experiment.description,
-            'show_dates': flags['SHOW_DATE_TO_LLM'],
-            'strategic_journal': flags['ENABLE_STRATEGIC_JOURNAL'],
-            'feeling_log': flags['ENABLE_FEELING_LOG'],
+            "experiment": experiment.name,
+            "description": experiment.description,
+            "show_dates": flags["SHOW_DATE_TO_LLM"],
+            "strategic_journal": flags["ENABLE_STRATEGIC_JOURNAL"],
+            "feeling_log": flags["ENABLE_FEELING_LOG"],
         }
 
     def list_experiments(self) -> Dict[str, str]:
         """List available experiments with descriptions"""
-        return {
-            name: exp.description
-            for name, exp in self._config.experiments.items()
-        }
+        return {name: exp.description for name, exp in self._config.experiments.items()}
 
-    def create_experiment(self, name: str, description: str, **kwargs) -> ExperimentConfig:
+    def create_experiment(
+        self, name: str, description: str, **kwargs
+    ) -> ExperimentConfig:
         """Create a new experiment configuration"""
         experiment = ExperimentConfig(
             name=name,
             description=description,
-            show_dates=kwargs.get('show_dates', False),
+            show_dates=kwargs.get("show_dates", False),
             features=FeatureFlags(
                 memory=MemoryFeatures(
-                    strategic_journal=kwargs.get('strategic_journal', False),
-                    feeling_log=kwargs.get('feeling_log', False),
-                    full_trading_history=kwargs.get('full_trading_history', True),
+                    strategic_journal=kwargs.get("strategic_journal", False),
+                    feeling_log=kwargs.get("feeling_log", False),
+                    full_trading_history=kwargs.get("full_trading_history", True),
                 ),
                 technical=TechnicalFeatures(
-                    indicators=kwargs.get('technical_indicators', True),
+                    indicators=kwargs.get("technical_indicators", True),
                 ),
                 reporting=ReportingFeatures(),  # Use defaults
-            )
+            ),
         )
 
         self._config.experiments[name] = experiment
@@ -250,7 +270,9 @@ class ConfigurationManager:
         """Set the active experiment"""
         if experiment_name not in self._config.experiments:
             available = list(self._config.experiments.keys())
-            raise ValueError(f"Experiment '{experiment_name}' not found. Available: {available}")
+            raise ValueError(
+                f"Experiment '{experiment_name}' not found. Available: {available}"
+            )
 
         self._config.active_experiment = experiment_name
         self.logger.info(f"Active experiment set to: {experiment_name}")
@@ -258,20 +280,20 @@ class ConfigurationManager:
     def get_config_as_dict(self) -> Dict[str, Any]:
         """Get entire configuration as dictionary for serialization"""
         return {
-            'use_dummy_model': self._config.use_dummy_model,
-            'test_mode': self._config.test_mode,
-            'test_limit': self._config.test_limit,
-            'active_experiment': self._config.active_experiment,
-            'data': {
-                'symbol': self._config.data.symbol,
-                'start_date': self._config.data.start_date,
-                'end_date': self._config.data.end_date,
+            "use_dummy_model": self._config.use_dummy_model,
+            "test_mode": self._config.test_mode,
+            "test_limit": self._config.test_limit,
+            "active_experiment": self._config.active_experiment,
+            "data": {
+                "symbol": self._config.data.symbol,
+                "start_date": self._config.data.start_date,
+                "end_date": self._config.data.end_date,
             },
-            'models': {
-                'use_dummy_model': self._config.models.use_dummy_model,
-                'models': self._config.models.models,
+            "models": {
+                "use_dummy_model": self._config.models.use_dummy_model,
+                "models": self._config.models.models,
             },
-            'experiments': {
+            "experiments": {
                 name: exp.to_dict() for name, exp in self._config.experiments.items()
-            }
+            },
         }

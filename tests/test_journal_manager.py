@@ -2,9 +2,11 @@
 Unit tests for JournalManager class
 """
 
-import pytest
 from datetime import datetime
+
 import pandas as pd
+import pytest
+
 from src.journal_manager import JournalManager
 
 
@@ -45,7 +47,7 @@ class TestJournalManager:
         trades = [
             {"decision": "BUY", "prob": 0.8},
             {"decision": "HOLD", "prob": 0.6},
-            {"decision": "SELL", "prob": 0.9}
+            {"decision": "SELL", "prob": 0.9},
         ]
 
         for trade in trades:
@@ -63,7 +65,7 @@ class TestJournalManager:
             {"id": 1, "decision": "BUY"},
             {"id": 2, "decision": "HOLD"},
             {"id": 3, "decision": "SELL"},
-            {"id": 4, "decision": "BUY"}  # This should cause removal of id=1
+            {"id": 4, "decision": "BUY"},  # This should cause removal of id=1
         ]
 
         for trade in trades:
@@ -140,7 +142,7 @@ class TestJournalManager:
             "macd_histogram": 0.08,
             "stoch_k": 75.2,
             "stoch_d": 72.8,
-            "bb_position": 0.85
+            "bb_position": 0.85,
         }
 
         manager.add_trade_entry(complex_trade)
@@ -205,20 +207,21 @@ class TestJournalManager:
         current_date = datetime(2023, 1, 10)
 
         trade_data = {
-            'date': datetime(2023, 1, 5),
-            'decision': 'BUY',
-            'prob': 0.75,
-            'next_return_1d': 1.23,
-            'strategy_return': 1.23,
-            'cumulative_return': 5.67,
-            'index_cumulative_return': 3.45,
-            'explanation': 'Market shows bullish signals',
-            'strategic_journal': 'Maintaining bullish bias',
-            'feeling_log': 'Confident in analysis'
+            "date": datetime(2023, 1, 5),
+            "decision": "BUY",
+            "prob": 0.75,
+            "next_return_1d": 1.23,
+            "strategy_return": 1.23,
+            "cumulative_return": 5.67,
+            "index_cumulative_return": 3.45,
+            "explanation": "Market shows bullish signals",
+            "strategic_journal": "Maintaining bullish bias",
+            "feeling_log": "Confident in analysis",
         }
 
-        entry = manager.format_single_entry(trade_data, current_date, show_dates=True,
-                                          enable_technical_indicators=False)
+        entry = manager.format_single_entry(
+            trade_data, current_date, show_dates=True, enable_technical_indicators=False
+        )
 
         assert "Date 2023-01-05:" in entry
         assert "action BUY (prob 0.75)" in entry
@@ -236,20 +239,24 @@ class TestJournalManager:
         current_date = datetime(2023, 1, 10)
 
         trade_data = {
-            'date': datetime(2023, 1, 5),  # 5 days ago
-            'decision': 'SELL',
-            'prob': 0.82,
-            'next_return_1d': -0.45,
-            'strategy_return': -0.45,
-            'cumulative_return': 2.34,
-            'index_cumulative_return': 1.89,
-            'explanation': 'Risk indicators elevated',
-            'strategic_journal': 'Taking defensive position',
-            'feeling_log': 'Cautious approach'
+            "date": datetime(2023, 1, 5),  # 5 days ago
+            "decision": "SELL",
+            "prob": 0.82,
+            "next_return_1d": -0.45,
+            "strategy_return": -0.45,
+            "cumulative_return": 2.34,
+            "index_cumulative_return": 1.89,
+            "explanation": "Risk indicators elevated",
+            "strategic_journal": "Taking defensive position",
+            "feeling_log": "Cautious approach",
         }
 
-        entry = manager.format_single_entry(trade_data, current_date, show_dates=False,
-                                          enable_technical_indicators=False)
+        entry = manager.format_single_entry(
+            trade_data,
+            current_date,
+            show_dates=False,
+            enable_technical_indicators=False,
+        )
 
         assert "5 days ago:" in entry
         assert "action SELL (prob 0.82)" in entry
@@ -263,30 +270,34 @@ class TestJournalManager:
         current_date = datetime(2023, 1, 10)
 
         trade_data = {
-            'date': datetime(2023, 1, 5),
-            'decision': 'HOLD',
-            'prob': 0.60,
-            'next_return_1d': 0.12,
-            'strategy_return': 0.0,
-            'cumulative_return': 1.45,
-            'index_cumulative_return': 2.10,
-            'rsi_14': 65.4,
-            'macd_line': 1.23,
-            'macd_signal': 1.15,
-            'macd_histogram': 0.08,
-            'stoch_k': 75.2,
-            'stoch_d': 72.8,
-            'bb_position': 0.85,
-            'explanation': 'Mixed signals',
-            'strategic_journal': 'Waiting for clarity',
-            'feeling_log': 'Neutral stance'
+            "date": datetime(2023, 1, 5),
+            "decision": "HOLD",
+            "prob": 0.60,
+            "next_return_1d": 0.12,
+            "strategy_return": 0.0,
+            "cumulative_return": 1.45,
+            "index_cumulative_return": 2.10,
+            "rsi_14": 65.4,
+            "macd_line": 1.23,
+            "macd_signal": 1.15,
+            "macd_histogram": 0.08,
+            "stoch_k": 75.2,
+            "stoch_d": 72.8,
+            "bb_position": 0.85,
+            "explanation": "Mixed signals",
+            "strategic_journal": "Waiting for clarity",
+            "feeling_log": "Neutral stance",
         }
 
-        entry = manager.format_single_entry(trade_data, current_date, show_dates=False,
-                                          enable_technical_indicators=True)
+        entry = manager.format_single_entry(
+            trade_data, current_date, show_dates=False, enable_technical_indicators=True
+        )
 
         assert "5 days ago:" in entry
-        assert "Technical indicators: RSI(14): 65.4 | MACD: 1.23/1.15/0.080 | Stochastic: 75.2/72.8 | BB Position: 0.85" in entry
+        assert (
+            "Technical indicators: RSI(14): 65.4 | MACD: 1.23/1.15/0.080 | Stochastic: 75.2/72.8 | BB Position: 0.85"
+            in entry
+        )
 
     def test_format_single_entry_missing_technical_data(self):
         """Test single entry formatting when technical indicators are missing or NaN"""
@@ -294,24 +305,25 @@ class TestJournalManager:
         current_date = datetime(2023, 1, 10)
 
         trade_data = {
-            'date': datetime(2023, 1, 5),
-            'decision': 'BUY',
-            'prob': 0.70,
-            'next_return_1d': 1.0,
-            'strategy_return': 1.0,
-            'cumulative_return': 3.0,
-            'index_cumulative_return': 2.0,
-            'rsi_14': None,  # Missing data
-            'macd_line': 1.0,
-            'macd_signal': pd.NA,  # NaN data
-            'macd_histogram': 0.1,
-            'explanation': 'Test',
-            'strategic_journal': 'Test',
-            'feeling_log': 'Test'
+            "date": datetime(2023, 1, 5),
+            "decision": "BUY",
+            "prob": 0.70,
+            "next_return_1d": 1.0,
+            "strategy_return": 1.0,
+            "cumulative_return": 3.0,
+            "index_cumulative_return": 2.0,
+            "rsi_14": None,  # Missing data
+            "macd_line": 1.0,
+            "macd_signal": pd.NA,  # NaN data
+            "macd_histogram": 0.1,
+            "explanation": "Test",
+            "strategic_journal": "Test",
+            "feeling_log": "Test",
         }
 
-        entry = manager.format_single_entry(trade_data, current_date, show_dates=False,
-                                          enable_technical_indicators=True)
+        entry = manager.format_single_entry(
+            trade_data, current_date, show_dates=False, enable_technical_indicators=True
+        )
 
         # Should not include technical indicators when data is missing/NaN
         assert "Technical indicators:" not in entry
@@ -321,8 +333,9 @@ class TestJournalManager:
         manager = JournalManager()
         current_date = datetime(2023, 1, 10)
 
-        block = manager.get_journal_block(current_date, show_dates=False,
-                                        enable_technical_indicators=False)
+        block = manager.get_journal_block(
+            current_date, show_dates=False, enable_technical_indicators=False
+        )
 
         assert block == "No past trades yet. You are starting your strategy."
 
@@ -334,36 +347,37 @@ class TestJournalManager:
         # Add a few entries
         trades = [
             {
-                'date': datetime(2023, 1, 10),  # 5 days ago
-                'decision': 'BUY',
-                'prob': 0.8,
-                'next_return_1d': 1.5,
-                'strategy_return': 1.5,
-                'cumulative_return': 1.5,
-                'index_cumulative_return': 1.0,
-                'explanation': 'Bullish',
-                'strategic_journal': 'Buying',
-                'feeling_log': 'Optimistic'
+                "date": datetime(2023, 1, 10),  # 5 days ago
+                "decision": "BUY",
+                "prob": 0.8,
+                "next_return_1d": 1.5,
+                "strategy_return": 1.5,
+                "cumulative_return": 1.5,
+                "index_cumulative_return": 1.0,
+                "explanation": "Bullish",
+                "strategic_journal": "Buying",
+                "feeling_log": "Optimistic",
             },
             {
-                'date': datetime(2023, 1, 12),  # 3 days ago
-                'decision': 'HOLD',
-                'prob': 0.6,
-                'next_return_1d': 0.0,
-                'strategy_return': 0.0,
-                'cumulative_return': 1.5,
-                'index_cumulative_return': 1.2,
-                'explanation': 'Neutral',
-                'strategic_journal': 'Holding',
-                'feeling_log': 'Cautious'
-            }
+                "date": datetime(2023, 1, 12),  # 3 days ago
+                "decision": "HOLD",
+                "prob": 0.6,
+                "next_return_1d": 0.0,
+                "strategy_return": 0.0,
+                "cumulative_return": 1.5,
+                "index_cumulative_return": 1.2,
+                "explanation": "Neutral",
+                "strategic_journal": "Holding",
+                "feeling_log": "Cautious",
+            },
         ]
 
         for trade in trades:
             manager.add_trade_entry(trade)
 
-        block = manager.get_journal_block(current_date, show_dates=False,
-                                        enable_technical_indicators=False)
+        block = manager.get_journal_block(
+            current_date, show_dates=False, enable_technical_indicators=False
+        )
 
         assert block.startswith("Past trades and results so far:")
         assert "5 days ago: action BUY" in block
@@ -380,16 +394,16 @@ class TestJournalManager:
         # Add 15 entries
         for i in range(15):
             trade = {
-                'date': datetime(2023, 1, i+1),
-                'decision': 'BUY',
-                'prob': 0.8,
-                'next_return_1d': 1.0,
-                'strategy_return': 1.0,
-                'cumulative_return': float(i),
-                'index_cumulative_return': float(i),
-                'explanation': f'Trade {i}',
-                'strategic_journal': f'Journal {i}',
-                'feeling_log': f'Feeling {i}'
+                "date": datetime(2023, 1, i + 1),
+                "decision": "BUY",
+                "prob": 0.8,
+                "next_return_1d": 1.0,
+                "strategy_return": 1.0,
+                "cumulative_return": float(i),
+                "index_cumulative_return": float(i),
+                "explanation": f"Trade {i}",
+                "strategic_journal": f"Journal {i}",
+                "feeling_log": f"Feeling {i}",
             }
             manager.add_trade_entry(trade)
 
@@ -397,10 +411,11 @@ class TestJournalManager:
         assert manager.get_entry_count() == 12  # Rolling window limit
 
         # But journal block should only show last 10
-        block = manager.get_journal_block(current_date, show_dates=False,
-                                        enable_technical_indicators=False)
+        block = manager.get_journal_block(
+            current_date, show_dates=False, enable_technical_indicators=False
+        )
 
-        lines = block.split('\n')
+        lines = block.split("\n")
         # Header + 10 entries = 11 lines
         assert len(lines) == 11
         assert "Past trades and results so far:" in lines[0]

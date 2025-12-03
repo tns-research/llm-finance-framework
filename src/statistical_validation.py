@@ -569,14 +569,18 @@ def evaluate_hold_decisions_dual_criteria(parsed_df: pd.DataFrame) -> Dict:
             reasons.append("quiet_market_timing")
 
         context_scores.append(score)
-        context_reasons.append({
-            "score": score,
-            "reasons": reasons,
-            "max_reason": reasons[0] if reasons else "no_credit"
-        })
+        context_reasons.append(
+            {
+                "score": score,
+                "reasons": reasons,
+                "max_reason": reasons[0] if reasons else "no_credit",
+            }
+        )
 
     avg_context_score = np.mean(context_scores) if context_scores else 0
-    context_success_rate = np.mean([s > 0.3 for s in context_scores]) if context_scores else 0
+    context_success_rate = (
+        np.mean([s > 0.3 for s in context_scores]) if context_scores else 0
+    )
 
     # ===== COMBINED SCORING =====
     quiet_weight = 0.6
@@ -601,17 +605,21 @@ def evaluate_hold_decisions_dual_criteria(parsed_df: pd.DataFrame) -> Dict:
     hold_success_indicators = [int(score >= 0.4) for score in combined_scores]
 
     # Create DataFrame with per-decision success data
-    hold_success_df = pd.DataFrame({
-        'index': hold_data.index,
-        'hold_success': hold_success_indicators,
-        'hold_success_score': combined_scores
-    })
+    hold_success_df = pd.DataFrame(
+        {
+            "index": hold_data.index,
+            "hold_success": hold_success_indicators,
+            "hold_success_score": combined_scores,
+        }
+    )
 
     # ===== CONTEXT REASONS BREAKDOWN =====
     context_reasons_breakdown = {}
     for context in context_reasons:
         for reason in context["reasons"]:
-            context_reasons_breakdown[reason] = context_reasons_breakdown.get(reason, 0) + 1
+            context_reasons_breakdown[reason] = (
+                context_reasons_breakdown.get(reason, 0) + 1
+            )
 
     # ===== PERFORMANCE CATEGORY =====
     def categorize_hold_performance(success_rate: float) -> str:

@@ -5,11 +5,12 @@ Tests cover all components: MemoryItem, PeriodStats, PeriodConfig,
 MemoryManager, and PeriodManager classes.
 """
 
-import pytest
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
 
-from src.memory_classes import MemoryItem, PeriodStats, PeriodConfig
+import pytest
+
+from src.memory_classes import MemoryItem, PeriodConfig, PeriodStats
 from src.memory_manager import MemoryManager
 from src.period_manager import PeriodManager
 
@@ -75,7 +76,9 @@ class TestPeriodStats:
 
     def test_reset(self):
         """Test stats reset functionality"""
-        stats = PeriodStats(strategy_return=100.0, days=5, wins=3, buys=2, holds=1, sells=2)
+        stats = PeriodStats(
+            strategy_return=100.0, days=5, wins=3, buys=2, holds=1, sells=2
+        )
         stats.reset()
         assert stats.strategy_return == 0.0
         assert stats.days == 0
@@ -146,30 +149,30 @@ class TestMemoryManager:
         manager = MemoryManager()
         # defaultdict starts empty, but we can check the period_configs
         assert len(manager.period_configs) == 4
-        assert 'weekly' in manager.period_configs
-        assert 'monthly' in manager.period_configs
-        assert 'quarterly' in manager.period_configs
-        assert 'yearly' in manager.period_configs
+        assert "weekly" in manager.period_configs
+        assert "monthly" in manager.period_configs
+        assert "quarterly" in manager.period_configs
+        assert "yearly" in manager.period_configs
 
         # Accessing memories creates entries
-        _ = manager.memories['weekly']
-        assert 'weekly' in manager.memories
+        _ = manager.memories["weekly"]
+        assert "weekly" in manager.memories
 
     def test_add_memory_item(self):
         """Test adding memory items"""
         manager = MemoryManager()
-        manager.add_memory_item('weekly', 'Test summary')
-        assert len(manager.memories['weekly']) == 1
-        assert manager.memories['weekly'][0].summary == 'Test summary'
-        assert manager.memories['weekly'][0].period == 'weekly'
+        manager.add_memory_item("weekly", "Test summary")
+        assert len(manager.memories["weekly"]) == 1
+        assert manager.memories["weekly"][0].summary == "Test summary"
+        assert manager.memories["weekly"][0].period == "weekly"
 
     def test_add_memory_item_with_tech_stats(self):
         """Test adding memory items with technical stats"""
         manager = MemoryManager()
         tech_stats = {"rsi": 70.0}
-        manager.add_memory_item('monthly', 'Monthly summary', tech_stats)
-        item = manager.memories['monthly'][0]
-        assert item.summary == 'Monthly summary'
+        manager.add_memory_item("monthly", "Monthly summary", tech_stats)
+        item = manager.memories["monthly"][0]
+        assert item.summary == "Monthly summary"
         assert item.technical_stats == tech_stats
 
     def test_memory_limit(self):
@@ -177,69 +180,69 @@ class TestMemoryManager:
         manager = MemoryManager()
         # Add 7 items (limit is 5)
         for i in range(7):
-            manager.add_memory_item('weekly', f'Summary {i}')
-        assert len(manager.memories['weekly']) == 5
+            manager.add_memory_item("weekly", f"Summary {i}")
+        assert len(manager.memories["weekly"]) == 5
         # Should keep the most recent 5
-        assert manager.memories['weekly'][0].summary == 'Summary 2'
-        assert manager.memories['weekly'][-1].summary == 'Summary 6'
+        assert manager.memories["weekly"][0].summary == "Summary 2"
+        assert manager.memories["weekly"][-1].summary == "Summary 6"
 
     def test_get_memory_block_empty(self):
         """Test getting memory block when empty"""
         manager = MemoryManager()
-        block = manager.get_memory_block('weekly')
+        block = manager.get_memory_block("weekly")
         assert block == "No weekly summaries yet."
 
     def test_get_memory_block_with_items(self):
         """Test getting memory block with items"""
         manager = MemoryManager()
-        manager.add_memory_item('weekly', 'First summary')
-        manager.add_memory_item('weekly', 'Second summary')
+        manager.add_memory_item("weekly", "First summary")
+        manager.add_memory_item("weekly", "Second summary")
 
-        block = manager.get_memory_block('weekly')
-        assert 'Weekly memory (most recent first)' in block
-        assert '1 week ago' in block
-        assert '2 weeks ago' in block
-        assert 'First summary' in block
-        assert 'Second summary' in block
+        block = manager.get_memory_block("weekly")
+        assert "Weekly memory (most recent first)" in block
+        assert "1 week ago" in block
+        assert "2 weeks ago" in block
+        assert "First summary" in block
+        assert "Second summary" in block
 
     def test_get_all_memory_blocks(self):
         """Test getting all memory blocks"""
         manager = MemoryManager()
-        manager.add_memory_item('weekly', 'Week summary')
+        manager.add_memory_item("weekly", "Week summary")
 
         blocks = manager.get_all_memory_blocks()
-        assert 'weekly' in blocks
-        assert 'monthly' in blocks
-        assert 'quarterly' in blocks
-        assert 'yearly' in blocks
-        assert 'Week summary' in blocks['weekly']
+        assert "weekly" in blocks
+        assert "monthly" in blocks
+        assert "quarterly" in blocks
+        assert "yearly" in blocks
+        assert "Week summary" in blocks["weekly"]
 
     def test_has_memory(self):
         """Test memory existence checking"""
         manager = MemoryManager()
-        assert not manager.has_memory('weekly')
-        manager.add_memory_item('weekly', 'Test')
-        assert manager.has_memory('weekly')
+        assert not manager.has_memory("weekly")
+        manager.add_memory_item("weekly", "Test")
+        assert manager.has_memory("weekly")
 
     def test_clear_memory_specific(self):
         """Test clearing specific period memory"""
         manager = MemoryManager()
-        manager.add_memory_item('weekly', 'Week summary')
-        manager.add_memory_item('monthly', 'Month summary')
+        manager.add_memory_item("weekly", "Week summary")
+        manager.add_memory_item("monthly", "Month summary")
 
-        manager.clear_memory('weekly')
-        assert not manager.has_memory('weekly')
-        assert manager.has_memory('monthly')
+        manager.clear_memory("weekly")
+        assert not manager.has_memory("weekly")
+        assert manager.has_memory("monthly")
 
     def test_clear_memory_all(self):
         """Test clearing all memory"""
         manager = MemoryManager()
-        manager.add_memory_item('weekly', 'Week summary')
-        manager.add_memory_item('monthly', 'Month summary')
+        manager.add_memory_item("weekly", "Week summary")
+        manager.add_memory_item("monthly", "Month summary")
 
         manager.clear_memory()
-        assert not manager.has_memory('weekly')
-        assert not manager.has_memory('monthly')
+        assert not manager.has_memory("weekly")
+        assert not manager.has_memory("monthly")
 
 
 class TestPeriodManager:
@@ -251,24 +254,24 @@ class TestPeriodManager:
         period_manager = PeriodManager(memory_manager)
 
         assert len(period_manager.stats) == 4
-        assert 'weekly' in period_manager.stats
-        assert 'monthly' in period_manager.stats
-        assert 'quarterly' in period_manager.stats
-        assert 'yearly' in period_manager.stats
+        assert "weekly" in period_manager.stats
+        assert "monthly" in period_manager.stats
+        assert "quarterly" in period_manager.stats
+        assert "yearly" in period_manager.stats
 
     def test_update_stats(self):
         """Test updating period statistics"""
         memory_manager = MemoryManager()
         period_manager = PeriodManager(memory_manager)
 
-        period_manager.update_stats('weekly', strategy_return=10.5, days=1)
-        assert period_manager.stats['weekly'].strategy_return == 10.5
-        assert period_manager.stats['weekly'].days == 1
+        period_manager.update_stats("weekly", strategy_return=10.5, days=1)
+        assert period_manager.stats["weekly"].strategy_return == 10.5
+        assert period_manager.stats["weekly"].days == 1
 
         # Test incremental updates
-        period_manager.update_stats('weekly', strategy_return=5.0, wins=1)
-        assert period_manager.stats['weekly'].strategy_return == 15.5
-        assert period_manager.stats['weekly'].wins == 1
+        period_manager.update_stats("weekly", strategy_return=5.0, wins=1)
+        assert period_manager.stats["weekly"].strategy_return == 15.5
+        assert period_manager.stats["weekly"].wins == 1
 
     def test_should_summarize_period_weekly_same_week(self):
         """Test weekly boundary check - same week"""
@@ -277,7 +280,7 @@ class TestPeriodManager:
 
         date1 = datetime(2023, 1, 2)  # Monday
         date2 = datetime(2023, 1, 3)  # Tuesday
-        assert not period_manager.should_summarize_period('weekly', date2, date1)
+        assert not period_manager.should_summarize_period("weekly", date2, date1)
 
     def test_should_summarize_period_weekly_different_week(self):
         """Test weekly boundary check - different weeks"""
@@ -286,7 +289,7 @@ class TestPeriodManager:
 
         date1 = datetime(2023, 1, 3)  # Tuesday week 1
         date2 = datetime(2023, 1, 9)  # Monday week 2
-        assert period_manager.should_summarize_period('weekly', date2, date1)
+        assert period_manager.should_summarize_period("weekly", date2, date1)
 
     def test_should_summarize_period_monthly_same_month(self):
         """Test monthly boundary check - same month"""
@@ -295,7 +298,7 @@ class TestPeriodManager:
 
         date1 = datetime(2023, 1, 15)
         date2 = datetime(2023, 1, 20)
-        assert not period_manager.should_summarize_period('monthly', date2, date1)
+        assert not period_manager.should_summarize_period("monthly", date2, date1)
 
     def test_should_summarize_period_monthly_different_month(self):
         """Test monthly boundary check - different months"""
@@ -304,7 +307,7 @@ class TestPeriodManager:
 
         date1 = datetime(2023, 1, 31)
         date2 = datetime(2023, 2, 1)
-        assert period_manager.should_summarize_period('monthly', date2, date1)
+        assert period_manager.should_summarize_period("monthly", date2, date1)
 
     def test_should_summarize_period_yearly_same_year(self):
         """Test yearly boundary check - same year"""
@@ -313,7 +316,7 @@ class TestPeriodManager:
 
         date1 = datetime(2023, 6, 15)
         date2 = datetime(2023, 12, 31)
-        assert not period_manager.should_summarize_period('yearly', date2, date1)
+        assert not period_manager.should_summarize_period("yearly", date2, date1)
 
     def test_should_summarize_period_yearly_different_year(self):
         """Test yearly boundary check - different years"""
@@ -322,9 +325,9 @@ class TestPeriodManager:
 
         date1 = datetime(2023, 12, 31)
         date2 = datetime(2024, 1, 1)
-        assert period_manager.should_summarize_period('yearly', date2, date1)
+        assert period_manager.should_summarize_period("yearly", date2, date1)
 
-    @patch('src.period_manager.generate_llm_period_summary')
+    @patch("src.period_manager.generate_llm_period_summary")
     def test_generate_period_summary(self, mock_generate):
         """Test period summary generation"""
         mock_generate.return_value = "Mocked summary"
@@ -333,24 +336,26 @@ class TestPeriodManager:
         period_manager = PeriodManager(memory_manager)
 
         # Add some stats
-        period_manager.update_stats('weekly', strategy_return=100.0, days=5, wins=3)
+        period_manager.update_stats("weekly", strategy_return=100.0, days=5, wins=3)
 
         end_date = datetime(2023, 1, 7)
-        summary = period_manager.generate_period_summary('weekly', end_date, 'router', 'model')
+        summary = period_manager.generate_period_summary(
+            "weekly", end_date, "router", "model"
+        )
 
         assert summary == "Mocked summary"
         mock_generate.assert_called_once()
 
         # Check that stats were reset
-        assert period_manager.stats['weekly'].days == 0
+        assert period_manager.stats["weekly"].days == 0
 
     def test_get_period_stats(self):
         """Test getting period statistics"""
         memory_manager = MemoryManager()
         period_manager = PeriodManager(memory_manager)
 
-        period_manager.update_stats('monthly', strategy_return=50.0, days=10)
-        stats = period_manager.get_period_stats('monthly')
+        period_manager.update_stats("monthly", strategy_return=50.0, days=10)
+        stats = period_manager.get_period_stats("monthly")
 
         assert stats.strategy_return == 50.0
         assert stats.days == 10
@@ -360,15 +365,15 @@ class TestPeriodManager:
         memory_manager = MemoryManager()
         period_manager = PeriodManager(memory_manager)
 
-        period_manager.update_stats('weekly', strategy_return=100.0, days=5)
-        period_manager.update_stats('monthly', strategy_return=200.0, days=20)
+        period_manager.update_stats("weekly", strategy_return=100.0, days=5)
+        period_manager.update_stats("monthly", strategy_return=200.0, days=20)
 
         period_manager.reset_all_stats()
 
-        assert period_manager.stats['weekly'].strategy_return == 0.0
-        assert period_manager.stats['weekly'].days == 0
-        assert period_manager.stats['monthly'].strategy_return == 0.0
-        assert period_manager.stats['monthly'].days == 0
+        assert period_manager.stats["weekly"].strategy_return == 0.0
+        assert period_manager.stats["weekly"].days == 0
+        assert period_manager.stats["monthly"].strategy_return == 0.0
+        assert period_manager.stats["monthly"].days == 0
 
     def test_get_active_periods(self):
         """Test getting periods with accumulated statistics"""
@@ -379,11 +384,11 @@ class TestPeriodManager:
         assert period_manager.get_active_periods() == []
 
         # Add stats to weekly
-        period_manager.update_stats('weekly', days=1)
-        assert period_manager.get_active_periods() == ['weekly']
+        period_manager.update_stats("weekly", days=1)
+        assert period_manager.get_active_periods() == ["weekly"]
 
         # Add stats to monthly
-        period_manager.update_stats('monthly', days=1)
+        period_manager.update_stats("monthly", days=1)
         active = period_manager.get_active_periods()
-        assert 'weekly' in active
-        assert 'monthly' in active
+        assert "weekly" in active
+        assert "monthly" in active

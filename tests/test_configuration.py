@@ -5,13 +5,18 @@ Tests cover all components: Configuration classes, ConfigurationManager,
 backward compatibility, and prompt building.
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 from src.config_classes import (
-    GlobalConfig, ExperimentConfig, FeatureFlags,
-    MemoryFeatures, TechnicalFeatures, DataSettings,
-    ExperimentType
+    DataSettings,
+    ExperimentConfig,
+    ExperimentType,
+    FeatureFlags,
+    GlobalConfig,
+    MemoryFeatures,
+    TechnicalFeatures,
 )
 from src.configuration_manager import ConfigurationManager
 from src.prompt_builder import PromptBuilder
@@ -31,9 +36,7 @@ class TestConfigurationClasses:
     def test_global_config_with_custom_values(self):
         """Test GlobalConfig with custom values"""
         config = GlobalConfig(
-            use_dummy_model=False,
-            test_limit=50,
-            active_experiment="baseline"
+            use_dummy_model=False, test_limit=50, active_experiment="baseline"
         )
         assert config.use_dummy_model == False
         assert config.test_limit == 50
@@ -65,8 +68,8 @@ class TestConfigurationClasses:
             show_dates=True,
             features=FeatureFlags(
                 memory=MemoryFeatures(strategic_journal=True, feeling_log=False),
-                technical=TechnicalFeatures(indicators=True)
-            )
+                technical=TechnicalFeatures(indicators=True),
+            ),
         )
 
         data = config.to_dict()
@@ -78,16 +81,16 @@ class TestConfigurationClasses:
     def test_data_settings_validation_valid(self):
         """Test DataSettings validation with valid data"""
         settings = DataSettings(
-            symbol="^GSPC",
-            start_date="2020-01-01",
-            end_date="2023-12-31"
+            symbol="^GSPC", start_date="2020-01-01", end_date="2023-12-31"
         )
         errors = settings.validate()
         assert len(errors) == 0
 
     def test_data_settings_validation_invalid_symbol(self):
         """Test DataSettings validation with invalid symbol"""
-        settings = DataSettings(symbol="", start_date="2020-01-01", end_date="2023-12-31")
+        settings = DataSettings(
+            symbol="", start_date="2020-01-01", end_date="2023-12-31"
+        )
         errors = settings.validate()
         assert len(errors) == 1
         assert "Symbol cannot be empty" in errors[0]
@@ -95,9 +98,7 @@ class TestConfigurationClasses:
     def test_data_settings_validation_invalid_dates(self):
         """Test DataSettings validation with invalid dates"""
         settings = DataSettings(
-            symbol="^GSPC",
-            start_date="invalid",
-            end_date="2023-12-31"
+            symbol="^GSPC", start_date="invalid", end_date="2023-12-31"
         )
         errors = settings.validate()
         assert len(errors) >= 1
@@ -106,9 +107,7 @@ class TestConfigurationClasses:
     def test_data_settings_validation_date_order(self):
         """Test DataSettings validation with reversed date order"""
         settings = DataSettings(
-            symbol="^GSPC",
-            start_date="2023-12-31",
-            end_date="2020-01-01"
+            symbol="^GSPC", start_date="2023-12-31", end_date="2020-01-01"
         )
         errors = settings.validate()
         assert len(errors) == 1
@@ -117,9 +116,9 @@ class TestConfigurationClasses:
     def test_feature_flags_structure(self):
         """Test FeatureFlags structure"""
         flags = FeatureFlags()
-        assert hasattr(flags.memory, 'strategic_journal')
-        assert hasattr(flags.technical, 'indicators')
-        assert hasattr(flags.reporting, 'comprehensive_reports')
+        assert hasattr(flags.memory, "strategic_journal")
+        assert hasattr(flags.technical, "indicators")
+        assert hasattr(flags.reporting, "comprehensive_reports")
 
     def test_memory_features_defaults(self):
         """Test MemoryFeatures default values"""
@@ -165,27 +164,27 @@ class TestConfigurationManager:
         manager = ConfigurationManager()
         flags = manager.get_feature_flags()
         assert isinstance(flags, dict)
-        assert 'ENABLE_STRATEGIC_JOURNAL' in flags
-        assert 'ENABLE_TECHNICAL_INDICATORS' in flags
-        assert 'SHOW_DATE_TO_LLM' in flags
-        assert 'ENABLE_COMPREHENSIVE_REPORTS' in flags
+        assert "ENABLE_STRATEGIC_JOURNAL" in flags
+        assert "ENABLE_TECHNICAL_INDICATORS" in flags
+        assert "SHOW_DATE_TO_LLM" in flags
+        assert "ENABLE_COMPREHENSIVE_REPORTS" in flags
 
     def test_get_data_settings(self):
         """Test getting data settings"""
         manager = ConfigurationManager()
         settings = manager.get_data_settings()
-        assert 'SYMBOL' in settings
-        assert 'DATA_START' in settings
-        assert 'DATA_END' in settings
+        assert "SYMBOL" in settings
+        assert "DATA_START" in settings
+        assert "DATA_END" in settings
 
     def test_get_model_settings(self):
         """Test getting model settings"""
         manager = ConfigurationManager()
         settings = manager.get_model_settings()
-        assert 'USE_DUMMY_MODEL' in settings
-        assert 'TEST_MODE' in settings
-        assert 'TEST_LIMIT' in settings
-        assert 'LLM_MODELS' in settings
+        assert "USE_DUMMY_MODEL" in settings
+        assert "TEST_MODE" in settings
+        assert "TEST_LIMIT" in settings
+        assert "LLM_MODELS" in settings
 
     def test_get_experiment_suffix_memory_feeling(self):
         """Test experiment suffix for memory_feeling"""
@@ -218,37 +217,37 @@ class TestConfigurationManager:
         manager = ConfigurationManager()
 
         # Update basic setting
-        manager.update_config({'test_mode': False})
+        manager.update_config({"test_mode": False})
         assert manager._config.test_mode == False
 
         # Update nested setting
-        manager.update_config({'data.symbol': 'AAPL'})
-        assert manager._config.data.symbol == 'AAPL'
+        manager.update_config({"data.symbol": "AAPL"})
+        assert manager._config.data.symbol == "AAPL"
 
     def test_update_config_invalid_path(self):
         """Test updating invalid config path raises error"""
         manager = ConfigurationManager()
 
         with pytest.raises(ValueError, match="Invalid config path"):
-            manager.update_config({'invalid.path': 'value'})
+            manager.update_config({"invalid.path": "value"})
 
     def test_get_current_config_summary(self):
         """Test getting configuration summary"""
         manager = ConfigurationManager()
         summary = manager.get_current_config_summary()
-        assert 'experiment' in summary
-        assert 'description' in summary
-        assert 'show_dates' in summary
-        assert 'strategic_journal' in summary
-        assert 'feeling_log' in summary
+        assert "experiment" in summary
+        assert "description" in summary
+        assert "show_dates" in summary
+        assert "strategic_journal" in summary
+        assert "feeling_log" in summary
 
     def test_list_experiments(self):
         """Test listing experiments"""
         manager = ConfigurationManager()
         experiments = manager.list_experiments()
         assert isinstance(experiments, dict)
-        assert 'baseline' in experiments
-        assert 'memory_feeling' in experiments
+        assert "baseline" in experiments
+        assert "memory_feeling" in experiments
         assert len(experiments) == 6  # Default experiments
 
     def test_create_experiment(self):
@@ -260,7 +259,7 @@ class TestConfigurationManager:
             description="Custom experiment",
             show_dates=True,
             strategic_journal=False,
-            feeling_log=True
+            feeling_log=True,
         )
 
         assert experiment.name == "custom_exp"
@@ -271,7 +270,7 @@ class TestConfigurationManager:
         # Should be added to experiments dict
         assert "custom_exp" in manager._config.experiments
 
-    @patch('src.configuration_manager.ConfigurationManager._load_config')
+    @patch("src.configuration_manager.ConfigurationManager._load_config")
     def test_config_validation_failure(self, mock_load):
         """Test configuration validation failure"""
         # Create invalid config
@@ -347,7 +346,7 @@ class TestPromptBuilder:
             show_dates=False,
             strategic_journal=True,
             feeling_log=True,
-            technical_indicators=False
+            technical_indicators=False,
         )
         manager.set_active_experiment("no_tech")
         builder = PromptBuilder(manager)
@@ -363,15 +362,15 @@ class TestBackwardCompatibility:
     def test_legacy_variables_exist(self):
         """Test that legacy global variables are available"""
         from src.config_compat import (
+            DATA_END,
+            DATA_START,
             ENABLE_STRATEGIC_JOURNAL,
             ENABLE_TECHNICAL_INDICATORS,
             SHOW_DATE_TO_LLM,
-            USE_DUMMY_MODEL,
             SYMBOL,
-            DATA_START,
-            DATA_END,
+            USE_DUMMY_MODEL,
+            get_current_config_summary,
             get_experiment_suffix,
-            get_current_config_summary
         )
 
         # Check that variables exist and have expected types
@@ -412,6 +411,6 @@ class TestBackwardCompatibility:
         from src.config_compat import EXPERIMENT_CONFIGS
 
         assert isinstance(EXPERIMENT_CONFIGS, dict)
-        assert 'baseline' in EXPERIMENT_CONFIGS
-        assert 'memory_feeling' in EXPERIMENT_CONFIGS
+        assert "baseline" in EXPERIMENT_CONFIGS
+        assert "memory_feeling" in EXPERIMENT_CONFIGS
         assert len(EXPERIMENT_CONFIGS) == 6
