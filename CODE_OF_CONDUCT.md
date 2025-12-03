@@ -75,37 +75,15 @@ Depending on severity, violations may result in:
 
 ## Attribution
 
-This Code of Conduct is adapted from the [Contributor Covenant][homepage], version 2.1, available at [https://www.contributor-covenant.org/version/3/0/code_of_conduct/][v3].
-
-Community Impact Guidelines were inspired by [Mozilla's code of conduct enforcement ladder][Mozilla CoC].
-
-For answers to common questions about this code of conduct, see the FAQ at [https://www.contributor-covenant.org/faq][FAQ]. Translations are available at [https://www.contributor-covenant.org/translations][translations].
+This Code of Conduct is adapted from the [Contributor Covenant][homepage], version 3.0, available at [https://www.contributor-covenant.org/version/3/0/code_of_conduct/][v3].
 
 [homepage]: https://www.contributor-covenant.org
 [v3]: https://www.contributor-covenant.org/version/3/0/code_of_conduct/
-[Mozilla CoC]: https://github.com/mozilla/diversity
-[FAQ]: https://www.contributor-covenant.org/faq
-[translations]: https://www.contributor-covenant.org/translations
 
 ## Contact Information
 
 For questions or concerns about this Code of Conduct:
 - **Maintainers**: tns-research
-- **Anonymous Reporting**: [GitHub Security Advisories or anonymous form if available]
-
----
-
-## 📚 Additional Resources
-
-### Research Ethics
-- [ACM Code of Ethics](https://www.acm.org/code-of-ethics)
-- [Responsible AI Practices](https://www.partnershiponai.org/tenets/)
-- [Research Data Management Guidelines](https://www.ands.org.au/working-with-data)
-
-### Community Guidelines
-- [Open Source Community Guidelines](https://opensource.guide/)
-- [Scientific Collaboration Best Practices](https://www.apa.org/monitor/2018/01/ce-corner)
-- [Inclusive Community Building](https://www.ashedryden.com/blog/inclusive-communities)
 
 ---
 
