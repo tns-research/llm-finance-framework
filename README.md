@@ -545,6 +545,14 @@ print(f"LLM vs Index p-value: {validation['bootstrap_vs_index']['p_value']}")
 - **Cross-Model Comparison**: BERT vs GPT vs Claude calibration differences
 - **Market Regime Analysis**: Calibration stability across bull/bear cycles
 
+### Phase 4: Trading Engine Refactoring (PLANNED)
+- **TradingSimulator Class**: Extract core trading simulation logic from `run_single_model` function (currently 513 lines)
+- **ExperimentOrchestrator**: Separate experiment coordination from trading execution for better testability
+- **Configuration Management**: Move hardcoded file paths to centralized configuration system
+- **Error Handling**: Implement proper exception types and recovery mechanisms for malformed LLM responses
+- **Integration Testing**: Add comprehensive tests for refactored components with dependency injection
+- **Impact**: Further reduce complexity by 40-50%, enable parallel model execution, improve maintainability
+
 
 ### Long-Term Questions
 - **AI Behavioral Training**: Can we train LLMs to avoid human cognitive biases?
