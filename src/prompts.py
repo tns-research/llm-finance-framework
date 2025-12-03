@@ -212,8 +212,14 @@ def build_prompts(features_path: str, prompts_path: str) -> pd.DataFrame:
     df = pd.read_csv(features_path, parse_dates=["date"])
 
     if config.START_ROW is not None:
-        print(f"START_ROW active : skipping first {config.START_ROW} rows")
-        df = df.iloc[config.START_ROW :].reset_index(drop=True)
+        start_row = min(config.START_ROW, len(df) - 1)  # Leave at least 1 row
+        if start_row != config.START_ROW:
+            print(f"START_ROW capped from {config.START_ROW} to {start_row} (dataset has {len(df)} rows)")
+        print(f"START_ROW active: skipping first {start_row} rows")
+        df = df.iloc[start_row:].reset_index(drop=True)
+
+        if len(df) == 0:
+            raise ValueError("No data remaining after START_ROW processing")
         print(f"New first date after START_ROW = {df.iloc[0]['date']}")
 
     prompts = []

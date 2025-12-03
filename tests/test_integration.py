@@ -127,7 +127,9 @@ class TestFullPipelineIntegration:
         assert len(prompts_df) > 0, "No prompts generated"
 
         # Check a sample prompt from later in the series (after NaN period)
-        sample_prompt = prompts_df["prompt_text"].iloc[50]  # Skip initial NaN period
+        # Use a safe index that works even after START_ROW processing
+        sample_index = min(50, len(prompts_df) - 1)  # Don't exceed available rows
+        sample_prompt = prompts_df["prompt_text"].iloc[sample_index]
 
         assert "RSI(14)" in sample_prompt, "RSI not found in prompt"
 
@@ -254,7 +256,9 @@ class TestFullPipelineIntegration:
             ), f"Advanced feature {feature} should always be present (calculated for analysis)"
 
         # Prompts should not contain advanced indicators
-        sample_prompt = prompts_df["prompt_text"].iloc[30]
+        # Use a safe index that works even after START_ROW processing
+        sample_index = min(30, len(prompts_df) - 1)  # Don't exceed available rows
+        sample_prompt = prompts_df["prompt_text"].iloc[sample_index]
         assert (
             "MACD(" not in sample_prompt
         ), "MACD should not be in prompt when disabled"

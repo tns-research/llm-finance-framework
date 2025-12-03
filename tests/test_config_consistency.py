@@ -49,14 +49,17 @@ class TestConfigConsistency:
 
     def test_start_row_transferred(self):
         """Test that START_ROW is read from legacy config"""
+        from src.config import START_ROW  # Import current value
         config_manager = ConfigurationManager()
 
         # Should have the field in new system
         assert hasattr(config_manager._config, "start_row")
 
-        # Should match legacy value (33)
-        assert config_manager._config.start_row == 33
-        assert START_ROW == 33
+        # Should match current config value (whatever it is set to)
+        assert config_manager._config.start_row == START_ROW
+        # Test that the global variable is also set correctly
+        from src.config_compat import START_ROW as COMPAT_START_ROW
+        assert COMPAT_START_ROW == START_ROW
 
     def test_openrouter_api_base_transferred(self):
         """Test that OPENROUTER_API_BASE is read from legacy config"""

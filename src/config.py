@@ -73,7 +73,10 @@ DEBUG_SHOW_FULL_PROMPT = True
 # DATA SUBSET FOR TESTING
 # -----------------------
 # Start from a specific row in the dataset (useful for testing specific time periods)
-# None = use all available data, 30 = skip first 30 trading days
+# None = use all available data
+# 30 = skip first 30 trading days (good for avoiding initial data issues)
+# 333 = start mid-dataset (test different market conditions)
+# WARNING: Should be < total dataset size (~2700 days)
 START_ROW = 333
 
 # LLM MODELS TO TEST
@@ -90,14 +93,14 @@ LLM_MODELS = [
     #    "router_model": "tngtech/tng-r1t-chimera:free",  # OpenRouter model ID
     # },
     # Add more models here:
-    #{
+    # {
     #    "tag": "olmo-32b",
     #    "router_model": "allenai/olmo-3-32b-think",
-    #},
-     {
+    # },
+    {
         "tag": "gpt-oss-20b",
         "router_model": "openai/gpt-oss-20b:free",
-     },
+    },
     # {
     #     "tag": "claude",
     #     "router_model": "anthropic/claude-3-sonnet",
@@ -237,6 +240,18 @@ else:
 
 # (USE_DUMMY_MODEL moved to top of file)
 # (TEST_MODE and TEST_LIMIT moved to top of file)
+
+# START_ROW validation - check against dataset size
+if START_ROW is not None:
+    estimated_dataset_days = 2700  # Approximate full dataset size
+    if START_ROW >= estimated_dataset_days:
+        print(f"⚠️  WARNING: START_ROW ({START_ROW}) >= estimated dataset size ({estimated_dataset_days})")
+        print(f"    This may cause no data to be processed in full experiments!")
+
+    # Additional check for TEST_MODE
+    if TEST_MODE and START_ROW + TEST_LIMIT > estimated_dataset_days:
+        print(f"⚠️  WARNING: START_ROW ({START_ROW}) + TEST_LIMIT ({TEST_LIMIT}) > estimated dataset size")
+        print(f"    Test may not have enough data!")
 
 # Decision mapping
 # BUY  +1, HOLD 0, SELL -1

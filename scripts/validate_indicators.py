@@ -16,7 +16,7 @@ sys.path.insert(0, src_path)
 try:
     from src.data_prep import prepare_features
     from src.baselines import run_all_baselines
-    from src.config import ENABLE_MACD, ENABLE_STOCHASTIC, ENABLE_BOLLINGER_BANDS
+    from src.config import ENABLE_TECHNICAL_INDICATORS
 except ImportError as e:
     print(f"Import error: {e}")
     print(f"Script dir: {script_dir}")
@@ -96,9 +96,8 @@ def validate_indicator_quality():
     print(".2f")
 
     print(f"\n🎯 New Indicators Status:")
-    print(f"   MACD: {'✅ Enabled' if ENABLE_MACD else '❌ Disabled'}")
-    print(f"   Stochastic: {'✅ Enabled' if ENABLE_STOCHASTIC else '❌ Disabled'}")
-    print(f"   Bollinger Bands: {'✅ Enabled' if ENABLE_BOLLINGER_BANDS else '❌ Disabled'}")
+    print(f"   Technical Indicators: {'✅ Enabled' if ENABLE_TECHNICAL_INDICATORS else '❌ Disabled'}")
+    print(f"   MACD, Stochastic, Bollinger Bands: {'✅ All enabled' if ENABLE_TECHNICAL_INDICATORS else '❌ All disabled'}")
 
     # Check data quality
     print(f"\n📊 Data Quality Check:")
@@ -106,15 +105,11 @@ def validate_indicator_quality():
     print(f"   Valid returns: {features_with['return_1d'].notna().sum()}")
     print(f"   RSI valid: {features_with['rsi_14'].notna().sum()}")
 
-    if ENABLE_MACD:
+    if ENABLE_TECHNICAL_INDICATORS:
         macd_valid = features_with['macd_line'].notna().sum()
         print(f"   MACD valid: {macd_valid}")
-
-    if ENABLE_STOCHASTIC:
         stoch_valid = features_with['stoch_k'].notna().sum()
         print(f"   Stochastic valid: {stoch_valid}")
-
-    if ENABLE_BOLLINGER_BANDS:
         bb_valid = features_with['bb_upper'].notna().sum()
         print(f"   Bollinger Bands valid: {bb_valid}")
 
@@ -124,16 +119,12 @@ def validate_indicator_quality():
     print(".1f")
     print(".2f")
 
-    if ENABLE_MACD:
+    if ENABLE_TECHNICAL_INDICATORS:
         print(".3f")
         print(".3f")
-
-    if ENABLE_STOCHASTIC:
         stoch_k_valid = features_with['stoch_k'].dropna()
         if len(stoch_k_valid) > 0:
             print(".1f")
-
-    if ENABLE_BOLLINGER_BANDS:
         bb_pos_valid = features_with['bb_position'].dropna()
         if len(bb_pos_valid) > 0:
             print(".2f")
