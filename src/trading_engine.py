@@ -23,6 +23,7 @@ from .period_manager import PeriodManager
 from .configuration_manager import ConfigurationManager
 from .performance_tracker import PerformanceTracker
 from .journal_manager import JournalManager
+from .trade_history_manager import TradeHistoryManager
 from .decision_analysis import (
     analyze_decisions_after_outcomes,
     analyze_position_duration_stats,
@@ -63,7 +64,6 @@ def run_single_model(
     print(f"Running model: {model_tag}  (router id: {router_model})")
     print("#" * 80)
 
-    trading_history = []  # Will store all past trades as data for full history feature
     rows = []
 
     # Unified performance tracking system
@@ -71,6 +71,9 @@ def run_single_model(
 
     # Unified journal management system
     journal_manager = JournalManager()
+
+    # Unified trade history management system
+    trade_history_manager = TradeHistoryManager()
 
     # Position duration tracking for backward compatibility
     previous_decision = None
@@ -128,24 +131,9 @@ def run_single_model(
         yearly_block = memory_blocks['yearly']
 
         # Full trading history block (always enabled if feature is on)
-        if ENABLE_FULL_TRADING_HISTORY and trading_history:
-            if SHOW_DATE_TO_LLM:
-                # Include dates when date mode is enabled
-                history_lines = ["date,decision,position,result"]
-                for entry in trading_history:
-                    history_lines.append(
-                        f"{entry['date']},{entry['decision']},{entry['position']},{entry['result']}"
-                    )
-            else:
-                # Omit dates in anonymized mode
-                history_lines = ["trade_id,decision,position,result"]
-                for entry in trading_history:
-                    history_lines.append(
-                        f"{entry['trade_id']},{entry['decision']},{entry['position']},{entry['result']}"
-                    )
-            trading_history_block = "TRADING_HISTORY:\n" + "\n".join(history_lines)
-        else:
-            trading_history_block = "TRADING_HISTORY:\nNo trading history yet."
+        trading_history_block = trade_history_manager.get_history_block(
+            SHOW_DATE_TO_LLM, ENABLE_FULL_TRADING_HISTORY
+        )
 
         # Final user prompt sent to the model
         if ENABLE_STRATEGIC_JOURNAL:
@@ -289,29 +277,9 @@ def run_single_model(
 
         # Accumulate full trading history for future prompts
         if ENABLE_FULL_TRADING_HISTORY:
-            if SHOW_DATE_TO_LLM:
-                # Include actual dates when date mode is enabled
-                history_entry = {
-                    "date": str(
-                        row["date"].date()
-                    ),  # Convert to string for JSON serialization
-                    "decision": decision,
-                    "position": position,
-                    "result": round(
-                        float(daily_return), 6
-                    ),  # Strategy return for this trade
-                }
-            else:
-                # Omit dates in anonymized mode to prevent data leakage
-                history_entry = {
-                    "trade_id": len(trading_history) + 1,  # Simple sequential ID
-                    "decision": decision,
-                    "position": position,
-                    "result": round(
-                        float(daily_return), 6
-                    ),  # Strategy return for this trade
-                }
-            trading_history.append(history_entry)
+            trade_history_manager.add_trade_entry(
+                row["date"], decision, position, daily_return, SHOW_DATE_TO_LLM
+            )
 
         rows.append(
             {
