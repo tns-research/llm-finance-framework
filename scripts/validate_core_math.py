@@ -4,13 +4,16 @@ Critical Mathematical Validation for LLM Finance Framework
 Tests the core calculations that directly impact trading decisions.
 """
 
-import numpy as np
-import pandas as pd
 import sys
 from pathlib import Path
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+import numpy as np
+import pandas as pd
+
+# Ensure the repo root is importable so `src` resolves even without an editable
+# install.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 
 def test_strategy_returns():
     """Test position × return multiplication - CRITICAL for P&L"""
@@ -19,9 +22,9 @@ def test_strategy_returns():
     # Test cases with known expected results
     test_cases = [
         # (position, market_return, expected_strategy_return)
-        (1.0, 1.5, 1.5),    # BUY: +1.5%
+        (1.0, 1.5, 1.5),  # BUY: +1.5%
         (-1.0, 1.5, -1.5),  # SELL: -1.5%
-        (0.0, 1.5, 0.0),    # HOLD: 0%
+        (0.0, 1.5, 0.0),  # HOLD: 0%
         (1.0, -2.3, -2.3),  # BUY in down market
         (-1.0, -2.3, 2.3),  # SELL in down market
     ]
@@ -37,6 +40,7 @@ def test_strategy_returns():
             print(f"  [PASS] position={position} × {market_ret}% = {actual}%")
 
     return all_passed
+
 
 def test_equity_curve():
     """Test equity curve calculation - CRITICAL for total returns"""
@@ -67,6 +71,7 @@ def test_equity_curve():
         print(f"     Final equity: ${equity_curve.iloc[-1]:.2f}")
         return True
 
+
 def test_performance_metrics():
     """Test Sharpe ratio, drawdown, win rate - CRITICAL for strategy evaluation"""
     print("\n[METRICS] Testing Performance Metrics...")
@@ -90,7 +95,7 @@ def test_performance_metrics():
     # Validate against manual calculations
     expected_mean = sum(returns) / len(returns)
     # pandas std() uses ddof=1 (sample std dev), numpy std() uses ddof=0 (population)
-    expected_vol = np.sqrt(sum((returns - expected_mean)**2) / (len(returns) - 1))
+    expected_vol = np.sqrt(sum((returns - expected_mean) ** 2) / (len(returns) - 1))
     expected_win_rate = sum(returns > 0) / len(returns)
 
     checks = [
@@ -110,6 +115,7 @@ def test_performance_metrics():
 
     return all_passed
 
+
 def test_technical_indicators():
     """Test basic technical indicator calculations"""
     print("\n[INDICATORS] Testing Technical Indicators...")
@@ -120,14 +126,19 @@ def test_technical_indicators():
     # Test RSI range
     try:
         from src.data_prep import compute_rsi
+
         rsi = compute_rsi(prices, window=5)
         rsi_valid = rsi.dropna()
 
         rsi_range_ok = rsi_valid.min() >= 0 and rsi_valid.max() <= 100
-        print(f"  [{'PASS]' if rsi_range_ok else '[FAIL]'} RSI range check: {rsi_range_ok}")
+        print(
+            f"  [{'PASS]' if rsi_range_ok else '[FAIL]'} RSI range check: {rsi_range_ok}"
+        )
 
         if not rsi_range_ok:
-            print(f"     RSI values: min={rsi_valid.min():.1f}, max={rsi_valid.max():.1f}")
+            print(
+                f"     RSI values: min={rsi_valid.min():.1f}, max={rsi_valid.max():.1f}"
+            )
             return False
 
     except Exception as e:
@@ -137,6 +148,7 @@ def test_technical_indicators():
     # Test EMA smoothness
     try:
         from src.data_prep import compute_ema
+
         ema_short = compute_ema(prices, 3)
         ema_long = compute_ema(prices, 8)
 
@@ -144,7 +156,9 @@ def test_technical_indicators():
         short_vol = ema_short.std()
         long_vol = ema_long.std()
         smoothness_ok = short_vol > long_vol
-        print(f"  [{'PASS]' if smoothness_ok else '[FAIL]'} EMA smoothness check: {smoothness_ok}")
+        print(
+            f"  [{'PASS]' if smoothness_ok else '[FAIL]'} EMA smoothness check: {smoothness_ok}"
+        )
 
         if not smoothness_ok:
             print(f"     Short EMA vol: {short_vol:.4f}, Long EMA vol: {long_vol:.4f}")
@@ -154,6 +168,7 @@ def test_technical_indicators():
         return False
 
     return True
+
 
 def main():
     """Run all critical mathematical validations"""
@@ -198,5 +213,7 @@ def main():
         print("   Fix the failing tests before proceeding.")
         return 1
 
+
 if __name__ == "__main__":
-    sys.exit(main())
+    exit_code = main()
+    sys.exit(exit_code)

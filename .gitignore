@@ -19,9 +19,15 @@ ENV/
 # IDE
 .vscode/
 .idea/
+.cursor/
 *.swp
 *.swo
 *~
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.settings/
 
 # OS
 .DS_Store
@@ -31,11 +37,21 @@ ENV/
 .Trashes
 ehthumbs.db
 Thumbs.db
+*.stackdump
+Icon?
+.DS_Store?
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.DocumentRevisions-V100
+.fseventsd
 
 # API Keys and secrets
 .env
 .env.local
 .env.*.local
+.env.*
 *key*.txt
 *secret*.txt
 *_key.txt
@@ -44,11 +60,17 @@ openrouter_key.txt
 api_key.txt
 apikey.txt
 apikey*
+*.key
+*.pem
+secrets.json
 
 # Logs and temporary files
 *.log
 *.tmp
 *.temp
+
+# Engineering journal
+engineering_journal/
 
 # Build artifacts
 build/
@@ -60,12 +82,39 @@ dist/
 .pytest_cache/
 .mypy_cache/
 .coverage.*
+coverage.xml
 htmlcov/
 .tox/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# LaTeX
+*.aux
+*.log
+*.pdf
+*.bbl
+*.blg
+*.out
+*.fdb_latexmk
+*.fls
+*.synctex.gz
 
 # Research directory (keep private until publication)
 docs/research/
 
-# Raw data files (data sources)
+# Raw data files (data sources) - all CSV files in raw directory
 data/raw/*.csv
-data/raw/sp500.csv
+# ...except the vendored, checksummed canonical snapshot (committed for reproducibility)
+!data/raw/spy_daily.csv
+
+# Additional temporary files
+*.bak
+*.backup
+*.orig
+*.rej
+.cache/
+*.sqlite
+*.sqlite3
+*.db

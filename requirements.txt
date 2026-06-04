@@ -1,8 +1,10 @@
-# Core dependencies
-requests
-pandas
-scipy
-matplotlib
+# Pinned for reproducibility. Tested with Python 3.11.2.
+# Refresh deliberately: bump a pin, re-run the suite, update docs/REPRODUCIBILITY.md.
+pandas==3.0.3
+numpy==2.4.6
+scipy==1.17.1
+matplotlib==3.10.9
+requests==2.34.2
 
 # Development dependencies (optional)
 # pytest>=7.0
