@@ -133,13 +133,13 @@ class TestPerformanceTracker:
 
     def test_performance_summary_no_trades(self):
         """Test performance summary when no trades have been executed"""
-        tracker = PerformanceTracker()
+        tracker = PerformanceTracker("Test Index")  # Use custom symbol for testing
 
         summary = tracker.get_performance_summary()
         expected = (
             "No trades executed yet.\n"
             "Strategy cumulative return so far  0.00 percent.\n"
-            "S and P 500 cumulative return so far  0.00 percent.\n"
+            "Test Index cumulative return so far  0.00 percent.\n"
             "BUY 0, HOLD 0, SELL 0.\n"
             "Win rate undefined."
         )
@@ -147,7 +147,7 @@ class TestPerformanceTracker:
 
     def test_performance_summary_with_trades_outperforming(self):
         """Test performance summary when strategy is outperforming"""
-        tracker = PerformanceTracker()
+        tracker = PerformanceTracker("Test Index")  # Use custom symbol for testing
 
         # Add some performance data
         tracker.update_daily_performance("BUY", 2.0, 1.0)
@@ -159,14 +159,14 @@ class TestPerformanceTracker:
 
         # Check key elements
         assert "Total strategy return so far  4.00 percent." in summary
-        assert "Total S and P 500 return so far  3.00 percent." in summary
+        assert "Total Test Index return so far  3.00 percent." in summary  # Updated
         assert "outperforming the index by 1.00 percent." in summary
         assert "Number of decisions so far  4 (BUY 2, HOLD 1, SELL 1)." in summary
         assert "Win rate so far  50.0 percent." in summary
 
     def test_performance_summary_underperforming(self):
         """Test performance summary when strategy is underperforming"""
-        tracker = PerformanceTracker()
+        tracker = PerformanceTracker("Test Index")  # Use custom symbol for testing
 
         # Strategy underperforms
         tracker.update_daily_performance("BUY", 1.0, 2.0)
@@ -175,8 +175,59 @@ class TestPerformanceTracker:
         summary = tracker.get_performance_summary()
 
         assert "Total strategy return so far  1.00 percent." in summary
-        assert "Total S and P 500 return so far  3.00 percent." in summary
+        assert "Total Test Index return so far  3.00 percent." in summary  # Updated
         assert "underperforming the index by -2.00 percent." in summary
+
+    def test_backward_compatibility_default_constructor(self):
+        """Test that default constructor maintains backward compatibility"""
+        tracker = PerformanceTracker()  # No symbol parameter - should use default
+
+        summary = tracker.get_performance_summary()
+
+        # Should use default "S&P 500 Index" name for backward compatibility
+        assert "S&P 500 Index cumulative return so far  0.00 percent." in summary
+
+    @pytest.mark.parametrize(
+        "symbol_name,expected_text",
+        [
+            ("SPY ETF", "SPY ETF cumulative return so far  0.00 percent."),
+            ("QQQ ETF", "QQQ ETF cumulative return so far  0.00 percent."),
+            ("S&P 500 Index", "S&P 500 Index cumulative return so far  0.00 percent."),
+            ("Custom Index", "Custom Index cumulative return so far  0.00 percent."),
+        ],
+    )
+    def test_performance_summary_different_symbols(self, symbol_name, expected_text):
+        """Test performance summary with different symbol names"""
+        tracker = PerformanceTracker(symbol_name)
+
+        summary = tracker.get_performance_summary()
+
+        assert expected_text in summary
+        assert "No trades executed yet." in summary
+        assert "Strategy cumulative return so far  0.00 percent." in summary
+
+    def test_symbol_integration_with_trades(self):
+        """Test that symbol names work correctly with actual trading data"""
+        test_cases = [
+            ("SPY ETF", "Total SPY ETF return so far"),
+            ("QQQ ETF", "Total QQQ ETF return so far"),
+            ("Apple Stock", "Total Apple Stock return so far"),
+        ]
+
+        for symbol_name, expected_prefix in test_cases:
+            tracker = PerformanceTracker(symbol_name)
+
+            # Add some trades: BUY +1.5%, SELL -0.5% = total +1.0%
+            # Index: +1.0% + 0.5% = total +1.5%
+            tracker.update_daily_performance("BUY", 1.5, 1.0)
+            tracker.update_daily_performance("SELL", -0.5, 0.5)
+
+            summary = tracker.get_performance_summary()
+
+            assert expected_prefix in summary
+            assert "Total strategy return so far  1.00 percent." in summary
+            # Strategy underperforms by 0.50% (1.0% vs 1.5%)
+            assert "underperforming the index by -0.50 percent." in summary
 
     def test_position_duration_info(self):
         """Test getting position duration information"""
