@@ -203,10 +203,6 @@ def row_to_prompt(row: pd.Series) -> str:
     return text
 
 
-# Need these constants from config again
-from .config_compat import MA20_WINDOW, RET_5D_WINDOW, VOL20_WINDOW
-
-
 def build_prompts(features_path: str, prompts_path: str) -> pd.DataFrame:
     os.makedirs(os.path.dirname(prompts_path), exist_ok=True)
     df = pd.read_csv(features_path, parse_dates=["date"])
@@ -214,7 +210,9 @@ def build_prompts(features_path: str, prompts_path: str) -> pd.DataFrame:
     if config.START_ROW is not None:
         start_row = min(config.START_ROW, len(df) - 1)  # Leave at least 1 row
         if start_row != config.START_ROW:
-            print(f"START_ROW capped from {config.START_ROW} to {start_row} (dataset has {len(df)} rows)")
+            print(
+                f"START_ROW capped from {config.START_ROW} to {start_row} (dataset has {len(df)} rows)"
+            )
         print(f"START_ROW active: skipping first {start_row} rows")
         df = df.iloc[start_row:].reset_index(drop=True)
 

@@ -1,11 +1,10 @@
 # src/openrouter_model.py
 
 import os
-from typing import Optional
 
 import requests
 
-from .config_compat import OPENROUTER_API_BASE
+from .config import OPENROUTER_API_BASE
 
 
 def get_openrouter_api_key() -> str:
@@ -38,7 +37,7 @@ def call_openrouter(model_name: str, system_prompt: str, user_prompt: str) -> st
     payload = {
         "model": model_name,
         "temperature": 0.0,
-        "max_tokens": 16384,
+        "max_tokens": 50000,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},

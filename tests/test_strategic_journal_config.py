@@ -3,12 +3,15 @@
 Test script to verify the strategic journal configuration works correctly.
 """
 
-import sys
-
-sys.path.insert(0, ".")
+import pytest
 
 from src.backtest import parse_response_text
-from src.config import ENABLE_FEELING_LOG, ENABLE_STRATEGIC_JOURNAL, SYSTEM_PROMPT
+from src.config import (
+    ENABLE_CHAIN_OF_THOUGHT,
+    ENABLE_FEELING_LOG,
+    ENABLE_STRATEGIC_JOURNAL,
+    SYSTEM_PROMPT,
+)
 
 
 def test_config():
@@ -20,6 +23,8 @@ def test_config():
 
     # Calculate expected lines
     expected_lines = 3
+    if ENABLE_CHAIN_OF_THOUGHT:
+        expected_lines += 1
     if ENABLE_STRATEGIC_JOURNAL:
         expected_lines += 1
     if ENABLE_FEELING_LOG:
@@ -37,8 +42,16 @@ def test_config():
     print("TESTING RESPONSE PARSING:")
     print("=" * 80)
 
-    # Build test response based on config
-    test_lines = [
+    # Build a response matching the parser's line order for the current config:
+    # [chain_of_thought], decision, prob, explanation, [journal], [feeling].
+    test_lines = []
+
+    if ENABLE_CHAIN_OF_THOUGHT:
+        test_lines.append(
+            "RSI neutral and MACD weak; risk moderate; strategic review favors a cautious long."
+        )
+
+    test_lines += [
         "BUY",
         "0.65",
         "The market shows positive momentum with increasing volume.",
@@ -61,26 +74,25 @@ def test_config():
     print(test_response)
     print("-" * 40)
 
-    try:
-        decision, prob, explanation, journal, feeling = parse_response_text(
-            test_response
-        )
-        print("\n✓ Parsing successful!")
-        print(f"  Decision: {decision}")
-        print(f"  Probability: {prob}")
-        print(f"  Explanation: {explanation}")
-        print(f"  Strategic Journal: {journal}")
-        print(f"  Feeling Log: {feeling}")
-    except Exception as e:
-        print(f"\n✗ Parsing failed: {e}")
-        return False
+    decision, prob, explanation, chain_of_thought, journal, feeling = (
+        parse_response_text(test_response)
+    )
+    print("\n✓ Parsing successful!")
+    print(f"  Decision: {decision}")
+    print(f"  Probability: {prob}")
+    print(f"  Explanation: {explanation}")
+    print(f"  Chain of Thought: {chain_of_thought}")
+    print(f"  Strategic Journal: {journal}")
+    print(f"  Feeling Log: {feeling}")
+
+    assert len(test_lines) == expected_lines
+    assert decision == "BUY"
+    assert prob == pytest.approx(0.65)
 
     print("\n" + "=" * 80)
     print("✓ ALL TESTS PASSED")
     print("=" * 80)
-    return True
 
 
 if __name__ == "__main__":
-    success = test_config()
-    sys.exit(0 if success else 1)
+    test_config()

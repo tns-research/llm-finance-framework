@@ -34,7 +34,7 @@ We welcome contributions from researchers, developers, and financial practitione
 ## 🚀 Getting Started
 
 ### Prerequisites
-- **Python**: 3.8, 3.9, 3.10, 3.11, or 3.12
+- **Python**: 3.11 or 3.12 (the pinned environment targets 3.11)
 - **Git**: For version control and collaboration
 - **OpenRouter Account**: For LLM API access (optional, dummy model available for testing)
 
@@ -56,8 +56,14 @@ dev.bat setup
 # Run full check suite
 dev.bat check
 
+# Data source defaults to the vendored offline snapshot (no setup needed)
+# Edit src/config.py only to change it:
+# DATA_SOURCE = "vendored"  # default: committed SPY snapshot, offline
+# DATA_SOURCE = "csv"       # your own local CSV dataset
+# DATA_SOURCE = "stooq"     # live refresh (requires an apikey)
+
 # Test basic functionality
-dev.bat run-dummy
+python -m src.main
 ```
 
 ### Manual Development Setup
@@ -358,7 +364,7 @@ If your contribution leads to research outputs, please cite:
   author={LLM Finance Framework Contributors},
   year={2025},
   url={https://github.com/tns-research/llm-finance-framework},
-  note={Version 0.3.1}
+  note={Version 0.4.0}
 }
 ```
 

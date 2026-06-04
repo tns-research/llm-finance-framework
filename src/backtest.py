@@ -5,46 +5,85 @@ import os
 import numpy as np
 import pandas as pd
 
-from .config_compat import ENABLE_FEELING_LOG, ENABLE_STRATEGIC_JOURNAL, POSITION_MAP
-
 
 def parse_response_text(response_text: str):
+    # Imported at call time (not module level) so tests can patch these flags
+    # on src.config and have the patched values take effect here.
+    from .config import (
+        ENABLE_CHAIN_OF_THOUGHT,
+        ENABLE_FEELING_LOG,
+        ENABLE_STRATEGIC_JOURNAL,
+    )
+
     lines = [ln.strip() for ln in str(response_text).splitlines() if ln.strip()]
 
-    # Determine expected line count based on config
-    expected_lines = 3  # decision, prob, explanation (always present)
-    line_index = 3
-
+    # Calculate expected lines based on enabled features
+    expected_lines = 3  # Base count: decision, prob, explanation
+    if ENABLE_CHAIN_OF_THOUGHT:
+        expected_lines += 1
     if ENABLE_STRATEGIC_JOURNAL:
         expected_lines += 1
     if ENABLE_FEELING_LOG:
         expected_lines += 1
 
     if len(lines) < expected_lines:
-        raise ValueError(f"Expected at least {expected_lines} lines, got {len(lines)}")
+        error_msg = (
+            f"Expected at least {expected_lines} lines for current config, got {len(lines)}. "
+            f"Config: ENABLE_CHAIN_OF_THOUGHT={ENABLE_CHAIN_OF_THOUGHT}, "
+            f"ENABLE_STRATEGIC_JOURNAL={ENABLE_STRATEGIC_JOURNAL}, "
+            f"ENABLE_FEELING_LOG={ENABLE_FEELING_LOG}. "
+            f"Lines received: {lines[:10]}..."  # Show first 10 lines for debugging
+        )
+        raise ValueError(error_msg)
 
-    # Always parse first 3 lines
-    decision = lines[0].upper()
-    prob = float(lines[1])
-    explanation = lines[2]
+    # CONDITIONAL PARSING: Parse based on chain of thought flag
+    line_index = 0
+
+    if ENABLE_CHAIN_OF_THOUGHT:
+        chain_of_thought = lines[line_index]
+        line_index += 1
+    else:
+        chain_of_thought = "Chain of thought reasoning disabled."
+
+    # Decision, probability, explanation (indices shift if chain of thought enabled)
+    try:
+        decision = lines[line_index].upper()
+        prob = float(lines[line_index + 1])
+        explanation = lines[line_index + 2]
+    except (IndexError, ValueError) as e:
+        raise ValueError(
+            f"Failed to parse decision/probability/explanation at lines {line_index}-{line_index+2}: {e}. Lines: {lines}"
+        )
+    line_index += 3
 
     # Parse strategic journal if enabled
     if ENABLE_STRATEGIC_JOURNAL:
-        strategic_journal = lines[line_index]
-        line_index += 1
+        try:
+            strategic_journal = lines[line_index]
+            line_index += 1
+        except IndexError:
+            raise ValueError(
+                f"Missing strategic journal line at index {line_index}. Expected lines: {expected_lines}, got {len(lines)}"
+            )
     else:
         strategic_journal = "Strategic journal disabled in this configuration."
 
     # Parse feeling log if enabled
     if ENABLE_FEELING_LOG:
-        feeling_log = lines[line_index]
+        try:
+            feeling_log = lines[line_index]
+        except IndexError:
+            raise ValueError(
+                f"Missing feeling log line at index {line_index}. Expected lines: {expected_lines}, got {len(lines)}"
+            )
     else:
         feeling_log = "Feeling log disabled in this configuration."
 
+    # Validation
     if decision not in ("BUY", "HOLD", "SELL"):
         raise ValueError(f"Invalid decision word: {decision}")
 
-    return decision, prob, explanation, strategic_journal, feeling_log
+    return decision, prob, explanation, chain_of_thought, strategic_journal, feeling_log
 
 
 def backtest_model(parsed_df: pd.DataFrame) -> dict:

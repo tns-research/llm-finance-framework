@@ -9,15 +9,14 @@ or called from trading_engine to add baseline context to LLM results.
 import os
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 
 from .baselines import (
     BASELINE_REGISTRY,
+    analyze_category_performance,
     calculate_llm_vs_random_stats,
-    compare_llm_to_baselines,
     enhanced_compare_llm_to_baselines,
-    print_baseline_comparison,
+    print_categorized_baseline_comparison,
     print_enhanced_baseline_comparison,
     run_all_baselines,
 )
@@ -79,7 +78,7 @@ def create_baseline_comparison_plot(
         "steelblue" if name != "LLM_STRATEGY" else "darkorange"
         for name in sharpe_df["baseline"]
     ]
-    bars2 = ax2.barh(
+    ax2.barh(
         sharpe_df["baseline"], sharpe_df["sharpe_annualized"], color=colors2, alpha=0.8
     )
     ax2.set_xlabel("Annualized Sharpe Ratio", fontweight="bold")
@@ -94,7 +93,7 @@ def create_baseline_comparison_plot(
         "steelblue" if name != "LLM_STRATEGY" else "darkorange"
         for name in dd_df["baseline"]
     ]
-    bars3 = ax3.barh(dd_df["baseline"], dd_df["max_drawdown"], color=colors3, alpha=0.8)
+    ax3.barh(dd_df["baseline"], dd_df["max_drawdown"], color=colors3, alpha=0.8)
     ax3.set_xlabel("Max Drawdown (%)", fontweight="bold")
     ax3.set_title("Maximum Drawdown (closer to 0 is better)", fontweight="bold")
     ax3.grid(axis="x", alpha=0.3)
@@ -106,7 +105,7 @@ def create_baseline_comparison_plot(
         "steelblue" if name != "LLM_STRATEGY" else "darkorange"
         for name in wr_df["baseline"]
     ]
-    bars4 = ax4.barh(wr_df["baseline"], wr_df["win_rate"], color=colors4, alpha=0.8)
+    ax4.barh(wr_df["baseline"], wr_df["win_rate"], color=colors4, alpha=0.8)
     ax4.set_xlabel("Win Rate (%)", fontweight="bold")
     ax4.set_title("Win Rate (% of profitable days)", fontweight="bold")
     ax4.axvline(
@@ -267,14 +266,14 @@ def run_baseline_analysis(
     print(f"Loaded {len(features_df)} rows from {features_path}")
 
     # Handle START_ROW if configured
-    from .config_compat import START_ROW
+    from .config import START_ROW
 
     if START_ROW is not None:
         features_df = features_df.iloc[START_ROW:].reset_index(drop=True)
         print(f"After START_ROW={START_ROW}: {len(features_df)} rows")
 
     # Handle TEST_MODE limit
-    from .config_compat import TEST_LIMIT, TEST_MODE
+    from .config import TEST_LIMIT, TEST_MODE
 
     if TEST_MODE:
         features_df = features_df.head(TEST_LIMIT)
@@ -299,10 +298,40 @@ def run_baseline_analysis(
         print_enhanced_baseline_comparison(
             comparison_df, random_stats, llm_stats, model_tag
         )
+
+        # Add category performance summary
+        category_stats = analyze_category_performance(comparison_df)
+        print("\nCATEGORY PERFORMANCE SUMMARY:")
+        print(
+            f"{'Category':<18} {'Count':>5} {'Best':>8} {'Avg':>8} {'Sharpe':>8} {'Win%':>6}"
+        )
+        print("-" * 60)
+        for category, stats in sorted(category_stats.items()):
+            category_display = category.upper().replace("_", " ")
+            print(
+                f"{category_display:<18} {stats['count']:>5} "
+                f"{stats['best_return']:>7.2f}% {stats['avg_return']:>7.2f}% "
+                f"{stats['avg_sharpe']:>7.3f} {stats['avg_win_rate']:>5.1f}%"
+            )
     else:
         comparison_df = baseline_results.sort_values("total_return", ascending=False)
-        # Print regular comparison (no LLM to compare)
-        print_baseline_comparison(comparison_df, model_tag)
+        # Print enhanced comparison with categorization
+        print_categorized_baseline_comparison(comparison_df, model_tag)
+
+        # Add category performance summary
+        category_stats = analyze_category_performance(comparison_df)
+        print("\nCATEGORY PERFORMANCE SUMMARY:")
+        print(
+            f"{'Category':<18} {'Count':>5} {'Best':>8} {'Avg':>8} {'Sharpe':>8} {'Win%':>6}"
+        )
+        print("-" * 60)
+        for category, stats in sorted(category_stats.items()):
+            category_display = category.upper().replace("_", " ")
+            print(
+                f"{category_display:<18} {stats['count']:>5} "
+                f"{stats['best_return']:>7.2f}% {stats['avg_return']:>7.2f}% "
+                f"{stats['avg_sharpe']:>7.3f} {stats['avg_win_rate']:>5.1f}%"
+            )
 
     # Save results
     os.makedirs(output_dir, exist_ok=True)

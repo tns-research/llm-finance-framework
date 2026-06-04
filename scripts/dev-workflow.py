@@ -37,6 +37,19 @@ def setup_dev_environment():
 def run_tests():
     """Run the test suite"""
     print("\n🧪 Running tests...")
+
+    # Clean up any stray test files in root directory before running tests
+    import os
+    root_test_files = [f for f in os.listdir('.') if f.startswith('test_') and f.endswith('.py')]
+    if root_test_files:
+        print(f"   🧹 Cleaning up stray test files: {', '.join(root_test_files)}")
+        for f in root_test_files:
+            try:
+                os.remove(f)
+                print(f"   ✅ Removed {f}")
+            except OSError as e:
+                print(f"   ⚠️  Could not remove {f}: {e}")
+
     return run_command([
         "python", "-m", "pytest", "tests/",
         "-v", "--tb=short", "--cov=src/", "--cov-report=term-missing"

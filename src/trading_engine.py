@@ -1,13 +1,15 @@
 # src/trading_engine.py
 
+import logging
 import os
 
 import pandas as pd
 
 from .backtest import backtest_model, parse_response_text, save_parsed_results
 from .baseline_runner import run_baseline_analysis
-from .config_compat import (
+from .config import (
     DEBUG_SHOW_FULL_PROMPT,
+    ENABLE_CHAIN_OF_THOUGHT,
     ENABLE_FULL_TRADING_HISTORY,
     ENABLE_STRATEGIC_JOURNAL,
     ENABLE_TECHNICAL_INDICATORS,
@@ -17,6 +19,7 @@ from .config_compat import (
     TEST_LIMIT,
     TEST_MODE,
     USE_DUMMY_MODEL,
+    get_current_symbol_info,
 )
 from .configuration_manager import ConfigurationManager
 from .decision_analysis import (
@@ -28,18 +31,15 @@ from .decision_analysis import (
 from .dummy_model import dummy_call_model
 from .journal_manager import JournalManager
 from .memory_manager import MemoryManager
-from .openrouter_model import call_openrouter
+from .model_router import generate_response
 from .performance_tracker import PerformanceTracker
 from .period_manager import PeriodManager
-from .report_generator import generate_comprehensive_report
 from .reporting import (
-    compute_period_technical_stats,
     create_calibration_by_decision_plot,
     create_calibration_plot,
     create_rsi_performance_analysis,
     create_technical_indicators_plot,
     generate_calibration_analysis_report,
-    generate_llm_period_summary,
 )
 from .statistical_validation import (
     comprehensive_statistical_validation,
@@ -48,68 +48,37 @@ from .statistical_validation import (
 )
 from .trade_history_manager import TradeHistoryManager
 
+logger = logging.getLogger(__name__)
 
-def run_single_model(
-    model_tag: str, router_model: str, prompts: pd.DataFrame, raw_path: str
+
+def _run_decision_loop(
+    model_tag,
+    router_model,
+    prompts,
+    performance_tracker,
+    journal_manager,
+    trade_history_manager,
+    memory_manager,
+    period_manager,
 ):
-    """
-    Run one model over all prompts with its own strategic journal,
-    save results, backtest, and print final performance summary.
-    """
-
-    # Define base directory for file paths
-    base_dir = os.path.dirname(os.path.dirname(__file__))
-
-    print("\n" + "#" * 80)
-    print(f"Running model: {model_tag}  (router id: {router_model})")
-    print("#" * 80)
-
+    """Run the daily decision loop over all prompts and return the result rows."""
     rows = []
-
-    # Unified performance tracking system
-    performance_tracker = PerformanceTracker()
-
-    # Unified journal management system
-    journal_manager = JournalManager()
-
-    # Unified trade history management system
-    trade_history_manager = TradeHistoryManager()
-
-    # Position duration tracking for backward compatibility
     previous_decision = None
     previous_return = None
-
-    # Unified memory and period management system
-    config_manager = ConfigurationManager()
-    memory_manager = MemoryManager()
-    period_manager = PeriodManager(memory_manager, config_manager)
-
     last_date = None
     total_rows = len(prompts)
 
     for idx, row in prompts.iterrows():
 
         if TEST_MODE and idx >= TEST_LIMIT:
-            print(
-                f"\nTEST MODE ACTIVE  stopping after {TEST_LIMIT} rows for model {model_tag}.\n"
+            logger.info(
+                "TEST MODE ACTIVE: stopping after %d rows for model %s.",
+                TEST_LIMIT,
+                model_tag,
             )
             break
 
         current_date = row["date"]
-
-        # Compute temporal identifiers for current date
-        iso = current_date.isocalendar()
-        try:
-            iso_year = iso.year
-            iso_week = iso.week
-        except AttributeError:
-            # older pandas returns a tuple
-            iso_year = int(iso[0])
-            iso_week = int(iso[1])
-
-        year = current_date.year
-        month = current_date.month
-        quarter = (month - 1) // 3 + 1
 
         # Check period boundaries and generate summaries using unified system
         if last_date is not None:
@@ -166,44 +135,47 @@ def run_single_model(
         if DEBUG_SHOW_FULL_PROMPT:
             full_debug_prompt = (
                 "===== SYSTEM PROMPT =====\n"
-                f"{SYSTEM_PROMPT}\n\n"
+                f"{SYSTEM_PROMPT()}\n\n"
                 "===== USER MESSAGE =====\n"
                 f"{user_prompt}\n"
             )
-            print("\n==============================")
-            print(f"FULL PROMPT SENT TO MODEL {model_tag} :")
-            print("==============================")
-            print(full_debug_prompt)
-            print("=============== END FULL PROMPT ===============\n")
+            logger.debug(
+                "Full prompt sent to model %s:\n%s", model_tag, full_debug_prompt
+            )
 
         # Call the model
         if USE_DUMMY_MODEL or router_model is None:
-            response = dummy_call_model(SYSTEM_PROMPT, user_prompt)
-            model_source = "dummy"
+            response = dummy_call_model(SYSTEM_PROMPT(), user_prompt)
         else:
-            response = call_openrouter(router_model, SYSTEM_PROMPT, user_prompt)
-            model_source = model_tag
+            response = generate_response(router_model, SYSTEM_PROMPT(), user_prompt)
 
-        # Parse the model response
+        # Parse the model response with conditional signature handling
         try:
-            decision, prob, explanation, strategic_journal, feeling_log = (
-                parse_response_text(response)
-            )
+            (
+                decision,
+                prob,
+                explanation,
+                chain_of_thought,
+                strategic_journal,
+                feeling_log,
+            ) = parse_response_text(response)
+            # If chain of thought is disabled, override with default message
+            if not ENABLE_CHAIN_OF_THOUGHT:
+                chain_of_thought = "Chain of thought reasoning disabled."
         except Exception as e:
-            print(f"\n[WARN] Malformed response for model {model_tag}: {e}")
-            print("Raw response:")
-            print(response)
+            logger.warning(
+                "Malformed response for model %s: %s. Raw response: %s",
+                model_tag,
+                e,
+                response,
+            )
 
+            # Error handling maintains system stability with sensible defaults
+            chain_of_thought = "Error in chain of thought parsing."
             decision = "HOLD"
             prob = 0.5
-            explanation = (
-                "Malformed response. Defaulting to HOLD based on uncertainty "
-                "and risk management."
-            )
-            strategic_journal = (
-                "Model produced an invalid output format. Strategy remains neutral "
-                "while awaiting consistent behavior."
-            )
+            explanation = "Malformed response. Defaulting to HOLD based on uncertainty."
+            strategic_journal = "Model produced an invalid output format."
             feeling_log = "Feeling cautious about reliability and focused on stability."
 
         position = POSITION_MAP[decision]
@@ -225,52 +197,18 @@ def run_single_model(
         )
 
         # Update period stats using unified system
-        period_manager.update_stats(
-            "weekly",
-            strategy_return=daily_return,
-            index_return=row["next_return_1d"],
-            days=1,
-        )
-        period_manager.update_stats(
-            "monthly",
-            strategy_return=daily_return,
-            index_return=row["next_return_1d"],
-            days=1,
-        )
-        period_manager.update_stats(
-            "quarterly",
-            strategy_return=daily_return,
-            index_return=row["next_return_1d"],
-            days=1,
-        )
-        period_manager.update_stats(
-            "yearly",
-            strategy_return=daily_return,
-            index_return=row["next_return_1d"],
-            days=1,
-        )
-
-        if daily_return > 0:
-            period_manager.update_stats("weekly", wins=1)
-            period_manager.update_stats("monthly", wins=1)
-            period_manager.update_stats("quarterly", wins=1)
-            period_manager.update_stats("yearly", wins=1)
-
-        if decision == "BUY":
-            period_manager.update_stats("weekly", buys=1)
-            period_manager.update_stats("monthly", buys=1)
-            period_manager.update_stats("quarterly", buys=1)
-            period_manager.update_stats("yearly", buys=1)
-        elif decision == "HOLD":
-            period_manager.update_stats("weekly", holds=1)
-            period_manager.update_stats("monthly", holds=1)
-            period_manager.update_stats("quarterly", holds=1)
-            period_manager.update_stats("yearly", holds=1)
-        elif decision == "SELL":
-            period_manager.update_stats("weekly", sells=1)
-            period_manager.update_stats("monthly", sells=1)
-            period_manager.update_stats("quarterly", sells=1)
-            period_manager.update_stats("yearly", sells=1)
+        decision_kwarg = {"BUY": "buys", "HOLD": "holds", "SELL": "sells"}.get(decision)
+        for period in period_manager.periods:
+            period_manager.update_stats(
+                period,
+                strategy_return=daily_return,
+                index_return=row["next_return_1d"],
+                days=1,
+            )
+            if daily_return > 0:
+                period_manager.update_stats(period, wins=1)
+            if decision_kwarg:
+                period_manager.update_stats(period, **{decision_kwarg: 1})
 
         last_date = current_date
 
@@ -317,6 +255,7 @@ def run_single_model(
                 "decision": decision,
                 "prob": prob,
                 "explanation": explanation,
+                "chain_of_thought": chain_of_thought,  # NEW COLUMN
                 "strategic_journal": strategic_journal,
                 "feeling_log": feeling_log,
                 "position": position,
@@ -351,20 +290,13 @@ def run_single_model(
         print("\nFeeling log:")
         print(feeling_log)
 
-    # Save parsed results and run backtest unchanged
-    parsed_results_path = os.path.join(
-        base_dir, "results", "parsed", f"{model_tag}_parsed.csv"
-    )
-    parsed_df = save_parsed_results(parsed_results_path, rows)
+    return rows
 
-    print("\nStep 4  backtest for model", model_tag)
-    metrics = backtest_model(parsed_df)
-    print("Metrics")
-    for k, v in metrics.items():
-        print(f"  {k}: {v}")
 
+def _run_post_analysis(parsed_df, metrics, model_tag, base_dir, raw_path, symbol_name):
+    """Run validation, plots, pattern analysis, baselines, and report generation."""
     # Statistical validation
-    print("\nStep 4.5  statistical validation for model", model_tag)
+    logger.info("Step 4.5: statistical validation for model %s", model_tag)
 
     # Determine split date for out-of-sample testing (roughly 70/30 split)
     dates = sorted(parsed_df["date"].unique())
@@ -413,7 +345,7 @@ def run_single_model(
     )
 
     # Generate decision pattern analysis
-    print("\nStep 5  decision pattern analysis for model", model_tag)
+    logger.info("Step 5: decision pattern analysis for model %s", model_tag)
 
     # Analyze and print summary
     decision_stats = analyze_decisions_after_outcomes(parsed_df)
@@ -452,7 +384,7 @@ def run_single_model(
 
     # Create technical indicators plots (conditionally)
     if has_rsi or has_macd or has_stoch or has_bb:
-        print("Generating technical indicators plots...")
+        logger.info("Generating technical indicators plots...")
         technical_plot_path = os.path.join(
             plots_dir, f"{model_tag}_technical_indicators.png"
         )
@@ -460,17 +392,19 @@ def run_single_model(
             features_df, parsed_df, model_tag, technical_plot_path
         )
     else:
-        print("Technical indicators plots skipped (no technical indicators enabled)")
+        logger.info(
+            "Technical indicators plots skipped (no technical indicators enabled)"
+        )
 
     # RSI performance analysis (only if RSI data available)
     if has_rsi:
-        print("Generating RSI performance analysis...")
+        logger.info("Generating RSI performance analysis...")
         rsi_plot_path = os.path.join(plots_dir, f"{model_tag}_rsi_performance.png")
         create_rsi_performance_analysis(
             parsed_df, features_df, model_tag, rsi_plot_path
         )
     else:
-        print("RSI performance analysis skipped (RSI not enabled)")
+        logger.info("RSI performance analysis skipped (RSI not enabled)")
 
     # Generate comprehensive report
     analysis_dir = os.path.join(base_dir, "results", "analysis")
@@ -501,7 +435,7 @@ def run_single_model(
     print(f"FINAL PERFORMANCE SUMMARY for model {model_tag}")
     print("=" * 70)
     print(f"Period: {period_start.date()} to {period_end.date()}")
-    print(f"S and P 500 buy and hold return: {sp500_return:.2f} percent")
+    print(f"{symbol_name} buy and hold return: {sp500_return:.2f} percent")
     print(f"LLM strategy total return:       {llm_return:.2f} percent")
 
     if llm_return > sp500_return:
@@ -511,7 +445,7 @@ def run_single_model(
     print("=" * 70)
 
     # Step 6: Baseline comparison
-    print("\nStep 6  baseline comparison for model", model_tag)
+    logger.info("Step 6: baseline comparison for model %s", model_tag)
     features_path = os.path.join(base_dir, "data", "processed", "features.csv")
 
     run_baseline_analysis(
@@ -523,8 +457,13 @@ def run_single_model(
     )
 
     # Generate comprehensive reports (after all analysis is complete)
-    print("\nStep 6  generating comprehensive experiment reports for model", model_tag)
+    logger.info(
+        "Step 6: generating comprehensive experiment reports for model %s", model_tag
+    )
     try:
+        # Import here to avoid conflicts with main module loading
+        from .report_generator import generate_comprehensive_report
+
         # Generate both Markdown and HTML reports
         md_report_path = generate_comprehensive_report(
             model_tag, base_dir, output_format="markdown"
@@ -532,11 +471,56 @@ def run_single_model(
         html_report_path = generate_comprehensive_report(
             model_tag, base_dir, output_format="html"
         )
-        print(f"✓ Markdown report generated: {md_report_path}")
-        print(f"✓ HTML report generated: {html_report_path}")
-        print(f"🌐 Open HTML report in browser: file://{html_report_path}")
-    except Exception as e:
-        print(f"⚠️  Warning: Could not generate comprehensive reports: {e}")
-        import traceback
+        logger.info("Markdown report generated: %s", md_report_path)
+        logger.info("HTML report generated: %s", html_report_path)
+        logger.info("Open HTML report in browser: file://%s", html_report_path)
+    except Exception:
+        logger.exception("Could not generate comprehensive reports")
 
-        traceback.print_exc()
+
+def run_single_model(
+    model_tag: str, router_model: str, prompts: pd.DataFrame, raw_path: str
+):
+    """
+    Run one model over all prompts with its own strategic journal,
+    save results, backtest, and print final performance summary.
+    """
+
+    # Define base directory for file paths
+    base_dir = os.path.dirname(os.path.dirname(__file__))
+
+    logger.info("Running model: %s  (router id: %s)", model_tag, router_model)
+
+    # Unified manager systems
+    _, symbol_name = get_current_symbol_info()
+    performance_tracker = PerformanceTracker(symbol_name)
+    journal_manager = JournalManager()
+    trade_history_manager = TradeHistoryManager()
+    config_manager = ConfigurationManager()
+    memory_manager = MemoryManager()
+    period_manager = PeriodManager(memory_manager, config_manager)
+
+    rows = _run_decision_loop(
+        model_tag,
+        router_model,
+        prompts,
+        performance_tracker,
+        journal_manager,
+        trade_history_manager,
+        memory_manager,
+        period_manager,
+    )
+
+    # Save parsed results and run backtest unchanged
+    parsed_results_path = os.path.join(
+        base_dir, "results", "parsed", f"{model_tag}_parsed.csv"
+    )
+    parsed_df = save_parsed_results(parsed_results_path, rows)
+
+    logger.info("Step 4: backtest for model %s", model_tag)
+    metrics = backtest_model(parsed_df)
+    print("Metrics")
+    for k, v in metrics.items():
+        print(f"  {k}: {v}")
+
+    _run_post_analysis(parsed_df, metrics, model_tag, base_dir, raw_path, symbol_name)

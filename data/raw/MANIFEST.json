@@ -1,0 +1,14 @@
+{
+  "file": "spy_daily.csv",
+  "sha256": "b3b90a1d0d9c16de85718b0d7eebfddcf0d5532393f22c859cf91568ba0b1811",
+  "bytes": 126484,
+  "rows": 2264,
+  "symbol": "SPY",
+  "columns": ["Date", "Open", "High", "Low", "Close", "Volume"],
+  "date_start": "2015-01-02",
+  "date_end": "2023-12-29",
+  "adjustment": "split_and_dividend_adjusted",
+  "source": "yfinance",
+  "source_version": "1.4.1",
+  "frozen_at": "2026-06-01"
+}

@@ -12,35 +12,131 @@ The framework uses a **hybrid configuration system** that combines simplicity fo
 - **No changes needed**: Existing configurations continue to work
 
 ### System Status
-- **✅ Fully Configurable**: `DEBUG_SHOW_FULL_PROMPT`, `START_ROW`, `TEST_MODE`, `TEST_LIMIT`, `OPENROUTER_API_BASE`, `ACTIVE_EXPERIMENT`, `SHOW_DATE_TO_LLM`, `MA20_WINDOW`, `RET_5D_WINDOW`, `VOL20_WINDOW`
-- **⚠️ Legacy System**: Other technical constants (RSI_WINDOW, MACD_FAST, etc.) - still work but less robust
-- **🎯 Future**: Additional constants can be migrated if needed for research
+- **[OK] Fully Configurable**: `DEBUG_SHOW_FULL_PROMPT`, `START_ROW`, `TEST_MODE`, `TEST_LIMIT`, `OPENROUTER_API_BASE`, `ACTIVE_EXPERIMENT`, `SHOW_DATE_TO_LLM`, `MA20_WINDOW`, `RET_5D_WINDOW`, `VOL20_WINDOW`
+- **[!] Legacy System**: Other technical constants (RSI_WINDOW, MACD_FAST, etc.) - still work but less robust
+- **[*] Future**: Additional constants can be migrated if needed for research
 
 ### Why This Approach?
 - **Stability**: Proven working system with minimal complexity
 - **User Experience**: No disruption to existing workflows
 - **Research Focus**: Prioritizes actual research over infrastructure perfection
 
+## 🚀 Execution & Runtime
+
+### Main Execution Command
+The framework runs via the main module:
+```bash
+python -m src.main
+```
+
+### Model Selection (Provider)
+`LLM_PROVIDER` is the single knob that decides how trading decisions are generated:
+
+```python
+LLM_PROVIDER = "dummy"  # Random decisions, no API/CLI, no cost. For testing.
+# LLM_PROVIDER = "openrouter"            # Any model via OpenRouter HTTP API (needs OPENROUTER_API_KEY)
+# LLM_PROVIDER = "claude_code"           # Claude Code via your subscription, single-shot (needs the claude CLI logged in)
+# LLM_PROVIDER = "claude_code_subagents" # Claude Code subscription, multi-agent (lead PM + specialist analysts)
+
+# Claude model used by the claude_code providers
+CLAUDE_CODE_MODEL = "sonnet"  # "sonnet", "opus", "haiku", or a full model id
+```
+
+> **Note**: `USE_DUMMY_MODEL` is derived automatically from `LLM_PROVIDER` (`USE_DUMMY_MODEL = LLM_PROVIDER == "dummy"`). Never set it by hand; it only exists for backward compatibility.
+
+### API Key Configuration
+The `openrouter` provider requires an OpenRouter API key:
+```bash
+export OPENROUTER_API_KEY="your_key_here"
+```
+- **Cost**: ~1-5 cents per API call depending on model and prompt length
+- **Free Option**: Some models like `deepseek/deepseek-r1-0528:free` are available
+- **No cost / no key**: Use `LLM_PROVIDER = "dummy"` for development, or the `claude_code` providers to run on your Claude subscription (no per-token cost). See [docs/providers.md](providers.md).
+
 ## 📊 Data Configuration
 
-### Basic Data Settings
+### Step 1: Choose Data Source
+Select your data source first:
 ```python
-# Data time range
+# 🎯 DATA SOURCE SELECTION
+DATA_SOURCE = "vendored"  # Default: committed frozen SPY snapshot, offline + deterministic
+# DATA_SOURCE = "csv"     # Your own local CSV file
+# DATA_SOURCE = "stooq"   # Live fetch (now requires an apikey; no longer the default)
+```
+
+### Step 2: Set Date Range
+Configure the date range (applies to all data sources):
+```python
+# DATE RANGE (applies to all data sources)
 DATA_START = "2015-01-01"  # Start date for historical data
 DATA_END = "2023-12-31"    # End date for historical data
+```
 
-# Asset selection
-SYMBOL = "^GSPC"  # S&P 500 index ticker (Yahoo Finance format)
+### Step 3: Configure Chosen Data Source
+
+#### Vendored Snapshot (Default - offline, deterministic)
+When `DATA_SOURCE = "vendored"` (the default), the framework loads a committed real SPY snapshot, verified by SHA-256 against its manifest. No network, no key, reproducible out of the box:
+```python
+# Committed real SPY data so a clean clone runs offline and deterministically
+VENDORED_DATA_PATH = "data/raw/spy_daily.csv"
+VENDORED_MANIFEST_PATH = "data/raw/MANIFEST.json"
+```
+To refresh the snapshot from a live source, see `scripts/refresh_data.py` and `data/raw/PROVENANCE.md`.
+
+#### CSV Data Files (your own local dataset)
+When `DATA_SOURCE = "csv"`:
+```python
+# Symbol for CSV data (only used when DATA_SOURCE = "csv")
+SYMBOL = "^GSPC"  # Stock symbol in CSV file
+CSV_DATA_PATH = "data/raw/sp500.csv"  # Path to your CSV file
+# Must contain columns: Date, Open, High, Low, Close, Volume
+```
+
+#### Stooq Historical Data (live refresh option, needs an apikey)
+When `DATA_SOURCE = "stooq"`. Note: Stooq now requires an apikey (and may present a captcha), so it is no longer the default nor a zero-setup option:
+```python
+# Symbol selection (Stooq format - no special characters needed)
+STOOQ_SYMBOL = "SPY"     # S&P 500 ETF (recommended for broad market)
+# STOOQ_SYMBOL = "QQQ"   # NASDAQ 100 ETF
+# STOOQ_SYMBOL = "AAPL"  # Individual stocks
+# STOOQ_SYMBOL = "BTC-USD"  # Cryptocurrencies
+```
+
+### Trading Delay Warning
+**⚠️ Important**: Trading doesn't begin immediately after `DATA_START`!
+
+Due to technical indicator warm-up requirements, the system automatically skips the first ~40 trading days of your dataset. Even with `START_ROW = 0`, you'll start trading approximately 40 trading days after your configured `DATA_START` date.
+
+**Example:** If `DATA_START = "2015-01-01"`, actual trading begins around March 2015.
+
+This delay ensures reliable technical indicators (RSI needs 14+ days, MACD needs 35+ days, etc.).
+
+### Configuration Validation
+The framework automatically validates your configuration and provides helpful guidance:
+
+**Successful Vendored Configuration (default):**
+```
+[CONFIG] [OK] Primary: vendored frozen snapshot (offline, checksummed)
+[CONFIG] 📦 File: data/raw/spy_daily.csv
+[CONFIG] 🔄 Fallback: None (vendored is offline-by-design)
+[CONFIG] [DATES] Date range: 2015-03-03 to 2023-12-31
+[CONFIG] 🧪 Test mode: ON (5 days)
+```
+
+**Helpful Warnings:**
+```
+[WARNING] CSV file not found: data/raw/sp500.csv
+[INFO] CSV_FALLBACK_PATH variable detected. Consider using CSV_DATA_PATH instead.
 ```
 
 ### Technical Indicators
 ```python
-# ✅ FULLY CONFIGURABLE (new system - can be modified for research)
+# [CONFIG] FULLY CONFIGURABLE (new system - can be modified for research)
 MA20_WINDOW = 20        # 20-day moving average window (configurable)
 RET_5D_WINDOW = 5       # 5-day return calculation window (configurable)
 VOL20_WINDOW = 20       # 20-day volatility window (configurable)
 
-# ⚠️ LEGACY SYSTEM (still works, defined in config.py)
+# [WARN] LEGACY SYSTEM (still works, defined in config.py)
 PAST_RET_LAGS = 20      # Number of lagged return features
 RSI_WINDOW = 14         # RSI period (14 days standard)
 RSI_OVERBOUGHT = 70     # RSI overbought threshold
@@ -92,9 +188,9 @@ The framework provides 6 predefined experiment configurations to systematically 
 ```python
 "baseline": {
     "description": "Minimal context: no dates, no memory, no feeling",
-    "SHOW_DATE_TO_LLM": False,        # ✅ Configurable via ACTIVE_EXPERIMENT
-    "ENABLE_STRATEGIC_JOURNAL": False, # ✅ Configurable via ACTIVE_EXPERIMENT
-    "ENABLE_FEELING_LOG": False,      # ✅ Configurable via ACTIVE_EXPERIMENT
+    "SHOW_DATE_TO_LLM": False,        # [CONFIG] Configurable via ACTIVE_EXPERIMENT
+    "ENABLE_STRATEGIC_JOURNAL": False, # [CONFIG] Configurable via ACTIVE_EXPERIMENT
+    "ENABLE_FEELING_LOG": False,      # [CONFIG] Configurable via ACTIVE_EXPERIMENT
 }
 ```
 **Use Case**: Test pure technical analysis capability without temporal context.
@@ -194,35 +290,140 @@ _MANUAL_ENABLE_STRATEGIC_JOURNAL = True
 _MANUAL_ENABLE_FEELING_LOG = False
 ```
 
+## 🎭 Trader Personality Configuration
+
+### Overview
+The framework supports **5 distinct trader personalities** that influence how LLMs approach trading decisions. Each personality provides a different behavioral framework without dictating specific rules.
+
+### Personality Selection
+```python
+# 🤖 LLM PERSONALITY SETTINGS
+ACTIVE_PERSONALITY = "cautious"  # Choose trader personality:
+# - "cautious": Conservative, risk-averse trading
+# - "aggressive": Bold, opportunity-focused trading
+# - "balanced": Systematic, balanced approach
+# - "momentum": Trend-following strategies
+# - "contrarian": Counter-trend strategies
+```
+
+### Personality Descriptions
+
+#### Cautious Conservative
+- **Risk Tolerance**: Low
+- **Decision Style**: Defensive
+- **Behavioral Framework**: Prioritizes capital preservation, requires strong conviction for directional trades. Prefers HOLD when signals are mixed and takes quick action to exit losing positions.
+
+#### Aggressive Growth
+- **Risk Tolerance**: High
+- **Decision Style**: Offensive
+- **Behavioral Framework**: Seeks alpha through active positioning, tolerates higher volatility for potential returns. More willing to take directional risk based on market momentum.
+
+#### Balanced Professional
+- **Risk Tolerance**: Medium
+- **Decision Style**: Systematic
+- **Behavioral Framework**: Balances risk and reward systematically, follows structured decision criteria. Makes decisions based on comprehensive analysis rather than instinct.
+
+#### Momentum Trader
+- **Risk Tolerance**: High
+- **Decision Style**: Reactive
+- **Behavioral Framework**: Capitalizes on market trends, quick to cut losses and ride winners. Emphasizes timing and market direction over fundamental valuation.
+
+#### Contrarian Value
+- **Risk Tolerance**: Medium
+- **Decision Style**: Contrarian
+- **Behavioral Framework**: Fades market sentiment, buys fear and sells greed when fundamentals suggest. Goes against prevailing market psychology when indicators show extremes.
+
+### Impact on Research
+- **Behavioral Consistency**: Study whether LLMs maintain personality-consistent decision patterns
+- **Market Regime Performance**: Analyze which personalities excel in different market conditions
+- **Decision Pattern Analysis**: Compare how different behavioral frameworks influence actual trading decisions
+- **LLM Psychology Research**: Understand how behavioral prompts affect AI decision-making
+
+## 🧠 Chain of Thought Reasoning
+
+### Overview
+The framework supports structured analytical reasoning in LLM prompts, enabling step-by-step decision processes independent of experiment configuration.
+
+### Configuration
+```python
+# 🧠 CHAIN OF THOUGHT REASONING
+ENABLE_CHAIN_OF_THOUGHT = True  # Enable structured analytical reasoning
+```
+
+### Important: Breaking Change
+**⚠️ BREAKING CHANGE**: As of recent updates, `ENABLE_CHAIN_OF_THOUGHT` works **independently** of experiment selection. This toggle enables reasoning regardless of which experiment type is active (`ACTIVE_EXPERIMENT`).
+
+Previously, chain of thought was tied to specific experiment configurations. Now it functions as a master toggle that can be combined with any experiment type.
+
+### Impact on Prompts
+When enabled, LLMs receive additional structured reasoning prompts that encourage:
+- Step-by-step market analysis
+- Systematic evaluation of technical indicators
+- Logical decision justification
+- Risk-reward assessment frameworks
+
+### Research Applications
+- **Decision Quality**: Study if structured reasoning improves trading decisions
+- **Process Transparency**: Analyze LLM thought processes and decision logic
+- **Methodological Rigor**: Compare intuitive vs. analytical decision-making approaches
+
 ## 🤖 Model Configuration
 
 ### Available Models
 ```python
 LLM_MODELS = [
     {
-        "tag": "bert",
-        "router_model": "openrouter/bert-nebulon-alpha",
+        "tag": "deepseek-r1-0528",
+        "router_model": "deepseek/deepseek-r1-0528:free",
     },
-    # Add more models as needed
+    # {
+    #     "tag": "bert",  # Model no longer available
+    #     "router_model": "openrouter/bert-nebulon-alpha",
+    # },
+    # {
+    #     "tag": "chimera",
+    #     "router_model": "tngtech/tng-r1t-chimera:free",
+    # },
+    # {
+    #     "tag": "olmo-32b",
+    #     "router_model": "allenai/olmo-3-32b-think",
+    # },
+    # {
+    #     "tag": "gpt-oss-120b",
+    #     "router_model": "openai/gpt-oss-120b:free",
+    # },
+    # {
+    #     "tag": "gpt-oss-20b",
+    #     "router_model": "openai/gpt-oss-20b:free",
+    # },
+    # {
+    #     "tag": "claude",
+    #     "router_model": "anthropic/claude-3-sonnet",
+    # },
 ]
 ```
 
 ### Model Selection
-Models are selected based on the `tag` field. The framework automatically appends the experiment configuration to create unique identifiers (e.g., `bert_memory_feeling`).
+The `LLM_MODELS` list above only applies when `LLM_PROVIDER = "openrouter"`. Models are selected based on the `tag` field, and the framework automatically appends the experiment configuration to create unique identifiers (e.g., `deepseek-r1-0528_memory_feeling`).
+
+For the other providers the model list is not used:
+- `LLM_PROVIDER = "dummy"` runs the deterministic stub model (no API, no cost).
+- `LLM_PROVIDER = "claude_code"` / `"claude_code_subagents"` use the local Claude Code session (no OpenRouter key, no per-call cost).
 
 ## ⚙️ Runtime Configuration
 
 ### Testing and Development
 ```python
-# Use dummy model for development/testing
-USE_DUMMY_MODEL = True  # Set to False for real LLM experiments
+# Select the model backend (the single knob you set by hand)
+LLM_PROVIDER = "dummy"  # "dummy" | "openrouter" | "claude_code" | "claude_code_subagents"
+# USE_DUMMY_MODEL is DERIVED from LLM_PROVIDER (== "dummy"); never set it by hand.
 
 # ✅ FULLY CONFIGURABLE (new system)
 DEBUG_SHOW_FULL_PROMPT = False  # Show complete prompts for debugging
 
 # ✅ FULLY CONFIGURABLE (new system)
 TEST_MODE = True      # Enable test mode (limits data processing)
-TEST_LIMIT = 500       # Number of days to process in test mode
+TEST_LIMIT = 5         # Number of days to process in test mode
 ```
 
 ### Starting Position
@@ -335,6 +536,36 @@ The framework automatically builds appropriate system prompts based on configura
 OPENROUTER_API_BASE = "https://openrouter.ai/api/v1/chat/completions"
 ```
 
+### API Interface
+The framework uses OpenRouter's OpenAI-compatible API:
+
+**Request Format:**
+```json
+{
+  "model": "deepseek/deepseek-r1-0528:free",
+  "temperature": 0.0,
+  "max_tokens": 50000,
+  "messages": [
+    {"role": "system", "content": "system_prompt"},
+    {"role": "user", "content": "user_prompt"}
+  ]
+}
+```
+
+**Response Format:**
+```json
+{
+  "choices": [
+    {
+      "message": {
+        "content": "LLM response text"
+      }
+    }
+  ]
+}
+```
+
+### Authentication
 API keys are read from environment variables:
 ```bash
 export OPENROUTER_API_KEY="your_key_here"
@@ -345,18 +576,18 @@ export OPENROUTER_API_KEY="your_key_here"
 ### Configuration Inspection
 ```python
 # List all available experiments
-from src.config_compat import list_experiments
+from src.config import list_experiments
 list_experiments()
 
 # Get current configuration summary
-from src.config_compat import get_current_config_summary
+from src.config import get_current_config_summary
 config = get_current_config_summary()
 ```
 
 ### Experiment Naming
 ```python
 # Get experiment suffix for file naming
-from src.config_compat import get_experiment_suffix
+from src.config import get_experiment_suffix
 suffix = get_experiment_suffix()  # Returns "_memory_feeling" etc.
 ```
 
@@ -370,7 +601,7 @@ suffix = get_experiment_suffix()  # Returns "_memory_feeling" etc.
 
 ### Performance Optimization
 - Use `TEST_MODE = True` for development
-- Set `USE_DUMMY_MODEL = True` for prompt testing
+- Set `LLM_PROVIDER = "dummy"` for prompt testing (no API, no cost)
 - Limit `TEST_LIMIT` for quick iterations
 
 ### Model Selection
@@ -390,8 +621,6 @@ suffix = get_experiment_suffix()  # Returns "_memory_feeling" etc.
 src/config.py (User Interface - Single Source of Truth)
     ↓ Legacy reading
 src/configuration_manager.py (New System Bridge)
-    ↓ Modern access
-src/config_compat.py (Backward Compatibility Layer)
     ↓ Clean imports
 src/*.py (Application Code)
 ```

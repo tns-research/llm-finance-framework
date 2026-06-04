@@ -11,11 +11,17 @@ Baseline Hierarchy:
 3. Rule-based    - Simple trading rules using technical features
 """
 
-from typing import Dict, List, Tuple
+import logging
+from typing import Dict, Tuple
 
 import numpy as np
 import pandas as pd
 from scipy import stats
+
+from .config import get_current_symbol_info
+from .constants import TRADING_DAYS_PER_YEAR
+
+logger = logging.getLogger(__name__)
 
 # =============================================================================
 # BASELINE STRATEGY FUNCTIONS
@@ -227,6 +233,295 @@ def rsi_contrarian_baseline(
     return df
 
 
+def macd_momentum_baseline(features_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    MACD Momentum Strategy: BUY when MACD crosses above signal line, SELL below.
+
+    This is the most basic MACD strategy - trend following based on momentum shifts.
+    Classic "MACD crossover" system used by many traders.
+
+    Uses consecutive BUY/SELL signals to maintain positions until exit signal.
+    HOLD only used when exiting to cash.
+
+    Logic:
+    - BUY when MACD line first crosses above signal line
+    - Stay long until MACD line crosses below signal line
+    - SELL when MACD line first crosses below signal line
+    - Stay short until MACD line crosses above signal line
+
+    This provides trend-following signals based on momentum acceleration.
+
+    Args:
+        features_df: DataFrame with macd_line, macd_signal columns
+
+    Returns:
+        DataFrame with decision, position, strategy_return columns
+    """
+    df = features_df.copy()
+
+    # MACD crossover logic: BUY when macd_line > macd_signal, SELL when <
+    # Use diff() to detect crossovers (sign changes)
+    macd_diff = df["macd_line"] - df["macd_signal"]
+    crossover_up = (macd_diff > 0) & (macd_diff.shift(1) <= 0)  # Crossed above
+    crossover_down = (macd_diff < 0) & (macd_diff.shift(1) >= 0)  # Crossed below
+
+    # Track signal state: BUY, SELL, or HOLD (cash)
+    signal_state = pd.Series("HOLD", index=df.index)  # Start in cash
+
+    for i in range(1, len(df)):
+        if crossover_up.iloc[i]:
+            signal_state.iloc[i] = "BUY"  # Entry: go long
+        elif crossover_down.iloc[i]:
+            signal_state.iloc[i] = "SELL"  # Entry: go short
+        else:
+            signal_state.iloc[i] = signal_state.iloc[i - 1]  # Maintain signal
+
+    # Map signal state to positions
+    df["decision"] = signal_state
+    df["position"] = signal_state.map({"BUY": 1.0, "SELL": -1.0, "HOLD": 0.0})
+    df["strategy_return"] = df["position"] * df["next_return_1d"]
+
+    return df
+
+
+def macd_histogram_baseline(
+    features_df: pd.DataFrame, threshold: float = 0.0
+) -> pd.DataFrame:
+    """
+    MACD Histogram Momentum Strategy: BUY/SELL based on histogram strength.
+
+    This strategy uses the MACD histogram to identify momentum acceleration:
+    - BUY when histogram > threshold (strong bullish momentum)
+    - SELL when histogram < -threshold (strong bearish momentum)
+    - HOLD otherwise (neutral momentum)
+
+    Args:
+        features_df: DataFrame with macd_histogram column
+        threshold: Minimum histogram value for signals (default 0.0)
+
+    Returns:
+        DataFrame with decision, position, strategy_return columns
+    """
+    df = features_df.copy()
+
+    # MACD Histogram signals: momentum strength
+    conditions = [
+        df["macd_histogram"] > threshold,  # Strong bullish momentum
+        df["macd_histogram"] < -threshold,  # Strong bearish momentum
+    ]
+    choices = ["BUY", "SELL"]
+    df["decision"] = np.select(conditions, choices, default="HOLD")
+
+    df["position"] = df["decision"].map({"BUY": 1.0, "HOLD": 0.0, "SELL": -1.0})
+    df["strategy_return"] = df["position"] * df["next_return_1d"]
+
+    return df
+
+
+def stochastic_baseline(
+    features_df: pd.DataFrame, overbought: float = 80, oversold: float = 20
+) -> pd.DataFrame:
+    """
+    Stochastic Oscillator Mean Reversion Strategy.
+
+    This classic momentum strategy buys when the oscillator shows oversold conditions
+    and sells when it shows overbought conditions.
+
+    Uses consecutive BUY/SELL signals to maintain positions until exit signal.
+    HOLD only used when exiting to cash.
+
+    Logic:
+    - BUY when %K first crosses above oversold level (default 20)
+    - Stay long until %K crosses below overbought level (default 80)
+    - SELL when %K first crosses below overbought level (default 80)
+    - Stay short until %K crosses above oversold level (default 20)
+
+    This complements RSI with different calculation method for momentum signals.
+
+    Args:
+        features_df: DataFrame with stoch_k, stoch_d columns
+        overbought: Overbought threshold (default 80)
+        oversold: Oversold threshold (default 20)
+
+    Returns:
+        DataFrame with decision, position, strategy_return columns
+    """
+    df = features_df.copy()
+
+    # Stochastic crossover signals
+    stoch_k = df["stoch_k"]
+
+    # BUY: %K crosses above oversold level
+    buy_signal = (stoch_k > oversold) & (stoch_k.shift(1) <= oversold)
+
+    # SELL: %K crosses below overbought level
+    sell_signal = (stoch_k < overbought) & (stoch_k.shift(1) >= overbought)
+
+    # Track signal state: BUY, SELL, or HOLD (cash)
+    signal_state = pd.Series("HOLD", index=df.index)  # Start in cash
+
+    for i in range(1, len(df)):
+        if buy_signal.iloc[i]:
+            signal_state.iloc[i] = "BUY"  # Entry: go long
+        elif sell_signal.iloc[i]:
+            signal_state.iloc[i] = "SELL"  # Entry: go short
+        else:
+            signal_state.iloc[i] = signal_state.iloc[i - 1]  # Maintain signal
+
+    # Map signal state to positions
+    df["decision"] = signal_state
+    df["position"] = signal_state.map({"BUY": 1.0, "SELL": -1.0, "HOLD": 0.0})
+    df["strategy_return"] = df["position"] * df["next_return_1d"]
+
+    return df
+
+
+def bollinger_reversion_baseline(features_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Bollinger Band Mean Reversion Strategy.
+
+    This classic volatility-based strategy buys when price touches the lower Bollinger Band
+    and sells when price touches the upper Bollinger Band, expecting mean reversion.
+
+    Uses consecutive BUY/SELL signals to maintain positions until opposite band touch.
+    HOLD only used when exiting to cash.
+
+    Logic:
+    - BUY when price first touches lower band (entry long)
+    - Stay long until price touches upper band (exit long)
+    - SELL when price first touches upper band (entry short)
+    - Stay short until price touches lower band (exit short)
+
+    This complements momentum-based strategies (RSI, Stochastic) with volatility signals.
+    """
+    df = features_df.copy()
+
+    # Bollinger Band signals - detect first touches (crossovers)
+    price = df["close"]
+    upper_band = df["bb_upper"]
+    lower_band = df["bb_lower"]
+
+    # BUY: Price crosses below lower band (first touch)
+    buy_signal = (price <= lower_band) & (price.shift(1) > lower_band)
+
+    # SELL: Price crosses above upper band (first touch)
+    sell_signal = (price >= upper_band) & (price.shift(1) < upper_band)
+
+    # Track signal state: BUY, SELL, or HOLD (cash)
+    signal_state = pd.Series("HOLD", index=df.index)  # Start in cash
+
+    for i in range(1, len(df)):
+        if buy_signal.iloc[i]:
+            signal_state.iloc[i] = "BUY"  # Entry: go long
+        elif sell_signal.iloc[i]:
+            signal_state.iloc[i] = "SELL"  # Entry: go short
+        else:
+            signal_state.iloc[i] = signal_state.iloc[i - 1]  # Maintain signal
+
+    # Map signal state to positions
+    df["decision"] = signal_state
+    df["position"] = signal_state.map({"BUY": 1.0, "SELL": -1.0, "HOLD": 0.0})
+    df["strategy_return"] = df["position"] * df["next_return_1d"]
+
+    return df
+
+
+def macd_rsi_combined_baseline(
+    features_df: pd.DataFrame, rsi_overbought: float = 70, rsi_oversold: float = 30
+) -> pd.DataFrame:
+    """
+    MACD + RSI Combined Confirmation Strategy.
+
+    Requires both MACD trend signal AND RSI momentum confirmation.
+    More selective but higher quality signals.
+
+    BUY = long (+1.0) when MACD bullish AND RSI oversold
+    SELL = short (-1.0) when MACD bearish AND RSI overbought
+    HOLD = cash (0.0) when no dual confirmation
+
+    This combines trend-following with mean reversion for stronger signals.
+    """
+    df = features_df.copy()
+
+    # MACD bullish/bearish signals (trend confirmation)
+    macd_bullish = df["macd_histogram"] > 0
+    macd_bearish = df["macd_histogram"] < 0
+
+    # RSI signals (momentum confirmation)
+    rsi_oversold = df["rsi_14"] < rsi_oversold
+    rsi_overbought = df["rsi_14"] > rsi_overbought
+
+    # Combined confirmation signals
+    buy_signal = macd_bullish & rsi_oversold
+    sell_signal = macd_bearish & rsi_overbought
+
+    # Apply signals: HOLD (cash) by default, only trade on dual confirmation
+    df["decision"] = np.select(
+        [buy_signal, sell_signal], ["BUY", "SELL"], default="HOLD"
+    )
+    df["position"] = df["decision"].map({"BUY": 1.0, "HOLD": 0.0, "SELL": -1.0})
+    df["strategy_return"] = df["position"] * df["next_return_1d"]
+
+    return df
+
+
+def stochastic_bollinger_combined_baseline(
+    features_df: pd.DataFrame, stoch_overbought: float = 80, stoch_oversold: float = 20
+) -> pd.DataFrame:
+    """
+    Stochastic + Bollinger Combined Confirmation Strategy.
+
+    Requires both Stochastic momentum signal AND Bollinger volatility confirmation.
+    Combines oscillator extremes with volatility breakouts.
+
+    BUY = long (+1.0) when Stochastic oversold AND price breaks lower Bollinger band
+    SELL = short (-1.0) when Stochastic overbought AND price breaks upper Bollinger band
+    HOLD = cash (0.0) when no dual confirmation
+
+    This provides high-confidence mean reversion signals.
+    """
+    df = features_df.copy()
+
+    # Validate required columns
+    required_cols = ["stoch_k", "close", "bb_lower", "bb_upper", "next_return_1d"]
+    missing_cols = [col for col in required_cols if col not in df.columns]
+    if missing_cols:
+        raise ValueError(
+            f"stochastic_bollinger_combined_baseline missing required columns: {missing_cols}"
+        )
+
+    # Stochastic signals (momentum confirmation)
+    # BUY when Stochastic becomes oversold (crosses below oversold level from above)
+    stoch_buy_signal = (df["stoch_k"] < stoch_oversold) & (
+        df["stoch_k"].shift(1) >= stoch_oversold
+    )
+    # SELL when Stochastic becomes overbought (crosses above overbought level from below)
+    stoch_sell_signal = (df["stoch_k"] > stoch_overbought) & (
+        df["stoch_k"].shift(1) <= stoch_overbought
+    )
+
+    # Bollinger band breakouts (volatility confirmation)
+    bb_buy_signal = (df["close"] <= df["bb_lower"]) & (
+        df["close"].shift(1) > df["bb_lower"]
+    )
+    bb_sell_signal = (df["close"] >= df["bb_upper"]) & (
+        df["close"].shift(1) < df["bb_upper"]
+    )
+
+    # Combined confirmation - both momentum AND volatility must agree
+    buy_signal = stoch_buy_signal & bb_buy_signal
+    sell_signal = stoch_sell_signal & bb_sell_signal
+
+    # Apply signals: HOLD (cash) by default, only trade on dual confirmation
+    df["decision"] = np.select(
+        [buy_signal, sell_signal], ["BUY", "SELL"], default="HOLD"
+    )
+    df["position"] = df["decision"].map({"BUY": 1.0, "HOLD": 0.0, "SELL": -1.0})
+    df["strategy_return"] = df["position"] * df["next_return_1d"]
+
+    return df
+
+
 # =============================================================================
 # METRICS CALCULATION
 # =============================================================================
@@ -244,7 +539,11 @@ def calculate_baseline_metrics(df: pd.DataFrame, baseline_name: str) -> Dict:
     total_return = returns.sum()
     mean_return = returns.mean()
     volatility = returns.std()
-    sharpe = (mean_return / volatility * np.sqrt(252)) if volatility > 0 else 0.0
+    sharpe = (
+        (mean_return / volatility * np.sqrt(TRADING_DAYS_PER_YEAR))
+        if volatility > 0
+        else 0.0
+    )
 
     # Win rate
     win_rate = (returns > 0).mean()
@@ -285,6 +584,7 @@ def calculate_baseline_metrics(df: pd.DataFrame, baseline_name: str) -> Dict:
 # =============================================================================
 
 # Registry of all available baselines
+# IMPORTANT: Each strategy should only be registered once to avoid duplication
 BASELINE_REGISTRY = {
     "random": random_baseline,
     "buy_and_hold": buy_and_hold_baseline,
@@ -295,6 +595,106 @@ BASELINE_REGISTRY = {
     "momentum_vol_combined": combined_momentum_vol_baseline,
     "rsi_mean_reversion": rsi_mean_reversion_baseline,
     "rsi_contrarian": rsi_contrarian_baseline,
+    # NEW: MACD Momentum baseline
+    "macd_momentum": macd_momentum_baseline,
+    # NEW: MACD Histogram baseline
+    "macd_histogram": macd_histogram_baseline,
+    # NEW: Stochastic Oscillator baseline
+    "stochastic_oscillator": stochastic_baseline,
+    # NEW: Bollinger Band Reversion baseline
+    "bollinger_reversion": bollinger_reversion_baseline,
+    # NEW: Combined indicator baselines
+    "macd_rsi_combined": macd_rsi_combined_baseline,
+    "stochastic_bollinger_combined": stochastic_bollinger_combined_baseline,
+}
+
+
+# =============================================================================
+# STRATEGY METADATA FOR ENHANCED REPORTING
+# =============================================================================
+
+STRATEGY_METADATA = {
+    # Original baselines
+    "random": {
+        "category": "noise",
+        "indicators": [],
+        "description": "Random noise baseline for statistical comparison",
+    },
+    "buy_and_hold": {
+        "category": "passive",
+        "indicators": [],
+        "description": f"Buy and hold {get_current_symbol_info()[1]} (benchmark)",
+    },
+    "momentum": {
+        "category": "trend_following",
+        "indicators": ["MA20"],
+        "description": "20-day moving average momentum strategy",
+    },
+    "contrarian": {
+        "category": "mean_reversion",
+        "indicators": ["MA20"],
+        "description": "MA20-based contrarian signals",
+    },
+    "mean_reversion": {
+        "category": "mean_reversion",
+        "indicators": ["volatility"],
+        "description": "Volatility-based mean reversion timing",
+    },
+    "volatility_timing": {
+        "category": "risk_management",
+        "indicators": ["volatility"],
+        "description": "Volatility threshold risk management",
+    },
+    "momentum_vol_combined": {
+        "category": "multi_factor",
+        "indicators": ["MA20", "volatility"],
+        "description": "Combined momentum and volatility factors",
+    },
+    # RSI strategies
+    "rsi_mean_reversion": {
+        "category": "mean_reversion",
+        "indicators": ["RSI"],
+        "description": "RSI oversold/overbought mean reversion",
+    },
+    "rsi_contrarian": {
+        "category": "mean_reversion",
+        "indicators": ["RSI"],
+        "description": "RSI contrarian momentum signals",
+    },
+    # MACD strategies
+    "macd_momentum": {
+        "category": "trend_following",
+        "indicators": ["MACD"],
+        "description": "MACD line crossover trend signals",
+    },
+    "macd_histogram": {
+        "category": "momentum",
+        "indicators": ["MACD"],
+        "description": "MACD histogram momentum acceleration",
+    },
+    # Stochastic strategies
+    "stochastic_oscillator": {
+        "category": "mean_reversion",
+        "indicators": ["Stochastic"],
+        "description": "Stochastic oscillator mean reversion",
+    },
+    # Bollinger strategies
+    "bollinger_reversion": {
+        "category": "mean_reversion",
+        "indicators": ["Bollinger"],
+        "description": "Bollinger band mean reversion",
+    },
+    # Combined strategies
+    "macd_rsi_combined": {
+        "category": "confirmation",
+        "indicators": ["MACD", "RSI"],
+        "description": "MACD + RSI dual confirmation signals",
+    },
+    "stochastic_bollinger_combined": {
+        "category": "confirmation",
+        "indicators": ["Stochastic", "Bollinger"],
+        "description": "Stochastic + Bollinger dual confirmation signals",
+    },
 }
 
 
@@ -317,10 +717,62 @@ def run_all_baselines(features_df: pd.DataFrame) -> pd.DataFrame:
             metrics = calculate_baseline_metrics(baseline_df, name)
             results.append(metrics)
         except Exception as e:
-            print(f"[WARN] Baseline '{name}' failed: {e}")
+            logger.warning("Baseline '%s' failed: %s", name, e)
             continue
 
-    return pd.DataFrame(results)
+    df = pd.DataFrame(results)
+
+    # Check for duplicates and warn if found
+    duplicates = df[df.duplicated(subset=["baseline"], keep=False)]
+    if not duplicates.empty:
+        logger.warning(
+            "Found duplicate baseline entries: %s", duplicates["baseline"].unique()
+        )
+
+    return df
+
+
+def calculate_category_performance(baseline_results: pd.DataFrame) -> pd.DataFrame:
+    """
+    Group baseline strategies by category and calculate category averages.
+
+    Args:
+        baseline_results: DataFrame from run_all_baselines()
+
+    Returns:
+        DataFrame with category-level performance metrics
+    """
+    category_stats = []
+
+    # Get all unique categories from STRATEGY_METADATA
+    categories = set()
+    for metadata in STRATEGY_METADATA.values():
+        categories.add(metadata["category"])
+
+    for category in sorted(categories):
+        # Filter baselines in this category
+        category_baselines = baseline_results[
+            baseline_results["baseline"].map(
+                lambda x: STRATEGY_METADATA.get(x, {}).get("category") == category
+            )
+        ]
+
+        if not category_baselines.empty:
+            category_stats.append(
+                {
+                    "category": category,
+                    "avg_return": category_baselines["total_return"].mean(),
+                    "avg_sharpe": category_baselines["sharpe_annualized"].mean(),
+                    "avg_win_rate": category_baselines["win_rate"].mean(),
+                    "strategy_count": len(category_baselines),
+                    "best_return": category_baselines["total_return"].max(),
+                    "worst_return": category_baselines["total_return"].min(),
+                    "return_std": category_baselines["total_return"].std(),
+                    "sharpe_std": category_baselines["sharpe_annualized"].std(),
+                }
+            )
+
+    return pd.DataFrame(category_stats)
 
 
 def compare_llm_to_baselines(
@@ -344,7 +796,7 @@ def compare_llm_to_baselines(
         "volatility": round(llm_metrics.get("volatility", 0), 4),
         "sharpe_annualized": round(
             (
-                llm_metrics.get("sharpe_like", 0) * np.sqrt(252)
+                llm_metrics.get("sharpe_like", 0) * np.sqrt(TRADING_DAYS_PER_YEAR)
                 if llm_metrics.get("sharpe_like")
                 else 0
             ),
@@ -378,78 +830,144 @@ def compare_llm_to_baselines(
     return all_results
 
 
-def print_baseline_comparison(comparison_df: pd.DataFrame, model_tag: str = "LLM"):
+def print_categorized_baseline_comparison(
+    comparison_df: pd.DataFrame, model_tag: str = "LLM"
+):
     """
-    Print a formatted comparison table to console.
-    """
-    print("\n" + "=" * 80)
-    print(f"BASELINE COMPARISON - {model_tag}")
-    print("=" * 80)
+    Enhanced baseline comparison with strategy categorization (no LLM case).
 
-    # Find LLM row for highlighting
+    Groups strategies by category and shows performance within each group.
+    """
+    print(f"\n{'='*80}")
+    print(f"ENHANCED BASELINE COMPARISON - {model_tag}")
+    print(f"{'='*80}")
+
+    # Find LLM for cross-category comparison
     llm_return = comparison_df[comparison_df["baseline"] == "LLM_STRATEGY"][
         "total_return"
     ].values
     llm_return = llm_return[0] if len(llm_return) > 0 else None
 
-    print(
-        f"\n{'Strategy':<25} {'Return':>10} {'Sharpe':>10} {'MaxDD':>10} {'Win%':>10}"
-    )
-    print("-" * 65)
+    # Group by category using STRATEGY_METADATA
+    categories = {}
+    for _, row in comparison_df.iterrows():
+        baseline = row["baseline"]
+        if baseline in STRATEGY_METADATA:
+            category = STRATEGY_METADATA[baseline]["category"]
+            if category not in categories:
+                categories[category] = []
+            categories[category].append(row)
+        elif baseline == "LLM_STRATEGY":
+            # Special handling for LLM - find which category it would fit in
+            # For now, put it in a separate "ai" category
+            if "ai" not in categories:
+                categories["ai"] = []
+            categories["ai"].append(row)
+
+    # Display each category
+    category_order = [
+        "ai",
+        "passive",
+        "trend_following",
+        "mean_reversion",
+        "momentum",
+        "risk_management",
+        "multi_factor",
+        "confirmation",
+        "noise",
+    ]
+
+    for category_name in category_order:
+        if category_name in categories:
+            strategies = categories[category_name]
+            if not strategies:
+                continue
+
+            print(f"\n{category_name.upper().replace('_', ' ')} STRATEGIES:")
+            print("-" * 70)
+
+            # Sort by total return within category (best first)
+            strategies_sorted = sorted(
+                strategies, key=lambda x: x["total_return"], reverse=True
+            )
+
+            for i, row in enumerate(strategies_sorted):
+                baseline = row["baseline"]
+                ret = row["total_return"]
+                sharpe = row["sharpe_annualized"]
+                maxdd = row["max_drawdown"]
+                winrate = row["win_rate"]
+
+                # Highlight top performer in category
+                rank_marker = " 🥇" if i == 0 and len(strategies) > 1 else ""
+
+                # Highlight LLM
+                llm_marker = " ◄" if baseline == "LLM_STRATEGY" else ""
+
+                # LLM vs category indicator
+                category_indicator = ""
+                if (
+                    llm_return is not None
+                    and baseline != "LLM_STRATEGY"
+                    and category_name != "ai"
+                ):
+                    if ret < llm_return:
+                        category_indicator = " ✓"  # LLM beats this strategy
+                    else:
+                        category_indicator = " ✗"  # LLM loses to this strategy
+
+                print(
+                    f"{baseline:<28} {ret:>8.2f}% {sharpe:>8.3f} {maxdd:>7.2f}% "
+                    f"{winrate:>6.1f}%{rank_marker}{category_indicator}{llm_marker}"
+                )
+
+    print(f"\n{'='*80}")
+
+
+def analyze_category_performance(comparison_df: pd.DataFrame) -> Dict:
+    """
+    Analyze performance by strategy category.
+
+    Returns dict with category-level statistics.
+    """
+    category_stats = {}
 
     for _, row in comparison_df.iterrows():
-        name = row["baseline"]
-        ret = row["total_return"]
-        sharpe = row["sharpe_annualized"]
-        maxdd = row["max_drawdown"]
-        winrate = row["win_rate"]
+        baseline = row["baseline"]
+        if baseline in STRATEGY_METADATA:
+            category = STRATEGY_METADATA[baseline]["category"]
+            if category not in category_stats:
+                category_stats[category] = {
+                    "strategies": [],
+                    "best_return": -999,
+                    "worst_return": 999,
+                    "avg_return": 0,
+                    "avg_sharpe": 0,
+                    "avg_win_rate": 0,
+                    "count": 0,
+                }
 
-        # Highlight LLM row
-        marker = " ◄" if name == "LLM_STRATEGY" else ""
+            stats = category_stats[category]
+            stats["strategies"].append(row)
+            stats["best_return"] = max(stats["best_return"], row["total_return"])
+            stats["worst_return"] = min(stats["worst_return"], row["total_return"])
+            stats["count"] += 1
 
-        # Color indicator (text only, no actual ANSI codes for compatibility)
-        if llm_return is not None and name != "LLM_STRATEGY":
-            if ret < llm_return:
-                indicator = " ✓"  # LLM beats this baseline
-            else:
-                indicator = " ✗"  # LLM loses to this baseline
-        else:
-            indicator = ""
+    # Calculate averages
+    for category, stats in category_stats.items():
+        strategies = stats["strategies"]
+        total_return = sum(row["total_return"] for row in strategies)
+        total_sharpe = sum(row["sharpe_annualized"] for row in strategies)
+        total_win_rate = sum(row["win_rate"] for row in strategies)
 
-        print(
-            f"{name:<25} {ret:>9.2f}% {sharpe:>10.3f} {maxdd:>9.2f}% {winrate:>9.1f}%{indicator}{marker}"
-        )
+        stats["avg_return"] = total_return / stats["count"]
+        stats["avg_sharpe"] = total_sharpe / stats["count"]
+        stats["avg_win_rate"] = total_win_rate / stats["count"]
 
-    print("-" * 65)
+        # Remove strategies list to keep output clean
+        del stats["strategies"]
 
-    # Summary
-    if llm_return is not None:
-        baselines_beaten = (
-            comparison_df[comparison_df["baseline"] != "LLM_STRATEGY"]["total_return"]
-            < llm_return
-        ).sum()
-        total_baselines = len(comparison_df) - 1
-
-        print(f"\nLLM beats {baselines_beaten}/{total_baselines} baselines")
-
-        # Key comparisons
-        bh_return = comparison_df[comparison_df["baseline"] == "buy_and_hold"][
-            "total_return"
-        ].values
-        if len(bh_return) > 0:
-            diff = llm_return - bh_return[0]
-            status = "OUTPERFORMS" if diff > 0 else "UNDERPERFORMS"
-            print(f"vs Buy-and-Hold: {status} by {abs(diff):.2f}%")
-
-        momentum_return = comparison_df[comparison_df["baseline"] == "momentum"][
-            "total_return"
-        ].values
-        if len(momentum_return) > 0:
-            diff = llm_return - momentum_return[0]
-            status = "OUTPERFORMS" if diff > 0 else "UNDERPERFORMS"
-            print(f"vs Simple Momentum: {status} by {abs(diff):.2f}%")
-
-    print("=" * 80 + "\n")
+    return category_stats
 
 
 # =============================================================================
@@ -609,20 +1127,60 @@ def print_enhanced_baseline_comparison(
     model_tag: str = "LLM",
 ):
     """
-    Print enhanced comparison with statistical details.
+    Print enhanced comparison with statistical details and categorization.
     """
     print("\n" + "=" * 100)
     print(f"ENHANCED BASELINE COMPARISON - {model_tag}")
     print("=" * 100)
 
-    # Standard comparison table
-    print(
-        f"\n{'Strategy':<30} {'Return':>10} {'Sharpe':>10} {'MaxDD':>10} {'Win%':>10}"
-    )
-    print("-" * 80)
-
+    # Group by category using STRATEGY_METADATA
+    categories = {}
     for _, row in comparison_df.iterrows():
-        name = row["baseline"]
+        baseline = row["baseline"]
+        if baseline in STRATEGY_METADATA:
+            category = STRATEGY_METADATA[baseline]["category"]
+            if category not in categories:
+                categories[category] = []
+            categories[category].append(row)
+        elif baseline == "LLM_STRATEGY":
+            # Special handling for LLM - put in "ai" category
+            if "ai" not in categories:
+                categories["ai"] = []
+            categories["ai"].append(row)
+
+    # Display each category
+    category_order = [
+        "ai",
+        "passive",
+        "trend_following",
+        "mean_reversion",
+        "momentum",
+        "risk_management",
+        "multi_factor",
+        "confirmation",
+        "noise",
+    ]
+
+    for category_name in category_order:
+        if category_name in categories:
+            strategies = categories[category_name]
+            if not strategies:
+                continue
+
+            print(f"\n{category_name.upper().replace('_', ' ')} STRATEGIES:")
+            print("-" * 85)
+
+            # Sort by total return within category (best first)
+            strategies_sorted = sorted(
+                strategies,
+                key=lambda x: (
+                    x["total_return"] if pd.notna(x["total_return"]) else -999
+                ),
+                reverse=True,
+            )
+
+            for i, row in enumerate(strategies_sorted):
+                baseline = row["baseline"]
         ret = row["total_return"] if pd.notna(row["total_return"]) else "N/A"
         sharpe = (
             row["sharpe_annualized"] if pd.notna(row["sharpe_annualized"]) else "N/A"
@@ -630,10 +1188,19 @@ def print_enhanced_baseline_comparison(
         maxdd = row["max_drawdown"] if pd.notna(row["max_drawdown"]) else "N/A"
         winrate = row["win_rate"] if pd.notna(row["win_rate"]) else "N/A"
 
-        marker = " ◄" if name == "LLM_STRATEGY" else ""
-        print(f"{name:<30} {ret:>9} {sharpe:>10} {maxdd:>9} {winrate:>9}{marker}")
+        # Highlight top performer in category
+        rank_marker = (
+            " 🥇" if i == 0 and len(strategies) > 1 and category_name != "ai" else ""
+        )
 
-    print("-" * 80)
+        # Highlight LLM
+        llm_marker = " ◄" if baseline == "LLM_STRATEGY" else ""
+
+        print(
+            f"{baseline:<30} {str(ret):>9} {str(sharpe):>10} {str(maxdd):>9} {str(winrate):>9}{rank_marker}{llm_marker}"
+        )
+
+    print("-" * 85)
 
     # Enhanced random statistics
     print(f"\nRANDOM BASELINE STATISTICS (n={random_stats['n_runs']} runs):")
@@ -649,7 +1216,7 @@ def print_enhanced_baseline_comparison(
 
     # Statistical significance
     if llm_stats:
-        print(f"\nSTATISTICAL SIGNIFICANCE vs RANDOM:")
+        print("\nSTATISTICAL SIGNIFICANCE vs RANDOM:")
         print(f"  LLM outperforms random by: {llm_stats['llm_vs_random_mean']:+.2f}%")
         print(f"  Beats random in: {llm_stats['beats_random_percent']:.1f}% of runs")
         print(f"  Effect size: {llm_stats['effect_size']:+.3f} (Cohen's d)")

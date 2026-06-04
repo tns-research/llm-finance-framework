@@ -16,8 +16,9 @@ class PerformanceTracker:
     previously scattered throughout the trading engine.
     """
 
-    def __init__(self):
+    def __init__(self, symbol_name: str = "S&P 500 Index"):
         """Initialize performance tracking state"""
+        self.symbol_name = symbol_name
         # Core performance metrics
         self.cumulative_return = 0.0
         self.index_cumulative_return = 0.0
@@ -85,7 +86,7 @@ class PerformanceTracker:
             return (
                 "No trades executed yet.\n"
                 "Strategy cumulative return so far  0.00 percent.\n"
-                "S and P 500 cumulative return so far  0.00 percent.\n"
+                f"{self.symbol_name} cumulative return so far  0.00 percent.\n"
                 "BUY 0, HOLD 0, SELL 0.\n"
                 "Win rate undefined."
             )
@@ -96,7 +97,7 @@ class PerformanceTracker:
 
             return (
                 f"Total strategy return so far  {self.cumulative_return:.2f} percent.\n"
-                f"Total S and P 500 return so far  {self.index_cumulative_return:.2f} percent.\n"
+                f"Total {self.symbol_name} return so far  {self.index_cumulative_return:.2f} percent.\n"
                 f"You are {outperform_word} the index by {edge:.2f} percent.\n"
                 f"Number of decisions so far  {self.decision_count} "
                 f"(BUY {self.buy_count}, HOLD {self.hold_count}, SELL {self.sell_count}).\n"

@@ -356,92 +356,255 @@ def create_decision_pattern_plots(
     print(f"\n[INFO] Decision pattern plots saved to: {output_path}")
 
 
-def analyze_market_regimes_for_decisions(parsed_df: pd.DataFrame) -> Dict:
+def analyze_indicator_specific_performance(
+    parsed_df: pd.DataFrame, features_df: pd.DataFrame
+) -> Dict[str, Dict]:
     """
-    Analyze how decision-making performs across different market regimes.
-    This complements the statistical risk analysis with decision-specific insights.
+    Analyze LLM performance conditioned on indicator signals.
+
+    Returns performance metrics when indicators give signals vs when they don't.
 
     Args:
-        parsed_df: Parsed trading data with decisions and returns
+        parsed_df: Parsed LLM decisions with dates and strategy_returns
+        features_df: Technical indicators data
 
     Returns:
-        Dict with regime-specific decision analysis
+        Dict with indicator-specific performance analysis
     """
-    if "decision" not in parsed_df.columns or "next_return_1d" not in parsed_df.columns:
-        return {}
+    results = {}
 
-    # First get the basic regime classification
-    from .statistical_validation import analyze_market_regimes
+    # Define indicators and their signal functions
+    indicators = {
+        "RSI": {
+            "signal_func": lambda df: (df["rsi_14"] < 30) | (df["rsi_14"] > 70),
+            "description": "Oversold (<30) or Overbought (>70)",
+        },
+        "MACD": {
+            "signal_func": lambda df: df["macd_histogram"] > 0,
+            "description": "Bullish momentum (histogram > 0)",
+        },
+        "Stochastic": {
+            "signal_func": lambda df: (df["stoch_k"] < 20) | (df["stoch_k"] > 80),
+            "description": "Oversold (<20) or Overbought (>80)",
+        },
+        "Bollinger": {
+            "signal_func": lambda df: (df["close"] <= df["bb_lower"])
+            | (df["close"] >= df["bb_upper"]),
+            "description": "Price at bands (breakout signals)",
+        },
+        "Momentum": {
+            "signal_func": lambda df: df["ma20_pct"] > 0,
+            "description": "Positive 20-day momentum",
+        },
+        "Volatility": {
+            "signal_func": lambda df: df["vol20_annualized"]
+            > df["vol20_annualized"].quantile(0.8),
+            "description": "High volatility periods (top 20%)",
+        },
+    }
 
-    regime_analysis = analyze_market_regimes(parsed_df)
+    for indicator_name, config in indicators.items():
+        try:
+            signal_func = config["signal_func"]
 
-    if not regime_analysis:
-        return {}
+            # Align data by date
+            parsed_dates = set(parsed_df["date"])
+            features_dates = set(features_df["date"])
+            common_dates = parsed_dates & features_dates
 
-    # Now analyze decisions within each regime
-    decisions = parsed_df["decision"].values
-    regime_decisions = {}
+            if not common_dates:
+                results[indicator_name] = {
+                    "error": "No overlapping dates between parsed data and features"
+                }
+                continue
 
-    # Classify market regimes (duplicate logic for now - could be refactored)
-    market_returns = parsed_df["next_return_1d"].values
-    rolling_vol = pd.Series(market_returns).rolling(20).std() * np.sqrt(252)
-    vol_median = rolling_vol.median()
-    vol_high = rolling_vol.quantile(0.75)
+            # Filter to common dates and sort
+            parsed_aligned = parsed_df[parsed_df["date"].isin(common_dates)].copy()
+            features_aligned = features_df[
+                features_df["date"].isin(common_dates)
+            ].copy()
 
-    regimes = []
-    for vol in rolling_vol:
-        if pd.isna(vol):
-            regimes.append("unknown")
-        elif vol > vol_high:
-            regimes.append("high_volatility")
-        elif vol > vol_median:
-            regimes.append("moderate_volatility")
-        else:
-            regimes.append("low_volatility")
+            parsed_aligned = parsed_aligned.sort_values("date")
+            features_aligned = features_aligned.sort_values("date")
 
-    # Decision analysis by regime
-    for regime in ["low_volatility", "moderate_volatility", "high_volatility"]:
-        regime_mask = np.array(regimes) == regime
-        if np.any(regime_mask):
-            regime_decisions_list = decisions[regime_mask]
+            # Get indicator signals (boolean array corresponding to aligned data)
+            signals = signal_func(features_aligned)
 
-            buy_count = np.sum(regime_decisions_list == "BUY")
-            hold_count = np.sum(regime_decisions_list == "HOLD")
-            sell_count = np.sum(regime_decisions_list == "SELL")
-            total_decisions = len(regime_decisions_list)
+            # Calculate performance when indicator signals
+            # Use boolean indexing with reset indices to avoid alignment issues
+            signal_mask = signals.reset_index(drop=True)
+            parsed_reset = parsed_aligned.reset_index(drop=True)
 
-            regime_decisions[regime] = {
-                "decision_distribution": {
-                    "BUY": int(buy_count),
-                    "HOLD": int(hold_count),
-                    "SELL": int(sell_count),
-                },
-                "decision_percentages": {
-                    "BUY": float(buy_count / total_decisions * 100),
-                    "HOLD": float(hold_count / total_decisions * 100),
-                    "SELL": float(sell_count / total_decisions * 100),
-                },
+            signal_returns = parsed_reset.loc[signal_mask, "strategy_return"]
+            no_signal_returns = parsed_reset.loc[~signal_mask, "strategy_return"]
+
+            # Calculate metrics
+            total_days = len(parsed_aligned)
+            signal_days = signals.sum()
+
+            if len(signal_returns) > 0 and len(no_signal_returns) > 0:
+                # Calculate cumulative returns
+                signal_cum_return = (1 + signal_returns).prod() - 1
+                no_signal_cum_return = (1 + no_signal_returns).prod() - 1
+
+                results[indicator_name] = {
+                    "signal_days": int(signal_days),
+                    "total_days": total_days,
+                    "signal_percentage": signal_days / total_days * 100,
+                    "llm_return_when_signal": float(signal_cum_return),
+                    "llm_return_when_no_signal": float(no_signal_cum_return),
+                    "signal_win_rate": float((signal_returns > 0).mean()),
+                    "no_signal_win_rate": float((no_signal_returns > 0).mean()),
+                    "performance_differential": float(
+                        signal_cum_return - no_signal_cum_return
+                    ),
+                    "signal_avg_daily_return": float(signal_returns.mean()),
+                    "no_signal_avg_daily_return": float(no_signal_returns.mean()),
+                    "description": config["description"],
+                }
+            else:
+                results[indicator_name] = {
+                    "error": "Insufficient data for signal/no-signal analysis"
+                }
+
+        except Exception as e:
+            results[indicator_name] = {"error": str(e)}
+
+    return results
+
+
+def analyze_llm_indicator_alignment(
+    parsed_df: pd.DataFrame, features_df: pd.DataFrame
+) -> Dict:
+    """
+    Analyze how well LLM decisions align with key technical indicators.
+
+    Returns alignment statistics for major technical indicators.
+    """
+    results = {}
+
+    # Key indicators to analyze with their signal functions
+    indicators = {
+        "RSI": {
+            "signal_func": lambda df: (df["rsi_14"] < 30) | (df["rsi_14"] > 70),
+            "description": "Oversold (<30) or Overbought (>70)",
+        },
+        "MACD": {
+            "signal_func": lambda df: df["macd_histogram"] > 0,
+            "description": "Bullish momentum (histogram > 0)",
+        },
+        "Stochastic": {
+            "signal_func": lambda df: (df["stoch_k"] < 20) | (df["stoch_k"] > 80),
+            "description": "Oversold (<20) or Overbought (>80)",
+        },
+        "Bollinger": {
+            "signal_func": lambda df: (df["close"] <= df["bb_lower"])
+            | (df["close"] >= df["bb_upper"]),
+            "description": "Price at bands (breakout signals)",
+        },
+        "Momentum": {
+            "signal_func": lambda df: df["ma20_pct"] > 0,
+            "description": "Positive 20-day momentum",
+        },
+        "Volatility": {
+            "signal_func": lambda df: df["vol20_annualized"]
+            > df["vol20_annualized"].quantile(0.8),
+            "description": "High volatility periods (top 20%)",
+        },
+    }
+
+    for indicator_name, config in indicators.items():
+        try:
+            # Get indicator signals
+            signal_func = config["signal_func"]
+
+            # Align data by date
+            parsed_dates = set(parsed_df["date"])
+            features_dates = set(features_df["date"])
+            common_dates = parsed_dates & features_dates
+
+            if not common_dates:
+                results[indicator_name] = {
+                    "error": "No overlapping dates between parsed data and features"
+                }
+                continue
+
+            # Filter to common dates
+            parsed_filtered = parsed_df[parsed_df["date"].isin(common_dates)].copy()
+            features_filtered = features_df[
+                features_df["date"].isin(common_dates)
+            ].copy()
+
+            # Sort by date to ensure alignment
+            parsed_filtered = parsed_filtered.sort_values("date")
+            features_filtered = features_filtered.sort_values("date")
+
+            # Get signals for aligned dates
+            indicator_signals = signal_func(features_filtered)
+
+            # Calculate alignment
+            llm_buy_signals = (parsed_filtered["decision"] == "BUY").sum()
+            llm_sell_signals = (parsed_filtered["decision"] == "SELL").sum()
+
+            # Simple alignment: LLM agrees with indicator direction
+            # BUY when indicator signals bullish, SELL when bearish
+            bullish_signals = indicator_signals.sum()
+            bearish_signals = len(indicator_signals) - bullish_signals
+
+            # Count agreements (simplified approach)
+            buy_agreements = min(bullish_signals, llm_buy_signals)
+            sell_agreements = min(bearish_signals, llm_sell_signals)
+            total_agreements = buy_agreements + sell_agreements
+            total_possible = bullish_signals + bearish_signals
+
+            alignment_rate = (
+                total_agreements / total_possible if total_possible > 0 else 0
+            )
+
+            results[indicator_name] = {
+                "alignment_rate": alignment_rate,
+                "total_signals": int(total_possible),
+                "agreements": int(total_agreements),
+                "bullish_signals": int(bullish_signals),
+                "bearish_signals": int(bearish_signals),
+                "llm_buy_signals": int(llm_buy_signals),
+                "llm_sell_signals": int(llm_sell_signals),
+                "description": config["description"],
             }
 
-    return {"regime_performance": regime_analysis, "regime_decisions": regime_decisions}
+        except Exception as e:
+            results[indicator_name] = {"error": f"Analysis failed: {str(e)}"}
+
+    return results
 
 
 def generate_pattern_analysis_report(
     parsed_df: pd.DataFrame, model_tag: str, output_path: str
 ):
     """
+
     Generate comprehensive markdown report combining all analyses.
 
+
+
     Args:
+
         parsed_df: DataFrame with all decision and outcome data
+
         model_tag: Name of the model
+
         output_path: Path to save the markdown report
+
     """
+
     # Run analyses
+
     decision_analysis = analyze_decisions_after_outcomes(parsed_df)
+
     duration_analysis = analyze_position_duration_stats(parsed_df)
 
     # Build report content
+
     report_lines = [
         f"# Decision Pattern Analysis Report - {model_tag}",
         "",
@@ -457,9 +620,13 @@ def generate_pattern_analysis_report(
     ]
 
     # Decision analysis results
+
     if "error" in decision_analysis:
+
         report_lines.append(f"**Error:** {decision_analysis['error']}")
+
     else:
+
         report_lines.extend(
             [
                 f"**Total Decisions Analyzed:** {decision_analysis['total_decisions']}",
@@ -471,8 +638,11 @@ def generate_pattern_analysis_report(
         )
 
         # After wins
+
         if decision_analysis["decisions_after_wins"]:
+
             wins = decision_analysis["decisions_after_wins"]
+
             report_lines.extend(
                 [
                     "### Decisions After Wins",
@@ -486,8 +656,11 @@ def generate_pattern_analysis_report(
             )
 
         # After losses
+
         if decision_analysis["decisions_after_losses"]:
+
             losses = decision_analysis["decisions_after_losses"]
+
             report_lines.extend(
                 [
                     "### Decisions After Losses",
@@ -501,13 +674,17 @@ def generate_pattern_analysis_report(
             )
 
         # Statistical test
+
         if decision_analysis["chi_square_test"]:
+
             chi_test = decision_analysis["chi_square_test"]
+
             significance_text = (
                 "**statistically significant**"
                 if chi_test["significant"]
                 else "not statistically significant"
             )
+
             report_lines.extend(
                 [
                     "### Statistical Independence Test",
@@ -522,18 +699,25 @@ def generate_pattern_analysis_report(
             )
 
             if chi_test["significant"]:
+
                 report_lines.append("> [!IMPORTANT]")
+
                 report_lines.append(
                     "> The model's decision-making **is significantly influenced** by previous outcomes. "
                 )
+
                 report_lines.append(
                     "> This suggests the model adapts its strategy based on recent performance."
                 )
+
             else:
+
                 report_lines.append("> [!NOTE]")
+
                 report_lines.append(
                     "> The model's decisions appear **independent** of previous outcomes. "
                 )
+
                 report_lines.append(
                     "> This suggests consistent strategy regardless of recent wins/losses."
                 )
@@ -550,6 +734,7 @@ def generate_pattern_analysis_report(
     )
 
     # Duration analysis results
+
     report_lines.extend(
         [
             f"**Total Position Changes:** {duration_analysis['total_position_changes']}",
@@ -561,10 +746,15 @@ def generate_pattern_analysis_report(
     )
 
     # By decision type
+
     for decision in ["BUY", "HOLD", "SELL"]:
+
         stats_key = f"{decision}_stats"
+
         if duration_analysis[stats_key]:
+
             stats = duration_analysis[stats_key]
+
             report_lines.extend(
                 [
                     f"### {decision} Positions",
@@ -578,8 +768,11 @@ def generate_pattern_analysis_report(
             )
 
     # Longest streak
+
     if duration_analysis["longest_streak"]:
+
         streak = duration_analysis["longest_streak"]
+
         report_lines.extend(
             [
                 "### Longest Position Streak",
@@ -590,6 +783,7 @@ def generate_pattern_analysis_report(
         )
 
     # Add visualization
+
     report_lines.extend(
         [
             "---",
@@ -600,11 +794,12 @@ def generate_pattern_analysis_report(
     )
 
     # Determine relative path to plot
-    report_dir = os.path.dirname(output_path)
     plots_filename = f"{model_tag}_decision_patterns.png"
 
     # Try to find plots directory relative to report
+
     # Assuming report is in results/analysis/ and plots in results/plots/
+
     relative_plot_path = os.path.join("..", "plots", plots_filename)
 
     report_lines.extend(
@@ -615,8 +810,11 @@ def generate_pattern_analysis_report(
     )
 
     # Write report
+
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
     with open(output_path, "w", encoding="utf-8") as f:
+
         f.write("\n".join(report_lines))
 
     print(f"\n[INFO] Pattern analysis report saved to: {output_path}")
