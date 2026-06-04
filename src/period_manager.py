@@ -7,7 +7,7 @@ the duplicated logic for weekly, monthly, quarterly, and yearly periods.
 
 import os
 from datetime import datetime
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 
 import pandas as pd
 
@@ -37,17 +37,12 @@ class PeriodManager:
         """
         self.memory_manager = memory_manager
         self.config_manager = config_manager or ConfigurationManager()
+        self.periods = ("weekly", "monthly", "quarterly", "yearly")
         self.stats: Dict[str, PeriodStats] = {
-            "weekly": PeriodStats(),
-            "monthly": PeriodStats(),
-            "quarterly": PeriodStats(),
-            "yearly": PeriodStats(),
+            period: PeriodStats() for period in self.periods
         }
         self.last_dates: Dict[str, Optional[datetime]] = {
-            "weekly": None,
-            "monthly": None,
-            "quarterly": None,
-            "yearly": None,
+            period: None for period in self.periods
         }
 
     def update_stats(self, period: str, **kwargs):
@@ -196,6 +191,9 @@ class PeriodManager:
         router_model: str,
         model_tag: str,
     ):
+        print(
+            f"[DEBUG] check_all_periods called with current_date={current_date}, last_date={last_date}"
+        )
         """
         Check all period boundaries and generate summaries as needed.
 
@@ -208,7 +206,14 @@ class PeriodManager:
             model_tag: Model tag for identification
         """
         for period in self.stats.keys():
-            if self.should_summarize_period(period, current_date, last_date):
+            should_summarize = self.should_summarize_period(
+                period, current_date, last_date
+            )
+            print(
+                f"[DEBUG] Period check: {period}, should_summarize={should_summarize}, current_date={current_date}, last_date={last_date}"
+            )
+            if should_summarize:
+                print(f"[DEBUG] Generating summary for {period}")
                 self.generate_period_summary(period, last_date, router_model, model_tag)
                 self.last_dates[period] = last_date
 

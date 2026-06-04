@@ -5,17 +5,11 @@ Unified memory management system that replaces the duplicated memory logic
 across weekly, monthly, quarterly, and yearly periods.
 """
 
-import os
 from collections import defaultdict
-from datetime import datetime
 from typing import Dict, List, Optional
 
-import pandas as pd
-
-from .config_compat import ENABLE_TECHNICAL_INDICATORS
 from .memory_classes import MemoryItem, PeriodConfig
 from .reporting import (
-    compute_period_technical_stats,
     format_period_technical_indicators,
 )
 

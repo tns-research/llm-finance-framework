@@ -9,12 +9,16 @@ Provides rigorous statistical testing for LLM trading strategies including:
 """
 
 import json
-import os
-from typing import Dict, Optional, Tuple
+import logging
+from typing import Dict, Optional
 
 import numpy as np
 import pandas as pd
 from scipy import stats
+
+from .constants import TRADING_DAYS_PER_YEAR, VOL_WINDOW
+
+logger = logging.getLogger(__name__)
 
 
 def bootstrap_sharpe_comparison(
@@ -41,7 +45,9 @@ def bootstrap_sharpe_comparison(
         """Calculate Sharpe ratio (annualized assuming daily returns)"""
         if len(returns) == 0 or returns.std() == 0:
             return 0.0
-        return (returns.mean() / returns.std()) * np.sqrt(252)  # Annualize
+        return (returns.mean() / returns.std()) * np.sqrt(
+            TRADING_DAYS_PER_YEAR
+        )  # Annualize
 
     # Observed statistics
     observed_strategy_sharpe = sharpe_ratio(strategy_returns)
@@ -117,7 +123,7 @@ def out_of_sample_validation(
     """
     try:
         split_date = pd.to_datetime(split_date)
-    except:
+    except Exception:
         return {"error": f"Invalid split_date format: {split_date}"}
 
     # Split data
@@ -143,7 +149,11 @@ def out_of_sample_validation(
         total_return = returns.sum()
         mean_return = returns.mean()
         volatility = returns.std()
-        sharpe = (mean_return / volatility * np.sqrt(252)) if volatility > 0 else 0
+        sharpe = (
+            (mean_return / volatility * np.sqrt(TRADING_DAYS_PER_YEAR))
+            if volatility > 0
+            else 0
+        )
         win_rate = (returns > 0).mean()
 
         # Drawdown analysis
@@ -283,28 +293,28 @@ def comprehensive_statistical_validation(
 
     # Out-of-sample validation
     if split_date:
-        print(f"Running out-of-sample validation with split date: {split_date}")
+        logger.info("Running out-of-sample validation with split date: %s", split_date)
         oos_results = out_of_sample_validation(parsed_df, split_date)
         results["out_of_sample_validation"] = oos_results
 
         if "error" in oos_results:
-            print(f"Warning: Out-of-sample validation failed: {oos_results['error']}")
+            logger.warning("Out-of-sample validation failed: %s", oos_results["error"])
         else:
-            print("✓ Out-of-sample validation completed")
+            logger.info("Out-of-sample validation completed")
 
     # Bootstrap testing vs benchmark
     if benchmark_returns is not None:
-        print("Running bootstrap Sharpe ratio comparison...")
+        logger.info("Running bootstrap Sharpe ratio comparison...")
         strategy_returns = parsed_df["strategy_return"].values
 
         bootstrap_results = bootstrap_sharpe_comparison(
             strategy_returns, benchmark_returns, n_bootstrap=5000
         )
         results["bootstrap_vs_benchmark"] = bootstrap_results
-        print("✓ Bootstrap comparison completed")
+        logger.info("Bootstrap comparison completed")
     else:
         # Default: compare vs index returns
-        print("Running bootstrap comparison vs index returns...")
+        logger.info("Running bootstrap comparison vs index returns...")
         strategy_returns = parsed_df["strategy_return"].values
         index_returns = parsed_df["next_return_1d"].values
 
@@ -312,7 +322,7 @@ def comprehensive_statistical_validation(
             strategy_returns, index_returns, n_bootstrap=5000
         )
         results["bootstrap_vs_index"] = bootstrap_results
-        print("✓ Bootstrap comparison vs index completed")
+        logger.info("Bootstrap comparison vs index completed")
 
     # Comprehensive decision analysis (BUY, HOLD, SELL)
     decision_analysis = analyze_decision_effectiveness(parsed_df)
@@ -365,9 +375,13 @@ def analyze_decision_effectiveness(parsed_df: pd.DataFrame) -> Dict:
             total_return = np.sum(returns)
 
             # Risk metrics
-            volatility = np.std(returns) * np.sqrt(252) if len(returns) > 1 else 0
+            volatility = (
+                np.std(returns) * np.sqrt(TRADING_DAYS_PER_YEAR)
+                if len(returns) > 1
+                else 0
+            )
             sharpe = (
-                avg_return / np.std(returns) * np.sqrt(252)
+                avg_return / np.std(returns) * np.sqrt(TRADING_DAYS_PER_YEAR)
                 if np.std(returns) > 0
                 else 0
             )
@@ -391,7 +405,9 @@ def analyze_decision_effectiveness(parsed_df: pd.DataFrame) -> Dict:
                 "max_drawdown": round(max_drawdown, 4),
                 "market_avg_return": round(market_avg_return, 4),
                 "excess_return": round(excess_return, 4),
-                "excess_return_annualized": round(excess_return * 252, 2),
+                "excess_return_annualized": round(
+                    excess_return * TRADING_DAYS_PER_YEAR, 2
+                ),
             }
 
     # Decision distribution
@@ -412,9 +428,16 @@ def analyze_decision_effectiveness(parsed_df: pd.DataFrame) -> Dict:
         "overall_win_rate": round(np.mean(all_returns > 0) * 100, 2),
         "overall_avg_return": round(np.mean(all_returns), 4),
         "overall_total_return": round(np.sum(all_returns), 2),
-        "overall_volatility": round(np.std(all_returns) * np.sqrt(252), 4),
+        "overall_volatility": round(
+            np.std(all_returns) * np.sqrt(TRADING_DAYS_PER_YEAR), 4
+        ),
         "overall_sharpe": (
-            round(np.mean(all_returns) / np.std(all_returns) * np.sqrt(252), 3)
+            round(
+                np.mean(all_returns)
+                / np.std(all_returns)
+                * np.sqrt(TRADING_DAYS_PER_YEAR),
+                3,
+            )
             if np.std(all_returns) > 0
             else 0
         ),
@@ -466,48 +489,19 @@ def analyze_decision_effectiveness(parsed_df: pd.DataFrame) -> Dict:
     return results
 
 
-def evaluate_hold_decisions_dual_criteria(parsed_df: pd.DataFrame) -> Dict:
+def _score_hold_decisions(hold_data: pd.DataFrame, vol_p75: float):
+    """Score each HOLD row on volatility-adjusted performance.
+
+    For every HOLD row, simulate the BUY/SELL alternatives and award a
+    volatility-adjusted score (1.0 / 0.5 / 0.3 / 0) plus a binary risk-avoidance
+    flag. ``vol_p75`` is the 75th percentile of the full-sample rolling
+    volatility (the high-volatility cutoff). Returns the two parallel score
+    lists in HOLD-row order.
     """
-    Evaluate HOLD decisions using dual criteria:
-    1. Quiet market success (<0.2% moves)
-    2. Contextual decision correctness (volatility, regime changes, uncertainty)
-    """
-    hold_decisions = parsed_df[parsed_df["decision"] == "HOLD"].copy()
-
-    if len(hold_decisions) == 0:
-        return {"note": "No HOLD decisions to evaluate"}
-
-    # Add rolling calculations for context analysis
-    parsed_df_copy = parsed_df.copy()
-    parsed_df_copy["market_volatility_20d"] = (
-        parsed_df_copy["next_return_1d"].rolling(20).std()
-    )
-    parsed_df_copy["market_trend_10d"] = (
-        parsed_df_copy["next_return_1d"].rolling(10).mean()
-    )
-    parsed_df_copy["regime_change"] = (
-        parsed_df_copy["market_trend_10d"].diff().abs() > 0.001
-    )
-
-    # Filter to HOLD decisions
-    hold_data = parsed_df_copy[parsed_df_copy["decision"] == "HOLD"]
-
-    # ===== CRITERION 1: QUIET MARKET SUCCESS =====
-    quiet_threshold = 0.002  # 0.2% very quiet market
-    risk_avoidance_threshold = 0.02  # 2% significant loss to avoid
-    market_returns = hold_data["next_return_1d"]
-    quiet_markets = market_returns.abs() < quiet_threshold
-
-    quiet_success_rate = quiet_markets.mean()
-    quiet_success_count = quiet_markets.sum()
-
-    # ===== CRITERION 2: RELATIVE PERFORMANCE ANALYSIS =====
-    # Compare HOLD performance vs directional bets in similar conditions
-
     relative_performance_scores = []
     risk_avoidance_scores = []
 
-    for idx, row in hold_data.iterrows():
+    for _, row in hold_data.iterrows():
         # Get market conditions for this HOLD decision
         vol_level = (
             row["market_volatility_20d"]
@@ -531,7 +525,7 @@ def evaluate_hold_decisions_dual_criteria(parsed_df: pd.DataFrame) -> Dict:
 
         # Score based on volatility-adjusted performance
         vol_adjusted_score = 0
-        if vol_level > parsed_df_copy["market_volatility_20d"].quantile(0.75):
+        if vol_level > vol_p75:
             # High volatility - HOLD gets credit for avoiding risk
             if risk_avoided:
                 vol_adjusted_score = 1.0  # Successfully avoided loss
@@ -546,6 +540,50 @@ def evaluate_hold_decisions_dual_criteria(parsed_df: pd.DataFrame) -> Dict:
 
         relative_performance_scores.append(vol_adjusted_score)
         risk_avoidance_scores.append(1.0 if risk_avoided else 0.0)
+
+    return relative_performance_scores, risk_avoidance_scores
+
+
+def evaluate_hold_decisions_dual_criteria(parsed_df: pd.DataFrame) -> Dict:
+    """
+    Evaluate HOLD decisions using dual criteria:
+    1. Quiet market success (<0.2% moves)
+    2. Contextual decision correctness (volatility, regime changes, uncertainty)
+    """
+    hold_decisions = parsed_df[parsed_df["decision"] == "HOLD"].copy()
+
+    if len(hold_decisions) == 0:
+        return {"note": "No HOLD decisions to evaluate"}
+
+    # Add rolling calculations for context analysis
+    parsed_df_copy = parsed_df.copy()
+    parsed_df_copy["market_volatility_20d"] = (
+        parsed_df_copy["next_return_1d"].rolling(VOL_WINDOW).std()
+    )
+    parsed_df_copy["market_trend_10d"] = (
+        parsed_df_copy["next_return_1d"].rolling(10).mean()
+    )
+    parsed_df_copy["regime_change"] = (
+        parsed_df_copy["market_trend_10d"].diff().abs() > 0.001
+    )
+
+    # Filter to HOLD decisions
+    hold_data = parsed_df_copy[parsed_df_copy["decision"] == "HOLD"]
+
+    # ===== CRITERION 1: QUIET MARKET SUCCESS =====
+    quiet_threshold = 0.002  # 0.2% very quiet market
+    market_returns = hold_data["next_return_1d"]
+    quiet_markets = market_returns.abs() < quiet_threshold
+
+    quiet_success_rate = quiet_markets.mean()
+    quiet_success_count = quiet_markets.sum()
+
+    # ===== CRITERION 2: RELATIVE PERFORMANCE ANALYSIS =====
+    # Compare HOLD performance vs directional bets in similar conditions
+    vol_p75 = parsed_df_copy["market_volatility_20d"].quantile(0.75)
+    relative_performance_scores, risk_avoidance_scores = _score_hold_decisions(
+        hold_data, vol_p75
+    )
 
     # Calculate new metrics
     avg_relative_performance = (
@@ -823,9 +861,14 @@ def calculate_var_and_stress_tests(
             "returns": scenario_returns,
             "cumulative": cumulative,
             "total_return": cumulative[-1] if len(cumulative) > 0 else 0,
-            "volatility": np.std(scenario_returns) * np.sqrt(252),  # Annualized
+            "volatility": np.std(scenario_returns)
+            * np.sqrt(TRADING_DAYS_PER_YEAR),  # Annualized
             "sharpe": (
-                (np.mean(scenario_returns) / np.std(scenario_returns) * np.sqrt(252))
+                (
+                    np.mean(scenario_returns)
+                    / np.std(scenario_returns)
+                    * np.sqrt(TRADING_DAYS_PER_YEAR)
+                )
                 if np.std(scenario_returns) > 0
                 else 0
             ),
@@ -834,7 +877,7 @@ def calculate_var_and_stress_tests(
     results["stress_tests"] = stress_results
 
     # Additional risk metrics
-    results["returns_volatility"] = np.std(returns) * np.sqrt(252)
+    results["returns_volatility"] = np.std(returns) * np.sqrt(TRADING_DAYS_PER_YEAR)
     results["returns_skewness"] = stats.skew(returns)
     results["returns_kurtosis"] = stats.kurtosis(returns)
     results["max_drawdown"] = calculate_max_drawdown(returns)
@@ -881,13 +924,13 @@ def calculate_risk_attribution(
         beta = 0
 
     alpha = np.mean(strategy_returns) - beta * np.mean(market_returns)
-    alpha_annualized = alpha * 252  # Daily to annual
+    alpha_annualized = alpha * TRADING_DAYS_PER_YEAR  # Daily to annual
 
     correlation = np.corrcoef(strategy_returns, market_returns)[0, 1]
 
     # Risk decomposition
-    strategy_vol = np.std(strategy_returns) * np.sqrt(252)
-    market_vol = np.std(market_returns) * np.sqrt(252)
+    strategy_vol = np.std(strategy_returns) * np.sqrt(TRADING_DAYS_PER_YEAR)
+    market_vol = np.std(market_returns) * np.sqrt(TRADING_DAYS_PER_YEAR)
 
     systematic_risk = beta**2 * market_vol**2
     idiosyncratic_risk = strategy_vol**2 - systematic_risk
@@ -928,7 +971,9 @@ def analyze_market_regimes(parsed_df: pd.DataFrame) -> Dict:
     strategy_returns = parsed_df["strategy_return"].values
 
     # Calculate rolling volatility (20-day window)
-    rolling_vol = pd.Series(market_returns).rolling(20).std() * np.sqrt(252)
+    rolling_vol = pd.Series(market_returns).rolling(VOL_WINDOW).std() * np.sqrt(
+        TRADING_DAYS_PER_YEAR
+    )
     vol_median = rolling_vol.median()
     vol_high = rolling_vol.quantile(0.75)
 
@@ -955,15 +1000,19 @@ def analyze_market_regimes(parsed_df: pd.DataFrame) -> Dict:
             regime_results[regime] = {
                 "days": int(np.sum(regime_mask)),
                 "strategy_return": float(
-                    np.mean(regime_strategy_returns) * 252
+                    np.mean(regime_strategy_returns) * TRADING_DAYS_PER_YEAR
                 ),  # Annualized
-                "market_return": float(np.mean(regime_market_returns) * 252),
+                "market_return": float(
+                    np.mean(regime_market_returns) * TRADING_DAYS_PER_YEAR
+                ),
                 "excess_return": float(
                     (np.mean(regime_strategy_returns) - np.mean(regime_market_returns))
-                    * 252
+                    * TRADING_DAYS_PER_YEAR
                 ),
                 "win_rate": float(np.mean(regime_strategy_returns > 0) * 100),
-                "volatility": float(np.std(regime_strategy_returns) * np.sqrt(252)),
+                "volatility": float(
+                    np.std(regime_strategy_returns) * np.sqrt(TRADING_DAYS_PER_YEAR)
+                ),
             }
 
     # Find best and worst performing regimes
@@ -1124,7 +1173,7 @@ def save_validation_report(validation_results: Dict, output_path: str):
             # For any other types, try to convert to string as fallback
             try:
                 return str(obj)
-            except:
+            except Exception:
                 return f"<non-serializable: {type(obj).__name__}>"
 
     # Recursively convert all numpy types
@@ -1146,4 +1195,4 @@ def save_validation_report(validation_results: Dict, output_path: str):
     with open(output_path, "w") as f:
         json.dump(json_results, f, indent=2)
 
-    print(f"[INFO] Statistical validation report saved to: {output_path}")
+    logger.info("Statistical validation report saved to: %s", output_path)

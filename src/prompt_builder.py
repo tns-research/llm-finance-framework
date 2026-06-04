@@ -5,8 +5,6 @@ Handles dynamic prompt construction based on configuration.
 Extracted from the monolithic config.py file to separate business logic from configuration.
 """
 
-from typing import Any, Dict
-
 from .configuration_manager import ConfigurationManager
 
 
@@ -25,13 +23,21 @@ class PromptBuilder:
     def build_system_prompt(self) -> str:
         """Build the main system prompt based on current configuration"""
         flags = self.config_manager.get_feature_flags()
+        symbol_code, symbol_name = self.config_manager.get_symbol_info()
+        personality = self.config_manager.get_active_personality()
 
         prompt_parts = [
-            "You are a cautious but rational equity index hedge fund trader. Your role is to beat the S&P500.",
+            f"You are a {personality.description}. Your role is to beat the {symbol_name}.",
             "",
-            "Your task is to decide a trading action for the S and P 500 index for the next trading day based only on the information provided in the user message.",
+            f"Your task is to decide a trading action for the {symbol_name} for the next trading day based only on the information provided in the user message.",
+            "",
+            f"Behavioral profile: {personality.bias_description}",
             "",
         ]
+
+        # Chain of thought instructions (placed after personality profile for emphasis)
+        if flags["ENABLE_CHAIN_OF_THOUGHT"]:
+            prompt_parts.append(self._build_chain_of_thought_instructions())
 
         # Add technical indicators description
         prompt_parts.append(self._build_technical_indicators_description())
@@ -44,14 +50,9 @@ class PromptBuilder:
 
         return "\n".join(prompt_parts).strip()
 
-    def build_period_summary_prompt(
-        self, period_name: str, stats: Dict[str, Any]
-    ) -> str:
+    def build_period_summary_prompt(self) -> str:
         """Build prompt for LLM-generated period summaries"""
-        flags = self.config_manager.get_feature_flags()
-
-        sections = self._build_period_summary_sections()
-        return sections
+        return self._build_period_summary_sections()
 
     def _build_technical_indicators_description(self) -> str:
         """Build technical indicators description section"""
@@ -115,8 +116,9 @@ class PromptBuilder:
 
         # Add strategic journal rule if enabled
         if flags["ENABLE_STRATEGIC_JOURNAL"]:
-            strategic_num = "6)" if flags["ENABLE_TECHNICAL_INDICATORS"] else "5)"
-            objective_num = "7)" if flags["ENABLE_TECHNICAL_INDICATORS"] else "6)"
+            # Strategic journal and objective rules follow sequentially after main rules
+            strategic_num = f"{hold_num + 1})"
+            objective_num = f"{hold_num + 2})"
 
             strategic_rule = f"""
 {strategic_num} You will also receive a section called "Strategic journal". This contains notes about your past decisions, the outcome of these decisions, and the evolution of your cumulative performance. Use this historical feedback to refine your decision making and improve your discipline over time. Become more careful after sequences of losses, and more critical of patterns that have not worked, but do not assume that any trend will always continue.
@@ -124,12 +126,29 @@ class PromptBuilder:
             rules.append(strategic_rule)
         else:
             # Add objective rule without strategic journal
-            objective_num = "5)" if flags["ENABLE_TECHNICAL_INDICATORS"] else "4)"
+            objective_num = f"{hold_num + 1})"
             objective_rule = f"""
 {objective_num} Your long run objective is to achieve a higher cumulative return than a simple buy and hold strategy on the index, while keeping risk and drawdowns at a reasonable level. Staying in cash for very long periods is also costly, because you then fail to capture market moves. You must balance caution with the need to take directional risk when the data supports it."""
             rules.append(objective_rule)
 
         return "\n".join(rules)
+
+    def _build_chain_of_thought_instructions(self) -> str:
+        """Build chain of thought reasoning instructions section"""
+        return """
+Before making your trading decision, follow this structured analytical process:
+
+1. Market Regime Assessment: Analyze current market conditions, volatility levels, and overall trend direction using the provided technical indicators and price data.
+
+2. Technical Indicator Analysis: Evaluate RSI, MACD, Stochastic, and Bollinger Bands for momentum signals, overbought/oversold conditions, and potential reversal patterns.
+
+3. Risk Assessment: Consider the 20-day volatility, recent drawdown patterns, and position sizing implications of different actions.
+
+4. Strategic Considerations: Factor in recent performance history, market timing, and the balance between capital preservation and alpha generation.
+
+5. Decision Synthesis: Combine your analysis into a final BUY/HOLD/SELL recommendation with supporting rationale.
+
+Provide your step-by-step reasoning in 3-4 sentences, clearly showing your analytical process before stating your final decision."""
 
     def _build_output_format(self) -> str:
         """Build the output format section based on feature flags"""
@@ -139,26 +158,46 @@ class PromptBuilder:
             "",
             "Output format (strict):",
             "",
-            "Line 1 must contain exactly one word in capital letters: BUY or HOLD or SELL",
-            "Line 2 must contain a number between 0 and 1 representing the probability that your decision will be profitable for the next trading day",
-            "Line 3 must contain a short explanation of today's decision, in 2 to 3 sentences, based on the current market data and basic risk considerations.",
         ]
 
-        line_count = 3
-        labels_to_skip = ["Explanation"]
+        if flags["ENABLE_CHAIN_OF_THOUGHT"]:
+            # Chain of thought enabled: reasoning becomes Line 1, shifts all other lines
+            output_parts.extend(
+                [
+                    "Line 1 must contain your chain of thought reasoning process in 3-4 sentences.",
+                    "Line 2 must contain exactly one word in capital letters: BUY or HOLD or SELL",
+                    "Line 3 must contain a number between 0 and 1 representing the probability",
+                    "Line 4 must contain a brief explanation of today's decision, in 1 to 2 sentences.",
+                ]
+            )
+            line_count = 4
+            labels_to_skip = ["Reasoning", "Explanation"]
+        else:
+            # Original format for backward compatibility
+            output_parts.extend(
+                [
+                    "Line 1 must contain exactly one word in capital letters: BUY or HOLD or SELL",
+                    "Line 2 must contain a number between 0 and 1 representing the probability that your decision will be profitable for the next trading day",
+                    "Line 3 must contain a short explanation of today's decision, in 2 to 3 sentences, based on the current market data and basic risk considerations.",
+                ]
+            )
+            line_count = 3
+            labels_to_skip = ["Explanation"]
 
-        # Add strategic journal output if enabled
+        # Add strategic journal output if enabled (line numbers adjust based on chain of thought)
         if flags["ENABLE_STRATEGIC_JOURNAL"]:
+            line_num = line_count + 1
             output_parts.append(
-                'Line 4 must contain a "strategic journal" entry, in 2 to 3 sentences, that explicitly reacts to yesterday\'s decision and outcome, comments on your cumulative and relative performance so far, and explains how you plan to adjust your behavior in the future.'
+                f'Line {line_num} must contain a "strategic journal" entry, in 2 to 3 sentences, that explicitly reacts to yesterday\'s decision and outcome, comments on your cumulative and relative performance so far, and explains how you plan to adjust your behavior in the future.'
             )
             labels_to_skip.append("Journal")
             line_count += 1
 
-        # Add feeling log output if enabled
+        # Add feeling log output if enabled (line numbers adjust based on chain of thought)
         if flags["ENABLE_FEELING_LOG"]:
+            line_num = line_count + 1
             output_parts.append(
-                'Line 5 must contain a "feeling log", in 1 to 3 sentences, describing how you feel about the current situation and your performance (for example more cautious, more confident, frustrated, relieved), while keeping a professional and analytical tone.'
+                f'Line {line_num} must contain a "feeling log", in 1 to 3 sentences, describing how you feel about the current situation and your performance (for example more cautious, more confident, frustrated, relieved), while keeping a professional and analytical tone.'
             )
             labels_to_skip.append("Feeling")
             line_count += 1
