@@ -33,7 +33,8 @@ What you expected to happen instead.
 ## 📁 Configuration Used
 ```python
 # Paste relevant config.py settings or command used
-USE_DUMMY_MODEL = True  # or False
+LLM_PROVIDER = "dummy"  # or "openrouter" / "claude_code" / "claude_code_subagents"
+DATA_SOURCE = "vendored"  # or "csv" / "stooq"
 ACTIVE_EXPERIMENT = "baseline"  # or other
 TEST_MODE = True  # or False
 # ... other relevant settings
