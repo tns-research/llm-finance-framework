@@ -295,10 +295,13 @@ class TestPromptBuilder:
         """Test building basic system prompt"""
         manager = ConfigurationManager()
         manager.set_active_experiment("baseline")  # Minimal features
+        manager.set_active_personality(
+            "cautious"
+        )  # Explicit personality for test consistency
         builder = PromptBuilder(manager)
 
         prompt = builder.build_system_prompt()
-        assert "cautious but rational equity index hedge fund trader" in prompt
+        assert "cautious but rational financial asset trader" in prompt
         assert "BUY" in prompt
         assert "HOLD" in prompt
         assert "SELL" in prompt
@@ -319,7 +322,7 @@ class TestPromptBuilder:
         manager = ConfigurationManager()
         builder = PromptBuilder(manager)
 
-        prompt = builder.build_period_summary_prompt("Month", {})
+        prompt = builder.build_period_summary_prompt()
         assert "three clearly separated sections" in prompt
         assert "Explanation:" in prompt
         assert "Strategic journal:" in prompt
@@ -361,7 +364,7 @@ class TestBackwardCompatibility:
 
     def test_legacy_variables_exist(self):
         """Test that legacy global variables are available"""
-        from src.config_compat import (
+        from src.config import (
             DATA_END,
             DATA_START,
             ENABLE_STRATEGIC_JOURNAL,
@@ -386,7 +389,7 @@ class TestBackwardCompatibility:
 
     def test_experiment_suffix_matches(self):
         """Test that new and old suffix generation match"""
-        from src.config_compat import get_experiment_suffix
+        from src.config import get_experiment_suffix
         from src.configuration_manager import ConfigurationManager
 
         manager = ConfigurationManager()
@@ -397,7 +400,7 @@ class TestBackwardCompatibility:
 
     def test_config_summary_matches(self):
         """Test that new and old config summary match"""
-        from src.config_compat import get_current_config_summary
+        from src.config import get_current_config_summary
         from src.configuration_manager import ConfigurationManager
 
         manager = ConfigurationManager()
@@ -408,9 +411,11 @@ class TestBackwardCompatibility:
 
     def test_legacy_experiment_configs_exist(self):
         """Test that legacy EXPERIMENT_CONFIGS still exists"""
-        from src.config_compat import EXPERIMENT_CONFIGS
+        from src import config
+        from src.config import EXPERIMENT_CONFIGS
 
         assert isinstance(EXPERIMENT_CONFIGS, dict)
         assert "baseline" in EXPERIMENT_CONFIGS
         assert "memory_feeling" in EXPERIMENT_CONFIGS
-        assert len(EXPERIMENT_CONFIGS) == 6
+        # config must re-export config.py's authoritative table, not a copy.
+        assert EXPERIMENT_CONFIGS is config.EXPERIMENT_CONFIGS

@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from src.config_compat import (
+from src.config import (
     DATA_END,
     DATA_START,
     DEBUG_SHOW_FULL_PROMPT,
@@ -50,6 +50,7 @@ class TestConfigConsistency:
     def test_start_row_transferred(self):
         """Test that START_ROW is read from legacy config"""
         from src.config import START_ROW  # Import current value
+
         config_manager = ConfigurationManager()
 
         # Should have the field in new system
@@ -58,7 +59,8 @@ class TestConfigConsistency:
         # Should match current config value (whatever it is set to)
         assert config_manager._config.start_row == START_ROW
         # Test that the global variable is also set correctly
-        from src.config_compat import START_ROW as COMPAT_START_ROW
+        from src.config import START_ROW as COMPAT_START_ROW
+
         assert COMPAT_START_ROW == START_ROW
 
     def test_openrouter_api_base_transferred(self):

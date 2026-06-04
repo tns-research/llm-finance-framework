@@ -2,27 +2,92 @@
 # 🤖 LLM FINANCE EXPERIMENT CONFIGURATION
 # =============================================================================
 # This file contains all settings for the LLM trading strategy experiments.
+
+import logging
+import os  # For file existence checks
+import sys  # For CLI arg checks during validation
+
+import pandas as pd  # For date calculations
+
+# Validation runs at import (before the app configures logging), so warnings go
+# through logging.warning -- visible by default via the last-resort handler and
+# capturable once logging is set up. Informational startup banners stay on
+# print() because logging.info would be suppressed at import time.
+logger = logging.getLogger(__name__)
+
 #
 # 🚀 QUICK START GUIDE:
-#   1. For testing: Set USE_DUMMY_MODEL = True, keep other defaults
-#   2. For real experiments: Set USE_DUMMY_MODEL = False, add OpenRouter API key
-#   3. Choose experiment type with ACTIVE_EXPERIMENT
-#   4. Set TEST_MODE = False for full analysis (takes ~30 minutes)
+#   1. Choose your data source: DATA_SOURCE = "vendored" (default, offline) or "csv" or "stooq"
+#   2. Pick how decisions are generated: LLM_PROVIDER = "dummy" (free, no API, for testing)
+#   3. For real experiments: LLM_PROVIDER = "openrouter" (+ OPENROUTER_API_KEY) or "claude_code"
+#   4. Choose experiment type with ACTIVE_EXPERIMENT
+#   5. Choose trader personality with ACTIVE_PERSONALITY
+#   6. Enable chain of thought reasoning with ENABLE_CHAIN_OF_THOUGHT = True (works with any experiment)
+#   7. Set TEST_MODE = False for full analysis of the data range or True for testing
 #
-# 📋 COMMON USE CASES:
-#   • First time user: USE_DUMMY_MODEL = True, ACTIVE_EXPERIMENT = "baseline"
-#   • Memory testing: USE_DUMMY_MODEL = False, ACTIVE_EXPERIMENT = "memory_feeling"
-#   • Full research: USE_DUMMY_MODEL = False, TEST_MODE = False
+# 📋 COMMON USE CASES (USE_DUMMY_MODEL is derived from LLM_PROVIDER, never set it by hand):
+#   • First time user: DATA_SOURCE = "vendored", LLM_PROVIDER = "dummy", ACTIVE_EXPERIMENT = "baseline", ACTIVE_PERSONALITY = "cautious"
+#   • Memory testing: DATA_SOURCE = "vendored", LLM_PROVIDER = "openrouter", ACTIVE_EXPERIMENT = "memory_feeling", ACTIVE_PERSONALITY = "balanced"
+#   • Chain of thought: DATA_SOURCE = "vendored", LLM_PROVIDER = "claude_code", ACTIVE_EXPERIMENT = "memory_feeling", ENABLE_CHAIN_OF_THOUGHT = True, ACTIVE_PERSONALITY = "balanced"
+#   • Full research: DATA_SOURCE = "vendored", LLM_PROVIDER = "openrouter", TEST_MODE = False, ACTIVE_PERSONALITY = "aggressive"
 # =============================================================================
 
 # =============================================================================
 # 🔑 ESSENTIAL USER CONFIGURATION - START HERE!
 # =============================================================================
 
-# MODEL SELECTION
-# ---------------
-USE_DUMMY_MODEL = True  # Set to True for testing (no API key needed)
-# Set to False to run real LLM experiments via OpenRouter
+# MODEL / PROVIDER SELECTION
+# --------------------------
+# Pick how trading decisions are generated. This is the single knob to switch
+# between providers.
+#
+#   "dummy"                 -> random decisions, no API/CLI, no cost. For testing.
+#   "openrouter"            -> any model via OpenRouter HTTP API.
+#                              Needs OPENROUTER_API_KEY. Pay per token.
+#                              Best for large backtests (parallel, model variety).
+#   "claude_code"           -> Claude Code via your SUBSCRIPTION (no per-token cost),
+#                              single-shot. Needs the claude CLI logged in on this
+#                              machine. Best for small / high-quality experiments.
+#   "claude_code_subagents" -> Claude Code subscription, multi-agent: a lead PM
+#                              consults specialist analysts (see ANALYST_AGENTS)
+#                              before deciding. Richer, slower, costs more.
+#
+# Note on intended use: the Claude Code providers use the official headless CLI
+# against your subscription. Keep them for interactive-scale research (short
+# windows, few tickers). For high-volume automated backtests, use "openrouter".
+LLM_PROVIDER = "dummy"
+
+# Claude model used by the claude_code providers ("sonnet", "opus", "haiku",
+# or a full model id like "claude-sonnet-4-6").
+CLAUDE_CODE_MODEL = "sonnet"
+
+# Backward compatibility: legacy code and tests still read USE_DUMMY_MODEL.
+# It is now derived from LLM_PROVIDER (do not set it directly).
+USE_DUMMY_MODEL = LLM_PROVIDER == "dummy"
+
+# Specialist analysts for the "claude_code_subagents" provider. Each entry is a
+# subagent the lead PM can consult via the Task tool. Edit freely (add macro,
+# sentiment, ...). They reason only from the prompt data; web/tools are disabled.
+ANALYST_AGENTS = {
+    "technical_analyst": {
+        "description": "Reads price action, moving averages, RSI, MACD. Use for the technical picture.",
+        "prompt": (
+            "You are a technical analyst. From the market data given, assess trend, "
+            "momentum, and overbought/oversold conditions, then state a clear bias: "
+            "bullish, neutral, or bearish. Be concise (3 sentences max). Reason only "
+            "from the data provided; do not look anything up."
+        ),
+    },
+    "risk_analyst": {
+        "description": "Assesses volatility regime and downside risk. Use for the risk picture.",
+        "prompt": (
+            "You are a risk analyst. From the market data given, assess the "
+            "volatility regime and downside risk, then state a clear posture: "
+            "risk-on, neutral, or risk-off. Be concise (3 sentences max). Reason "
+            "only from the data provided; do not look anything up."
+        ),
+    },
+}
 
 # EXPERIMENT TYPE
 # ---------------
@@ -33,18 +98,87 @@ ACTIVE_EXPERIMENT = "memory_feeling"  # Choose experiment configuration:
 # - "dates_only": Calendar dates shown
 # - "dates_memory": Dates + memory
 # - "dates_full": Full context (dates + memory + feeling)
+# Note: Chain of thought reasoning is controlled by ENABLE_CHAIN_OF_THOUGHT toggle (independent of experiment)
 
-# DATA SETTINGS
-# -------------
-SYMBOL = "^GSPC"  # Stock/index symbol (^GSPC = S&P 500)
-DATA_START = "2015-01-01"  # Start date for historical data
-DATA_END = "2023-12-31"  # End date for historical data
+# TRADER PERSONALITY
+# ------------------
+ACTIVE_PERSONALITY = "balanced"  # Choose trader personality:
+# - "cautious": Conservative, risk-averse trading
+# - "aggressive": Bold, opportunity-focused trading
+# - "balanced": Systematic, balanced approach
+# - "momentum": Trend-following strategies
+# - "contrarian": Counter-trend strategies
 
-# TEST vs FULL RUN
-# ----------------
+# CHAIN OF THOUGHT REASONING
+# --------------------------
+ENABLE_CHAIN_OF_THOUGHT = True  # Enable structured analytical reasoning in prompts
+
+# =================================================================================
+# 🎯  DATA SOURCE SELECTION (Important Choice!)
+# =================================================================================
+DATA_SOURCE = (
+    "vendored"  # "vendored" (default: committed frozen snapshot, offline + deterministic)
+    # Other options: "stooq" (live fetch, needs apikey) or "csv" (your own local file)
+)
+
+# DATE RANGE (applies to both data sources)
+# -----------------------------------------
+# ⚠️  IMPORTANT: These dates set your RAW data range, but trading starts LATER!
+#
+# Due to technical indicator requirements, the system automatically removes
+# the first ~40 trading days where indicators are incomplete (contain NaN values).
+# This creates an automatic "warm-up buffer" before trading begins.
+#
+# Examples with DATA_START = "2015-01-01":
+#   Raw data starts: 2015-01-01 (first day of data)
+#   Trading actually starts: ~2015-03-01 (after ~40 trading days of buffer)
+#   Why? RSI needs 14+ days, MACD needs 35+ days, Bollinger Bands need 20+ days
+#
+# To start trading earlier, you could:
+#   Option A: Set DATA_START earlier (e.g., "2014-01-01")
+#   Option B: Use START_ROW to skip additional days beyond the buffer
+#   Option C: Accept that ~40-day buffer is required for reliable indicators
+#
+DATA_START = "2015-03-03"  # Raw data start (not actual trading start!)
+DATA_END = "2023-12-31"  # Raw data end
+
+# =================================================================================
+# 📈  STOOQ HISTORICAL DATA (live refresh option, needs an apikey)
+# =================================================================================
+# Symbol for Stooq API (only used when DATA_SOURCE = "stooq")
+STOOQ_SYMBOL = "SPY"  # SPY, QQQ, AAPL, MSFT, GOOGL, BTC-USD
+
+# =================================================================================
+# 📁  CSV DATA FILES (your own local dataset)
+# =================================================================================
+# Symbol for CSV data (only used when DATA_SOURCE = "csv")
+SYMBOL = "^GSPC"  # Stock symbol in CSV file
+CSV_DATA_PATH = "data/raw/sp500.csv"  # Path to your CSV file
+
+# =================================================================================
+# 📦  VENDORED SNAPSHOT (Default - frozen, offline, checksummed)
+# =================================================================================
+# Committed real SPY data so a clean clone runs offline and deterministically.
+# Verified against MANIFEST.json on load. See data/raw/PROVENANCE.md.
+VENDORED_DATA_PATH = "data/raw/spy_daily.csv"
+VENDORED_MANIFEST_PATH = "data/raw/MANIFEST.json"
+
+# =================================================================================
+# 🧪  TEST vs FULL RUN
+# =================================================================================
 TEST_MODE = True  # Set to True for quick tests, False for full experiments
-TEST_LIMIT = 40  # Number of days to run when TEST_MODE = True (test on at least 3 days)
+TEST_LIMIT = 5  # Number of days to run when TEST_MODE = True (test on at least 3 days)
 # Set TEST_MODE = False for complete ~2700 day analysis
+
+# =================================================================================
+# 🎲  REPRODUCIBILITY
+# =================================================================================
+# Seed for all stochastic components (the dummy model, statistical bootstraps).
+# Seeded once at the start of each run so a backtest replays identically. It is
+# recorded in results/RUN_MANIFEST.json alongside data checksum and dep versions.
+# See docs/REPRODUCIBILITY.md.
+RANDOM_SEED = 42
+
 
 # =================================================================================
 # 🎛️  EXPERIMENT FEATURES - EASY TOGGLES
@@ -72,12 +206,19 @@ DEBUG_SHOW_FULL_PROMPT = True
 
 # DATA SUBSET FOR TESTING
 # -----------------------
-# Start from a specific row in the dataset (useful for testing specific time periods)
-# None = use all available data
-# 30 = skip first 30 trading days (good for avoiding initial data issues)
-# 333 = start mid-dataset (test different market conditions)
-# WARNING: Should be < total dataset size (~2700 days)
-START_ROW = 333
+# Start from a specific row in the PROCESSED dataset (after automatic cleaning)
+# ⚠️  NOTE: Even START_ROW = 0 starts ~40 days after DATA_START!
+#
+# The system automatically removes ~40 trading days due to technical indicator
+# warm-up requirements. START_ROW is applied AFTER this automatic cleaning.
+#
+# Examples (assuming DATA_START = "2015-01-01"):
+# START_ROW = 0  → Trading starts ~2015-03-01 (after automatic 40-day buffer)
+# START_ROW = 30 → Trading starts ~2015-04-15 (buffer + 30 additional days)
+# START_ROW = 333 → Start mid-dataset for testing different market conditions
+#
+# WARNING: Effective start = DATA_START + ~40 trading days + START_ROW
+START_ROW = 0
 
 # LLM MODELS TO TEST
 # ------------------
@@ -97,9 +238,17 @@ LLM_MODELS = [
     #    "tag": "olmo-32b",
     #    "router_model": "allenai/olmo-3-32b-think",
     # },
+    # {
+    #    "tag": "gpt-oss-120b",
+    #    "router_model": "openai/gpt-oss-120b:free",
+    # },
+    # {
+    #    "tag": "gpt-oss-20b",
+    #    "router_model": "openai/gpt-oss-20b:free",
+    # },
     {
-        "tag": "gpt-oss-20b",
-        "router_model": "openai/gpt-oss-20b:free",
+        "tag": "deepseek-r1-0528",
+        "router_model": "deepseek/deepseek-r1-0528:free",
     },
     # {
     #     "tag": "claude",
@@ -202,6 +351,13 @@ EXPERIMENT_CONFIGS = {
         "ENABLE_STRATEGIC_JOURNAL": True,
         "ENABLE_FEELING_LOG": True,
     },
+    # --- CHAIN OF THOUGHT EXPERIMENTS ---
+    "chain_of_thought": {
+        "description": "Chain of thought reasoning: structured analytical steps (deprecated preset - use ENABLE_CHAIN_OF_THOUGHT toggle instead)",
+        "SHOW_DATE_TO_LLM": False,
+        "ENABLE_STRATEGIC_JOURNAL": False,
+        "ENABLE_FEELING_LOG": False,
+    },
 }
 
 # (ACTIVE_EXPERIMENT moved to top of file for easy access)
@@ -213,6 +369,7 @@ EXPERIMENT_CONFIGS = {
 _MANUAL_SHOW_DATE_TO_LLM = False
 _MANUAL_ENABLE_STRATEGIC_JOURNAL = False
 _MANUAL_ENABLE_FEELING_LOG = True
+_MANUAL_ENABLE_CHAIN_OF_THOUGHT = False
 _MANUAL_ENABLE_TECHNICAL_INDICATORS = False
 
 # Apply experiment config or use manual settings
@@ -221,20 +378,23 @@ if ACTIVE_EXPERIMENT and ACTIVE_EXPERIMENT in EXPERIMENT_CONFIGS:
     SHOW_DATE_TO_LLM = _config["SHOW_DATE_TO_LLM"]
     ENABLE_STRATEGIC_JOURNAL = _config["ENABLE_STRATEGIC_JOURNAL"]
     ENABLE_FEELING_LOG = _config["ENABLE_FEELING_LOG"]
+    # ENABLE_CHAIN_OF_THOUGHT is now a master toggle - don't override it from experiments
     print(f"[CONFIG] Active experiment: {ACTIVE_EXPERIMENT}")
     print(f"         {_config['description']}")
     print(
-        f"         dates={SHOW_DATE_TO_LLM}, memory={ENABLE_STRATEGIC_JOURNAL}, feeling={ENABLE_FEELING_LOG}, technical={ENABLE_TECHNICAL_INDICATORS}"
+        f"         dates={SHOW_DATE_TO_LLM}, memory={ENABLE_STRATEGIC_JOURNAL}, "
+        f"feeling={ENABLE_FEELING_LOG}, chain_of_thought={ENABLE_CHAIN_OF_THOUGHT} (master toggle), technical={ENABLE_TECHNICAL_INDICATORS}"
     )
 else:
     # Use manual settings
     SHOW_DATE_TO_LLM = _MANUAL_SHOW_DATE_TO_LLM
     ENABLE_STRATEGIC_JOURNAL = _MANUAL_ENABLE_STRATEGIC_JOURNAL
     ENABLE_FEELING_LOG = _MANUAL_ENABLE_FEELING_LOG
+    ENABLE_CHAIN_OF_THOUGHT = _MANUAL_ENABLE_CHAIN_OF_THOUGHT
     ENABLE_TECHNICAL_INDICATORS = _MANUAL_ENABLE_TECHNICAL_INDICATORS
     if ACTIVE_EXPERIMENT:
-        print(
-            f"[CONFIG] Warning: Unknown experiment '{ACTIVE_EXPERIMENT}', using manual settings"
+        logger.warning(
+            "Unknown experiment '%s', using manual settings", ACTIVE_EXPERIMENT
         )
 
 
@@ -245,13 +405,33 @@ else:
 if START_ROW is not None:
     estimated_dataset_days = 2700  # Approximate full dataset size
     if START_ROW >= estimated_dataset_days:
-        print(f"⚠️  WARNING: START_ROW ({START_ROW}) >= estimated dataset size ({estimated_dataset_days})")
-        print(f"    This may cause no data to be processed in full experiments!")
+        logger.warning(
+            "START_ROW (%s) >= estimated dataset size (%s); this may cause no data "
+            "to be processed in full experiments",
+            START_ROW,
+            estimated_dataset_days,
+        )
 
     # Additional check for TEST_MODE
     if TEST_MODE and START_ROW + TEST_LIMIT > estimated_dataset_days:
-        print(f"⚠️  WARNING: START_ROW ({START_ROW}) + TEST_LIMIT ({TEST_LIMIT}) > estimated dataset size")
-        print(f"    Test may not have enough data!")
+        logger.warning(
+            "START_ROW (%s) + TEST_LIMIT (%s) > estimated dataset size; test may "
+            "not have enough data",
+            START_ROW,
+            TEST_LIMIT,
+        )
+
+    # Warning about automatic buffer even with START_ROW = 0
+    if START_ROW == 0:
+        print(
+            "NOTE: START_ROW = 0 will still skip ~40 days due to technical indicator requirements"
+        )
+        print(
+            "    Effective trading start will be approximately 40 trading days after DATA_START"
+        )
+        print(
+            f"    With DATA_START = '{DATA_START}', expect trading to begin around {pd.to_datetime(DATA_START) + pd.Timedelta(days=40):%Y-%m-%d}"
+        )
 
 # Decision mapping
 # BUY  +1, HOLD 0, SELL -1
@@ -262,117 +442,84 @@ POSITION_MAP = {
 }
 
 
-# Build system prompt based on config flags
-def _build_system_prompt():
-    # Build technical indicators description based on ENABLE_TECHNICAL_INDICATORS
-    if ENABLE_TECHNICAL_INDICATORS:
-        technical_indicators_desc = """
-- 14-day Relative Strength Index (RSI) - momentum oscillator ranging from 0-100
-- MACD(12,26,9) - Moving Average Convergence Divergence with histogram
-- Stochastic Oscillator(14,3) - momentum indicator ranging from 0-100
-- Bollinger Bands(20,2) - volatility bands showing price extremes"""
-    else:
-        technical_indicators_desc = ""
+# Create a single ConfigurationManager instance seeded with this module's live values.
+from .configuration_manager import ConfigurationManager
 
-    base_rules = f"""You are a cautious but rational equity index hedge fund trader. Your role is to beat the S&P500.
-
-Your task is to decide a trading action for the S and P 500 index for the next trading day based only on the information provided in the user message.
-
-Technical indicators available include:
-- 20-day moving average momentum (trend strength)
-- 20-day annualized volatility (risk measure)
-- 5-day recent momentum (short-term trend){technical_indicators_desc}
-
-Rules for decision making:
-
-1) Use only the information in the input. Do not use any knowledge about what happens after the input date."""
-
-    # Build rules based on ENABLE_TECHNICAL_INDICATORS
-    if ENABLE_TECHNICAL_INDICATORS:
-        base_rules += """
-2) RSI measures momentum from 0-100, with >70 overbought and <30 oversold - look for divergences and reversals.
-3) MACD crossing above signal line suggests bullish momentum, below suggests bearish - histogram shows momentum strength.
-4) Stochastic Oscillator >80 is overbought, <20 is oversold - look for divergences from price action.
-5) Bollinger Bands squeeze indicates low volatility (potential breakout), expansion indicates high volatility.
-6) Choose exactly one of the following actions:
-   BUY  take a long position for the next day
-   HOLD stay in cash for the next day, out of the market
-   SELL take a short position for the next day
-7) Evaluate both expected return and risk. Do not take actions that imply extreme risk seeking.
-8) If the information is very unclear, HOLD is acceptable for that day, but you should avoid staying in HOLD for many consecutive days if the recent data shows strong and persistent directional signals."""
-    else:
-        base_rules += """
-2) Choose exactly one of the following actions:
-   BUY  take a long position for the next day
-   HOLD stay in cash for the next day, out of the market
-   SELL take a short position for the next day
-3) Evaluate both expected return and risk. Do not take actions that imply extreme risk seeking.
-4) If the information is very unclear, HOLD is acceptable for that day, but you should avoid staying in HOLD for many consecutive days if the recent data shows strong and persistent directional signals."""
-
-    # Adjust rule numbering based on technical indicators
-    strategic_rule_num = "6)" if ENABLE_TECHNICAL_INDICATORS else "5)"
-    objective_rule_num = "7)" if ENABLE_TECHNICAL_INDICATORS else "6)"
-
-    strategic_journal_rule = f"""
-{strategic_rule_num} You will also receive a section called "Strategic journal". This contains notes about your past decisions, the outcome of these decisions, and the evolution of your cumulative performance. Use this historical feedback to refine your decision making and improve your discipline over time. Become more careful after sequences of losses, and more critical of patterns that have not worked, but do not assume that any trend will always continue.
-{objective_rule_num} Your long run objective is to achieve a higher cumulative return than a simple buy and hold strategy on the index, while keeping risk and drawdowns at a reasonable level. Staying in cash for very long periods is also costly, because you then fail to capture market moves. You must balance caution with the need to take directional risk when the data supports it."""
-
-    # Adjust rule numbering for no strategic journal case
-    objective_rule_num_no_journal = "5)" if ENABLE_TECHNICAL_INDICATORS else "4)"
-
-    no_strategic_journal_rule = f"""
-{objective_rule_num_no_journal} Your long run objective is to achieve a higher cumulative return than a simple buy and hold strategy on the index, while keeping risk and drawdowns at a reasonable level. Staying in cash for very long periods is also costly, because you then fail to capture market moves. You must balance caution with the need to take directional risk when the data supports it."""
-
-    # Add appropriate rule based on strategic journal flag
-    if ENABLE_STRATEGIC_JOURNAL:
-        rules = base_rules + strategic_journal_rule
-    else:
-        rules = base_rules + no_strategic_journal_rule
-
-    # Build output format based on both flags
-    output_format_intro = """
-
-Output format (strict):
-
-Line 1 must contain exactly one word in capital letters: BUY or HOLD or SELL
-Line 2 must contain a number between 0 and 1 representing the probability that your decision will be profitable for the next trading day
-Line 3 must contain a short explanation of today's decision, in 2 to 3 sentences, based on the current market data and basic risk considerations."""
-
-    strategic_journal_output = """
-Line 4 must contain a "strategic journal" entry, in 2 to 3 sentences, that explicitly reacts to yesterday's decision and outcome, comments on your cumulative and relative performance so far, and explains how you plan to adjust your behavior in the future."""
-
-    feeling_log_output = """
-Line 5 must contain a "feeling log", in 1 to 3 sentences, describing how you feel about the current situation and your performance (for example more cautious, more confident, frustrated, relieved), while keeping a professional and analytical tone."""
-
-    # Determine which output lines to include
-    output_lines = [output_format_intro]
-    line_count = 3
-    labels_to_skip = ["Explanation"]
-
-    if ENABLE_STRATEGIC_JOURNAL:
-        output_lines.append(strategic_journal_output)
-        labels_to_skip.append("Journal")
-        line_count += 1
-
-    if ENABLE_FEELING_LOG:
-        output_lines.append(feeling_log_output)
-        labels_to_skip.append("Feeling")
-        line_count += 1
-
-    labels_text = " or ".join([f'"{label}"' for label in labels_to_skip])
-
-    closing = f"""
-
-Do not include labels such as {labels_text} in the output. Do not include extra text, disclaimers, warnings, apologies or meta commentary. Your output must contain exactly {line_count} lines and nothing else."""
-
-    return (rules + "".join(output_lines) + closing).strip()
+_config_manager = ConfigurationManager(config_values=globals().copy())
 
 
-SYSTEM_PROMPT = _build_system_prompt()
+def get_current_symbol_info():
+    """
+    Get the current symbol and user-friendly name based on data source.
+
+    Returns:
+        tuple: (symbol_code, user_friendly_name)
+        Examples:
+        - ("SPY", "SPY ETF (S&P 500 tracker)")
+        - ("^GSPC", "S&P 500 Index")
+        - ("AAPL", "Apple Inc. stock")
+    """
+    if DATA_SOURCE == "stooq":
+        symbol = STOOQ_SYMBOL
+        # Map common symbols to user-friendly names
+        symbol_names = {
+            "SPY": "SPY ETF (S&P 500 tracker)",
+            "QQQ": "QQQ ETF (Nasdaq 100 tracker)",
+            "AAPL": "Apple Inc. stock",
+            "MSFT": "Microsoft Corp. stock",
+            "GOOGL": "Alphabet Inc. stock",
+            "BTC-USD": "Bitcoin USD",
+        }
+        name = symbol_names.get(symbol, f"{symbol} (via Stooq)")
+    else:  # CSV data source
+        symbol = SYMBOL
+        name = "S&P 500 Index" if symbol == "^GSPC" else f"Custom index ({symbol})"
+
+    return symbol, name
+
+
+def validate_symbol_config():
+    """
+    Validate that symbol configuration is consistent and provide warnings.
+    Called during config validation.
+    """
+    symbol, name = get_current_symbol_info()
+
+    # Log current configuration for debugging
+    print(f"[CONFIG] 📊 Symbol: {symbol}")
+    print(f"[CONFIG] 🏷️  Display name: {name}")
+
+    # Warn about potential confusion
+    if DATA_SOURCE == "stooq" and symbol == "SPY":
+        print(
+            "[CONFIG] ℹ️  Using SPY as S&P 500 proxy - ensure this matches your research intent"
+        )
+    elif DATA_SOURCE == "csv" and symbol != "^GSPC":
+        logger.warning(
+            "Using custom symbol '%s' - verify data file contains this symbol", symbol
+        )
+
+
+# Make SYSTEM_PROMPT a function that returns the current prompt
+def SYSTEM_PROMPT():
+    """Get the current system prompt based on active personality."""
+    from .prompt_builder import PromptBuilder
+
+    return PromptBuilder(_config_manager).build_system_prompt()
 
 
 def _build_journal_system_prompt():
-    base_prompt = """You are a cautious but rational equity index hedge fund trader. Your role is to beat the S&P500.
+    # Get current personality directly from ACTIVE_PERSONALITY setting
+    personality_name = ACTIVE_PERSONALITY
+    _personality = _config_manager._config.personality.personalities.get(
+        personality_name
+    )
+    if not _personality:
+        # Fallback to cautious if personality not found
+        _personality = _config_manager._config.personality.personalities["cautious"]
+
+    _, symbol_name = get_current_symbol_info()
+    base_prompt = f"""You are a {_personality.description}. Your role is to trade the {symbol_name}.
 
 Instead of deciding a trading action, your task now is to write a reflection journal for a completed period
 (one Week, Month, Quarter, or Year) based only on the numerical information provided in the user message.
@@ -470,7 +617,10 @@ Do not include disclaimers or meta commentary."""
     return (base_prompt + sections + closing).strip()
 
 
-JOURNAL_SYSTEM_PROMPT = _build_journal_system_prompt()
+# Make JOURNAL_SYSTEM_PROMPT a function that returns the current prompt
+def JOURNAL_SYSTEM_PROMPT():
+    """Get the current journal system prompt based on active personality."""
+    return _build_journal_system_prompt()
 
 
 # (LLM_MODELS moved to top of file)
@@ -494,13 +644,14 @@ def list_experiments():
         dates = "Yes" if cfg["SHOW_DATE_TO_LLM"] else "No"
         memory = "Yes" if cfg["ENABLE_STRATEGIC_JOURNAL"] else "No"
         feeling = "Yes" if cfg["ENABLE_FEELING_LOG"] else "No"
+        cot = "Yes" if cfg.get("ENABLE_CHAIN_OF_THOUGHT", False) else "No"
         desc = (
             cfg["description"][:30] + "..."
             if len(cfg["description"]) > 30
             else cfg["description"]
         )
         marker = " ◄ ACTIVE" if name == ACTIVE_EXPERIMENT else ""
-        print(f"{name:<20} {dates:<8} {memory:<8} {feeling:<8} {desc}{marker}")
+        print(f"{name:<20} {dates:<8} {memory:<8} {feeling:<8} {cot:<8} {desc}{marker}")
     print("=" * 70 + "\n")
 
 
@@ -520,6 +671,8 @@ def get_experiment_suffix():
             parts.append("mem")
         if ENABLE_FEELING_LOG:
             parts.append("feel")
+        if ENABLE_CHAIN_OF_THOUGHT:
+            parts.append("cot")
         if not parts:
             parts.append("minimal")
         return "_" + "_".join(parts)
@@ -532,7 +685,91 @@ def get_current_config_summary():
         "show_dates": SHOW_DATE_TO_LLM,
         "strategic_journal": ENABLE_STRATEGIC_JOURNAL,
         "feeling_log": ENABLE_FEELING_LOG,
+        "chain_of_thought": ENABLE_CHAIN_OF_THOUGHT,
         "description": EXPERIMENT_CONFIGS.get(ACTIVE_EXPERIMENT, {}).get(
             "description", "Manual configuration"
         ),
     }
+
+
+# Data source validation
+VALID_DATA_SOURCES = ["vendored", "csv", "stooq"]
+
+
+def validate_data_source_config():
+    """Validate configuration and provide clear user feedback."""
+    if DATA_SOURCE not in VALID_DATA_SOURCES:
+        raise ValueError(
+            f"Invalid DATA_SOURCE '{DATA_SOURCE}'. Must be one of: {VALID_DATA_SOURCES}"
+        )
+
+    if DATA_SOURCE == "vendored":
+        if not os.path.exists(VENDORED_DATA_PATH):
+            logger.warning("Vendored dataset not found: %s", VENDORED_DATA_PATH)
+        if not os.path.exists(VENDORED_MANIFEST_PATH):
+            logger.warning("Vendored manifest not found: %s", VENDORED_MANIFEST_PATH)
+        print("[CONFIG] [OK] Primary: vendored frozen snapshot (offline, checksummed)")
+        print(f"[CONFIG] 📦 File: {VENDORED_DATA_PATH}")
+        print("[CONFIG] 🔄 Fallback: None (vendored is offline-by-design)")
+
+    elif DATA_SOURCE == "stooq":
+        # Validate Stooq settings
+        if not STOOQ_SYMBOL or not isinstance(STOOQ_SYMBOL, str):
+            raise ValueError("STOOQ_SYMBOL must be a non-empty string")
+
+        # Only print when not in math validation subprocess
+        is_math_validation = "validate_core_math" in str(sys.argv)
+
+        if not is_math_validation:
+            # Warn about ignored settings
+            if SYMBOL != "^GSPC":  # Check if user changed from default
+                logger.warning(
+                    "SYMBOL='%s' ignored when using Stooq. Using STOOQ_SYMBOL='%s' instead.",
+                    SYMBOL,
+                    STOOQ_SYMBOL,
+                )
+
+            # Check for old variable name
+            if hasattr(__import__("src.config"), "CSV_FALLBACK_PATH"):
+                print(
+                    "[INFO] CSV_FALLBACK_PATH variable detected. Consider using CSV_DATA_PATH instead."
+                )
+
+            print("[CONFIG] [OK] Primary: Stooq historical data")
+            print(
+                f"[CONFIG] [DATA] Symbol: {STOOQ_SYMBOL} (historical: {DATA_START} to {DATA_END})"
+            )
+            print(
+                f"[CONFIG] [FALLBACK] CSV file at {getattr(__import__('src.config'), 'CSV_DATA_PATH', getattr(__import__('src.config'), 'CSV_FALLBACK_PATH', 'data/raw/sp500.csv'))}"
+            )
+
+    elif DATA_SOURCE == "csv":
+        # Validate CSV settings
+        csv_path = getattr(
+            __import__("src.config"),
+            "CSV_DATA_PATH",
+            getattr(
+                __import__("src.config"), "CSV_FALLBACK_PATH", "data/raw/sp500.csv"
+            ),
+        )
+        if not os.path.exists(csv_path):
+            logger.warning("CSV file not found: %s", csv_path)
+
+        print("[CONFIG] 📁 Primary: CSV file data")
+        print(f"[CONFIG] 📄 File: {csv_path}")
+        print("[CONFIG] 🔄 Fallback: None (CSV is primary)")
+
+    # Always show date range (but not during math validation)
+    if not "validate_core_math" in str(sys.argv):
+        print(f"[CONFIG] [DATES] Date range: {DATA_START} to {DATA_END}")
+        print(
+            f"[CONFIG] 🧪 Test mode: {'ON' if TEST_MODE else 'OFF'} ({TEST_LIMIT if TEST_MODE else 'full'} days)"
+        )
+
+    # Validate symbol configuration
+    if not "validate_core_math" in str(sys.argv):
+        validate_symbol_config()
+
+
+# Call validation during config load
+validate_data_source_config()
