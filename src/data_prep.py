@@ -6,16 +6,17 @@ import numpy as np
 import pandas as pd
 
 from . import config
+from .constants import TRADING_DAYS_PER_YEAR
 
 
 def load_raw_csv(raw_path: str) -> pd.DataFrame:
     """
-    Lit un CSV type Stooq avec au moins les colonnes:
+    Reads a Stooq-style CSV with at least the columns:
     Date, Open, High, Low, Close, Volume
 
-    On est robuste:
-    - autodétection du séparateur
-    - on enlève les espaces dans les noms de colonnes
+    Robust handling:
+    - automatic separator detection
+    - removes spaces in column names
     """
 
     if not os.path.exists(raw_path):
@@ -24,10 +25,10 @@ def load_raw_csv(raw_path: str) -> pd.DataFrame:
             "Place here a CSV with columns like Date, Open, High, Low, Close, Volume."
         )
 
-    # sep=None + engine="python" pour autodétecter , ou ; ou tab
+    # sep=None + engine="python" to auto-detect , or ; or tab separators
     df = pd.read_csv(raw_path, sep=None, engine="python")
 
-    # Nettoyage des noms de colonnes
+    # Clean column names
     df.columns = df.columns.astype(str).str.strip()
 
     print("Loaded raw CSV with columns:", list(df.columns))
@@ -35,7 +36,7 @@ def load_raw_csv(raw_path: str) -> pd.DataFrame:
     if "Date" not in df.columns:
         raise RuntimeError("CSV must contain a 'Date' column")
 
-    # Certaines sources ont 'Close', d autres 'Adj Close'
+    # Some sources have 'Close', others have 'Adj Close'
     price_col = None
     if "Close" in df.columns:
         price_col = "Close"
@@ -236,7 +237,7 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # Volatilité réalisée 20 jours annualisée
     daily_vol_20 = df["return_1d"].rolling(config.VOL20_WINDOW).std()
-    df["vol20_annualized"] = daily_vol_20 * np.sqrt(252)
+    df["vol20_annualized"] = daily_vol_20 * np.sqrt(TRADING_DAYS_PER_YEAR)
 
     # RSI (Relative Strength Index) - always calculated for baselines and analysis
     df["rsi_14"] = compute_rsi(df["close"], config.RSI_WINDOW)
@@ -289,7 +290,7 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
     # Label: rendement du jour suivant
     df["next_return_1d"] = df["return_1d"].shift(-1)
 
-    # On enlève les lignes incomplètes
+    # Remove incomplete rows
     df = df.dropna().reset_index(drop=True)
 
     if df.empty:
