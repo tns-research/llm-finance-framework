@@ -1,574 +1,21 @@
-# src/reporting.py
+# src/reporting/charts.py
+"""Matplotlib chart generation and calibration reporting.
 
-from typing import Union
+Moved verbatim out of the old monolithic src/reporting.py (pure structural
+split, no logic change). Re-exported via the reporting package __init__.
+
+Note: this module sits one package level deeper than the original
+src/reporting.py, so the in-body ``from .statistical_validation import ...``
+imports become ``from ..statistical_validation import ...``.
+"""
+
+from typing import Dict
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from .config_compat import (
-    DEBUG_SHOW_FULL_PROMPT,
-    JOURNAL_SYSTEM_PROMPT,
-    SHOW_DATE_TO_LLM,
-    USE_DUMMY_MODEL,
-)
-from .memory_classes import PeriodStats
-from .openrouter_model import call_openrouter
-
-
-def make_empty_stats():
-    """
-    Helper to initialize per period statistics.
-    """
-    return {
-        "strategy_return": 0.0,
-        "index_return": 0.0,
-        "days": 0,
-        "wins": 0,
-        "buys": 0,
-        "holds": 0,
-        "sells": 0,
-    }
-
-
-def build_period_summary(period_label: str, end_date, stats: dict) -> str:
-    """
-    Build a compact text summary for a completed period (week, month, quarter, year).
-
-    period_label  "Week", "Month", "Quarter", "Year"
-    end_date      last trading date of the period (pandas Timestamp)
-    stats         dict from make_empty_stats, aggregated over that period
-    """
-    if stats["days"] == 0:
-        return f"{period_label} ending {end_date.strftime('%Y-%m-%d')}  no trading activity recorded."
-
-    strat_ret = stats["strategy_return"]
-    idx_ret = stats["index_return"]
-    days = stats["days"]
-    win_rate = (stats["wins"] / days) * 100.0 if days > 0 else 0.0
-
-    explanation = (
-        f"{period_label} ending {end_date.strftime('%Y-%m-%d')}. "
-        f"Market total return over the period  {idx_ret:.2f} percent. "
-        f"Strategy total return  {strat_ret:.2f} percent over {days} trading days."
-    )
-
-    journal = (
-        f"During this period you took BUY {stats['buys']} times, "
-        f"HOLD {stats['holds']} times, SELL {stats['sells']} times, "
-        f"with a win rate of {win_rate:.1f} percent on daily returns. "
-        "Reflect on whether your positioning matched the prevailing trend and volatility, "
-        "and whether you managed risk consistently."
-    )
-
-    if strat_ret > idx_ret:
-        feeling = (
-            "Feeling confident and satisfied, having outperformed the index, "
-            "but still cautious about overconfidence."
-        )
-    elif strat_ret > 0:
-        feeling = (
-            "Feeling cautiously positive. You earned a positive return but did "
-            "not beat the index, so there is room for improvement in timing and sizing."
-        )
-    else:
-        feeling = (
-            "Feeling dissatisfied and reflective. Losses highlight the need to improve "
-            "signal quality and risk management, especially during volatile regimes."
-        )
-
-    return (
-        f"{period_label} ending {end_date.strftime('%Y-%m-%d')}\n"
-        f"{explanation}\n"
-        f"Strategic journal  {journal}\n"
-        f"Feeling  {feeling}"
-    )
-
-
-def compute_period_technical_stats(
-    features_df: pd.DataFrame, start_date, end_date
-) -> dict:
-    """
-    Compute technical indicator statistics for a time period.
-
-    This function calculates period-level summaries of technical indicators
-    to provide rich context to the LLM for memory/reflection purposes.
-    Only includes statistics when data is available and valid.
-
-    Args:
-        features_df: DataFrame with technical indicator columns
-        start_date: Start date of the period (inclusive)
-        end_date: End date of the period (inclusive)
-
-    Returns:
-        dict: Technical indicator statistics for the period
-    """
-    # Filter data for the period
-    period_data = features_df[
-        (features_df["date"] >= start_date) & (features_df["date"] <= end_date)
-    ].copy()
-
-    stats = {}
-
-    # RSI Statistics
-    if "rsi_14" in period_data.columns:
-        rsi_valid = period_data["rsi_14"].dropna()
-        if len(rsi_valid) > 0:
-            stats["rsi_avg"] = rsi_valid.mean()
-            stats["rsi_overbought_pct"] = (rsi_valid > 70).sum() / len(rsi_valid) * 100
-            stats["rsi_oversold_pct"] = (rsi_valid < 30).sum() / len(rsi_valid) * 100
-            stats["rsi_min"] = rsi_valid.min()
-            stats["rsi_max"] = rsi_valid.max()
-
-    # MACD Statistics
-    if "macd_histogram" in period_data.columns:
-        hist_valid = period_data["macd_histogram"].dropna()
-        if len(hist_valid) > 0:
-            stats["macd_bullish_pct"] = (hist_valid > 0).sum() / len(hist_valid) * 100
-            stats["macd_avg_histogram"] = hist_valid.mean()
-            # Count signal line crossovers (histogram changes sign)
-            hist_sign_changes = ((hist_valid > 0) != (hist_valid.shift(1) > 0)).sum()
-            stats["macd_crossovers"] = hist_sign_changes
-
-    # Stochastic Statistics
-    if "stoch_k" in period_data.columns:
-        stoch_valid = period_data["stoch_k"].dropna()
-        if len(stoch_valid) > 0:
-            stats["stoch_overbought_pct"] = (
-                (stoch_valid > 80).sum() / len(stoch_valid) * 100
-            )
-            stats["stoch_oversold_pct"] = (
-                (stoch_valid < 20).sum() / len(stoch_valid) * 100
-            )
-            stats["stoch_min"] = stoch_valid.min()
-            stats["stoch_max"] = stoch_valid.max()
-
-    # Bollinger Bands Statistics
-    if "bb_position" in period_data.columns:
-        bb_valid = period_data["bb_position"].dropna()
-        if len(bb_valid) > 0:
-            # Near upper band (position > 0.95) or near lower band (position < 0.05)
-            stats["bb_upper_touch_pct"] = (bb_valid > 0.95).sum() / len(bb_valid) * 100
-            stats["bb_lower_touch_pct"] = (bb_valid < 0.05).sum() / len(bb_valid) * 100
-            stats["bb_avg_position"] = bb_valid.mean()
-
-    # Add current/latest values for short periods or when aggregated stats are not meaningful
-    if len(period_data) > 0:
-        last_row = period_data.iloc[-1]
-
-        # Current RSI value
-        if "rsi_14" in period_data.columns and not pd.isna(last_row.get("rsi_14")):
-            stats["rsi_current"] = last_row["rsi_14"]
-
-        # Current MACD values
-        macd_cols = ["macd_line", "macd_signal", "macd_histogram"]
-        if all(col in period_data.columns for col in macd_cols):
-            macd_values = [last_row.get(col) for col in macd_cols]
-            if not any(pd.isna(macd_values)):
-                stats["macd_current"] = {
-                    "line": last_row["macd_line"],
-                    "signal": last_row["macd_signal"],
-                    "histogram": last_row["macd_histogram"],
-                }
-
-        # Current Stochastic values
-        stoch_cols = ["stoch_k", "stoch_d"]
-        if all(col in period_data.columns for col in stoch_cols):
-            stoch_values = [last_row.get(col) for col in stoch_cols]
-            if not any(pd.isna(stoch_values)):
-                stats["stoch_current"] = {
-                    "k": last_row["stoch_k"],
-                    "d": last_row["stoch_d"],
-                }
-
-        # Current Bollinger Band position
-        if "bb_position" in period_data.columns and not pd.isna(
-            last_row.get("bb_position")
-        ):
-            stats["bb_current_position"] = last_row["bb_position"]
-
-    return stats
-
-
-def format_period_technical_indicators(technical_stats: dict, period_name: str) -> str:
-    """Format aggregated technical indicators for memory display."""
-    if not technical_stats:
-        return ""
-
-    lines = []
-
-    # RSI
-    if "rsi_avg" in technical_stats:
-        rsi_parts = [f"Average {technical_stats['rsi_avg']:.1f}"]
-        if "rsi_overbought_pct" in technical_stats:
-            rsi_parts.append(f"{technical_stats['rsi_overbought_pct']:.0f}% overbought")
-        if "rsi_oversold_pct" in technical_stats:
-            rsi_parts.append(f"{technical_stats['rsi_oversold_pct']:.0f}% oversold")
-        if "rsi_min" in technical_stats and "rsi_max" in technical_stats:
-            rsi_parts.append(
-                f"range {technical_stats['rsi_min']:.1f}-{technical_stats['rsi_max']:.1f}"
-            )
-        lines.append(f"RSI(14): {', '.join(rsi_parts)}")
-    elif "rsi_current" in technical_stats:
-        # Fallback for short periods - show current value
-        rsi_val = technical_stats["rsi_current"]
-        status = "neutral"
-        if rsi_val > 70:
-            status = "overbought"
-        elif rsi_val < 30:
-            status = "oversold"
-        lines.append(f"RSI(14): {rsi_val:.1f} ({status})")
-
-    # MACD
-    if "macd_bullish_pct" in technical_stats:
-        macd_parts = [f"{technical_stats['macd_bullish_pct']:.0f}% bullish periods"]
-        if "macd_avg_histogram" in technical_stats:
-            macd_parts.append(
-                f"avg histogram {technical_stats['macd_avg_histogram']:.3f}"
-            )
-        if (
-            "macd_crossovers" in technical_stats
-            and technical_stats["macd_crossovers"] > 0
-        ):
-            macd_parts.append(f"{technical_stats['macd_crossovers']} crossovers")
-        lines.append(f"MACD: {', '.join(macd_parts)}")
-    elif "macd_current" in technical_stats:
-        # Fallback for short periods - show current values
-        macd = technical_stats["macd_current"]
-        signal = "bullish" if macd["histogram"] > 0 else "bearish"
-        lines.append(
-            f"MACD: {macd['line']:.2f}/{macd['signal']:.2f}/{macd['histogram']:.3f} ({signal})"
-        )
-
-    # Stochastic
-    if "stoch_overbought_pct" in technical_stats:
-        stoch_parts = [
-            f"{technical_stats['stoch_overbought_pct']:.0f}% overbought days"
-        ]
-        if "stoch_oversold_pct" in technical_stats:
-            stoch_parts.append(
-                f"{technical_stats['stoch_oversold_pct']:.0f}% oversold days"
-            )
-        lines.append(f"Stochastic: {', '.join(stoch_parts)}")
-    elif "stoch_current" in technical_stats:
-        # Fallback for short periods - show current values
-        stoch = technical_stats["stoch_current"]
-        status = "neutral"
-        if stoch["k"] > 80:
-            status = "overbought"
-        elif stoch["k"] < 20:
-            status = "oversold"
-        lines.append(f"Stochastic: {stoch['k']:.1f}/{stoch['d']:.1f} ({status})")
-
-    # Bollinger Bands
-    if "bb_avg_position" in technical_stats:
-        bb_parts = [f"Avg position {technical_stats['bb_avg_position']:.2f}"]
-        if (
-            "bb_upper_touch_pct" in technical_stats
-            and "bb_lower_touch_pct" in technical_stats
-        ):
-            total_touches = (
-                technical_stats["bb_upper_touch_pct"]
-                + technical_stats["bb_lower_touch_pct"]
-            )
-            bb_parts.append(f"band touches {total_touches:.0f}%")
-        lines.append(f"Bollinger Bands: {', '.join(bb_parts)}")
-    elif "bb_current_position" in technical_stats:
-        # Fallback for short periods - show current position
-        pos = technical_stats["bb_current_position"]
-        location = "middle"
-        if pos > 0.8:
-            location = "upper band"
-        elif pos < 0.2:
-            location = "lower band"
-        lines.append(f"Bollinger Bands: Position {pos:.2f} ({location})")
-
-    if lines:
-        return f"\n\n{period_name} technical indicators:\n" + "\n".join(lines) + "\n"
-    return ""
-
-
-def generate_llm_period_summary(
-    period_label: str,
-    end_date,
-    stats: Union[dict, PeriodStats],
-    router_model: str,
-    model_tag: str,
-    technical_stats: dict = None,
-) -> str:
-    """
-    Use the LLM itself to write a weekly, monthly, quarterly or yearly journal
-    based on aggregated stats for that period.
-
-    If USE_DUMMY_MODEL or router_model is None, we fall back to a simple
-    template summary.
-
-    Args:
-        period_label: "Week", "Month", "Quarter", or "Year"
-        end_date: End date of the period
-        stats: Statistics dict or PeriodStats object
-        router_model: Model identifier for LLM calls
-        model_tag: Model tag for identification
-        technical_stats: Optional technical indicators data
-    """
-    # Convert PeriodStats to dict for backward compatibility
-    if hasattr(stats, "to_dict"):
-        stats = stats.to_dict()
-
-    if stats["days"] == 0:
-        return f"{period_label} ending {end_date.strftime('%Y-%m-%d')}  no trading activity recorded."
-
-    strat_ret = stats["strategy_return"]
-    idx_ret = stats["index_return"]
-    days = stats["days"]
-    wins = stats["wins"]
-    buys = stats["buys"]
-    holds = stats["holds"]
-    sells = stats["sells"]
-
-    # Fallback template if we are in dummy mode or no router model
-    if USE_DUMMY_MODEL or router_model is None:
-        win_rate = (wins / days) * 100.0 if days > 0 else 0.0
-        edge = strat_ret - idx_ret
-        outperform_word = "outperformed" if edge > 0 else "underperformed"
-
-        # Respect SHOW_DATE_TO_LLM setting in fallback summaries
-        if SHOW_DATE_TO_LLM:
-            period_header = f"{period_label} ending {end_date.strftime('%Y-%m-%d')}"
-            explanation_date = (
-                f"{period_label} ending {end_date.strftime('%Y-%m-%d')}. "
-            )
-        else:
-            period_header = f"{period_label} summary (date hidden)"
-            explanation_date = f"{period_label} summary. "
-
-        explanation = (
-            f"{explanation_date}"
-            f"Market total return  {idx_ret:.2f} percent. "
-            f"Strategy total return  {strat_ret:.2f} percent. "
-            f"The strategy {outperform_word} the index by {edge:.2f} percent over {days} days."
-        )
-
-        # Add technical analysis to explanation if available
-        if technical_stats:
-            if "rsi_avg" in technical_stats:
-                explanation += f" RSI averaged {technical_stats['rsi_avg']:.1f} with {technical_stats['rsi_overbought_pct']:.1f}% overbought days."
-            if "macd_bullish_pct" in technical_stats:
-                explanation += f" MACD was bullish {technical_stats['macd_bullish_pct']:.1f}% of the time."
-            if "stoch_overbought_pct" in technical_stats:
-                explanation += f" Stochastic showed {technical_stats['stoch_overbought_pct']:.1f}% overbought conditions."
-            if "bb_upper_touch_pct" in technical_stats:
-                explanation += f" Price touched Bollinger upper band on {technical_stats['bb_upper_touch_pct']:.1f}% of days."
-
-        journal = (
-            f"During this period you traded BUY {buys} times, HOLD {holds} times, SELL {sells} times, "
-            f"with a win rate of {win_rate:.1f} percent on daily returns. "
-        )
-
-        # Add technical analysis to strategic journal if available
-        if technical_stats:
-            journal += "Technical indicators provided "
-            tech_signals = []
-
-            if "rsi_avg" in technical_stats:
-                rsi_signal = (
-                    "bullish signals"
-                    if technical_stats["rsi_avg"] < 50
-                    else "bearish signals"
-                )
-                tech_signals.append(f"RSI {rsi_signal}")
-
-            if "macd_bullish_pct" in technical_stats:
-                macd_signal = (
-                    "mostly bullish momentum"
-                    if technical_stats["macd_bullish_pct"] > 50
-                    else "mostly bearish momentum"
-                )
-                tech_signals.append(f"MACD showing {macd_signal}")
-
-            if "stoch_overbought_pct" in technical_stats:
-                stoch_signal = (
-                    "frequent overbought conditions"
-                    if technical_stats["stoch_overbought_pct"] > 20
-                    else "limited overbought conditions"
-                )
-                tech_signals.append(f"Stochastic with {stoch_signal}")
-
-            if "bb_upper_touch_pct" in technical_stats:
-                bb_signal = (
-                    "frequent band touches"
-                    if technical_stats["bb_upper_touch_pct"]
-                    + technical_stats["bb_lower_touch_pct"]
-                    > 10
-                    else "rare band extremes"
-                )
-                tech_signals.append(f"Bollinger Bands with {bb_signal}")
-
-            if tech_signals:
-                journal += f"mixed signals: {', '.join(tech_signals)}. "
-            else:
-                journal += "consistent signals. "
-
-        journal += (
-            "Reflect on whether your positioning matched the prevailing trend and volatility, "
-            "and whether your risk management was consistent."
-        )
-
-        feeling = (
-            "Feeling cautiously reflective about this period. Use the results to refine your process "
-            "without becoming overconfident or discouraged."
-        )
-
-        return (
-            f"{period_header}\n"
-            f"Explanation: {explanation}\n"
-            f"Strategic journal: {journal}\n"
-            f"Feeling log: {feeling}"
-        )
-
-    # If we are here, we can call the real LLM via OpenRouter
-    win_rate = (wins / days) * 100.0 if days > 0 else 0.0
-    edge = strat_ret - idx_ret
-
-    # When SHOW_DATE_TO_LLM is False, we send NO date information to the LLM at all
-    # This prevents the LLM from including dates in its summaries
-    if SHOW_DATE_TO_LLM:
-        date_info = f"- End date  {end_date.strftime('%Y-%m-%d')}\n"
-        period_desc = f"You are summarizing a completed {period_label}.\n\n"
-    else:
-        date_info = ""  # No date information sent to LLM in anonymized mode
-        period_desc = f"You are summarizing a completed {period_label} (time period anonymized).\n\n"
-
-    # Add technical indicators section if available
-    technical_info = ""
-    if technical_stats:
-        print(f"DEBUG: LLM received technical_stats = {technical_stats}")
-        technical_info = "\nTechnical indicators summary for this period:\n"
-
-        if "rsi_avg" in technical_stats:
-            technical_info += (
-                f"- RSI(14): Average {technical_stats['rsi_avg']:.1f}, "
-                f"{technical_stats['rsi_overbought_pct']:.1f}% overbought days (>70), "
-                f"{technical_stats['rsi_oversold_pct']:.1f}% oversold days (<30), "
-                f"range {technical_stats['rsi_min']:.1f}-{technical_stats['rsi_max']:.1f}\n"
-            )
-
-        if "macd_bullish_pct" in technical_stats:
-            technical_info += (
-                f"- MACD(12,26,9): {technical_stats['macd_bullish_pct']:.1f}% bullish periods, "
-                f"avg histogram {technical_stats['macd_avg_histogram']:.3f}, "
-                f"{technical_stats.get('macd_crossovers', 0)} signal crossovers\n"
-            )
-
-        if "stoch_overbought_pct" in technical_stats:
-            technical_info += (
-                f"- Stochastic(14,3): {technical_stats['stoch_overbought_pct']:.1f}% overbought days (>80), "
-                f"{technical_stats['stoch_oversold_pct']:.1f}% oversold days (<20), "
-                f"range {technical_stats['stoch_min']:.1f}-{technical_stats['stoch_max']:.1f}\n"
-            )
-
-        if "bb_upper_touch_pct" in technical_stats:
-            technical_info += (
-                f"- Bollinger Bands(20,2): {technical_stats['bb_upper_touch_pct']:.1f}% days touched upper band, "
-                f"{technical_stats['bb_lower_touch_pct']:.1f}% touched lower band, "
-                f"avg position {technical_stats['bb_avg_position']:.2f}\n"
-            )
-    else:
-        print("DEBUG: LLM received technical_stats = None/empty")
-
-    user_message = (
-        f"{period_desc}"
-        f"Period information\n"
-        f"{date_info}"
-        f"- Trading days in period  {days}\n"
-        f"- Strategy total return over the period  {strat_ret:.2f} percent\n"
-        f"- Index total return over the period  {idx_ret:.2f} percent\n"
-        f"- Difference strategy minus index  {edge:.2f} percent\n"
-        f"- Winning days (positive strategy return)  {wins} out of {days}\n"
-        f"- Number of BUY decisions  {buys}\n"
-        f"- Number of HOLD decisions  {holds}\n"
-        f"- Number of SELL decisions  {sells}\n"
-        f"- Daily win rate  {win_rate:.1f} percent"
-        f"{technical_info}\n\n"
-        "Write a reflection journal for this period. Do not include any dates or calendar references. Use only the numerical information provided."
-    )
-
-    try:
-        if DEBUG_SHOW_FULL_PROMPT:
-            debug_block = (
-                "===== JOURNAL SYSTEM PROMPT =====\n"
-                f"{JOURNAL_SYSTEM_PROMPT}\n\n"
-                "===== JOURNAL USER MESSAGE =====\n"
-                f"{user_message}\n"
-            )
-            print("\n==============================")
-            print(f"FULL JOURNAL PROMPT SENT TO MODEL {model_tag} :")
-            print("==============================")
-            print(debug_block)
-            print("=========== END JOURNAL PROMPT ===========\n")
-
-        response_text = call_openrouter(
-            router_model, JOURNAL_SYSTEM_PROMPT, user_message
-        )
-        clean = str(response_text).strip()
-
-        # Optional: small numeric recap so the memory always carries the hard data
-        if SHOW_DATE_TO_LLM:
-            period_id = f"{period_label} ending {end_date.strftime('%Y-%m-%d')}"
-        else:
-            period_id = f"{period_label} summary (date hidden)"
-
-        header = (
-            f"{period_id}\n"
-            f"Stats  strategy {strat_ret:.2f} percent, "
-            f"index {idx_ret:.2f} percent, "
-            f"edge (strategy minus index) {edge:.2f} percent, "
-            f"days {days}, wins {wins}, "
-            f"BUY {buys}, HOLD {holds}, SELL {sells}.\n\n"
-        )
-
-        wrapped = header + clean
-
-        print("\n===== JOURNAL MODEL OUTPUT =====")
-        print(wrapped)
-        print("================================\n")
-
-        return wrapped
-
-    except Exception as e:
-        print(
-            f"\n[WARN] Failed to generate {period_label} journal with LLM for model {model_tag}: {e}"
-        )
-        # Fallback to simple template
-        win_rate = (wins / days) * 100.0 if days > 0 else 0.0
-
-        # Respect SHOW_DATE_TO_LLM setting in error fallback
-        if SHOW_DATE_TO_LLM:
-            period_header = f"{period_label} ending {end_date.strftime('%Y-%m-%d')}"
-            explanation_date = (
-                f"{period_label} ending {end_date.strftime('%Y-%m-%d')}. "
-            )
-        else:
-            period_header = f"{period_label} summary (date hidden)"
-            explanation_date = f"{period_label} summary. "
-
-        explanation = (
-            f"{explanation_date}"
-            f"Market total return  {idx_ret:.2f} percent. "
-            f"Strategy total return  {strat_ret:.2f} percent over {days} days."
-        )
-        journal = (
-            f"BUY {buys}, HOLD {holds}, SELL {sells}, win rate {win_rate:.1f} percent. "
-            "LLM journal generation failed, using fallback summary."
-        )
-        feeling = "Feeling neutral due to technical issues."
-
-        return (
-            f"{period_header}\n"
-            f"Explanation: {explanation}\n"
-            f"Strategic journal: {journal}\n"
-            f"Feeling log: {feeling}"
-        )
+from ..constants import TRADING_DAYS_PER_YEAR
 
 
 def calculate_decision_success(parsed_df: pd.DataFrame) -> pd.Series:
@@ -581,7 +28,7 @@ def calculate_decision_success(parsed_df: pd.DataFrame) -> pd.Series:
     Returns:
         pd.Series: Boolean success indicators for each decision
     """
-    from .statistical_validation import evaluate_hold_decisions_dual_criteria
+    from ..statistical_validation import evaluate_hold_decisions_dual_criteria
 
     df = parsed_df.copy()
 
@@ -797,7 +244,7 @@ def create_risk_analysis_chart(
         model_tag: Model identifier for chart title
         output_path: Path to save the chart
     """
-    from .statistical_validation import calculate_var_and_stress_tests
+    from ..statistical_validation import calculate_var_and_stress_tests
 
     if "strategy_return" not in parsed_df.columns:
         print(f"Warning: No strategy returns found for risk analysis chart")
@@ -919,7 +366,11 @@ def create_rolling_performance_chart(
                 df["strategy_return"]
                 .rolling(window)
                 .apply(
-                    lambda x: x.mean() / x.std() * np.sqrt(252) if x.std() > 0 else 0
+                    lambda x: (
+                        x.mean() / x.std() * np.sqrt(TRADING_DAYS_PER_YEAR)
+                        if x.std() > 0
+                        else 0
+                    )
                 )
             )
             ax1.plot(
@@ -1247,6 +698,418 @@ def generate_calibration_analysis_report(
         "mean_predicted": mean_predicted,
         "decision_calibration": decision_calibration,
     }
+
+
+def create_category_performance_plot(
+    category_stats: pd.DataFrame, llm_metrics: Dict, output_path: str
+) -> None:
+    """
+    Create comprehensive category performance comparison plot.
+
+    Args:
+        category_stats: DataFrame from calculate_category_performance()
+        llm_metrics: LLM performance metrics
+        output_path: Path to save the plot
+    """
+    import matplotlib.pyplot as plt
+
+    # Set style (fallback if seaborn not available)
+    try:
+        import seaborn as sns
+
+        sns.set_style("whitegrid")
+    except ImportError:
+        # Fallback to matplotlib default styling
+        plt.style.use("default")
+
+    plt.rcParams["figure.figsize"] = (16, 10)
+
+    # Create subplots
+    fig, axes = plt.subplots(2, 2, figsize=(16, 10))
+    fig.suptitle(
+        "Strategy Category Performance Analysis", fontsize=16, fontweight="bold"
+    )
+
+    # Prepare LLM data
+    llm_return = llm_metrics.get("total_return", 0)
+    llm_sharpe = llm_metrics.get("sharpe_like", 0) * (
+        TRADING_DAYS_PER_YEAR**0.5
+    )  # Annualized
+    llm_win_rate = llm_metrics.get("hit_rate", 0) * 100
+
+    # Plot 1: Returns comparison
+    categories = category_stats["category"].values
+    category_returns = category_stats["avg_return"].values
+
+    bars1 = axes[0, 0].bar(
+        categories,
+        category_returns,
+        alpha=0.7,
+        color="skyblue",
+        label="Category Average",
+    )
+    axes[0, 0].axhline(
+        y=llm_return,
+        color="red",
+        linestyle="--",
+        linewidth=2,
+        label=f"LLM Strategy ({llm_return:+.1f}%)",
+    )
+
+    # Add value labels on bars
+    for bar, value in zip(bars1, category_returns):
+        axes[0, 0].text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + 0.5,
+            f"{value:+.1f}%",
+            ha="center",
+            va="bottom",
+            fontsize=9,
+        )
+
+    axes[0, 0].set_title("Returns by Strategy Category", fontweight="bold")
+    axes[0, 0].set_ylabel("Total Return (%)")
+    axes[0, 0].tick_params(axis="x", rotation=45)
+    axes[0, 0].legend()
+    axes[0, 0].grid(True, alpha=0.3)
+
+    # Plot 2: Sharpe ratios
+    category_sharpes = category_stats["avg_sharpe"].values
+
+    bars2 = axes[0, 1].bar(
+        categories,
+        category_sharpes,
+        alpha=0.7,
+        color="lightgreen",
+        label="Category Average",
+    )
+    axes[0, 1].axhline(
+        y=llm_sharpe,
+        color="red",
+        linestyle="--",
+        linewidth=2,
+        label=f"LLM Strategy ({llm_sharpe:+.2f})",
+    )
+
+    for bar, value in zip(bars2, category_sharpes):
+        axes[0, 1].text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + 0.05,
+            f"{value:+.2f}",
+            ha="center",
+            va="bottom",
+            fontsize=9,
+        )
+
+    axes[0, 1].set_title("Risk-Adjusted Returns (Sharpe Ratio)", fontweight="bold")
+    axes[0, 1].set_ylabel("Sharpe Ratio")
+    axes[0, 1].tick_params(axis="x", rotation=45)
+    axes[0, 1].legend()
+    axes[0, 1].grid(True, alpha=0.3)
+
+    # Plot 3: Win rates
+    category_win_rates = category_stats["avg_win_rate"].values
+
+    bars3 = axes[1, 0].bar(
+        categories,
+        category_win_rates,
+        alpha=0.7,
+        color="orange",
+        label="Category Average",
+    )
+    axes[1, 0].axhline(
+        y=llm_win_rate,
+        color="red",
+        linestyle="--",
+        linewidth=2,
+        label=f"LLM Strategy ({llm_win_rate:.1f}%)",
+    )
+
+    for bar, value in zip(bars3, category_win_rates):
+        axes[1, 0].text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + 0.5,
+            f"{value:.1f}%",
+            ha="center",
+            va="bottom",
+            fontsize=9,
+        )
+
+    axes[1, 0].set_title("Win Rates by Strategy Category", fontweight="bold")
+    axes[1, 0].set_ylabel("Win Rate (%)")
+    axes[1, 0].tick_params(axis="x", rotation=45)
+    axes[1, 0].legend()
+    axes[1, 0].grid(True, alpha=0.3)
+
+    # Plot 4: Strategy counts and performance ranges
+    strategy_counts = category_stats["strategy_count"].values
+    performance_ranges = category_stats["best_return"] - category_stats["worst_return"]
+
+    bars4 = axes[1, 1].bar(
+        categories, strategy_counts, alpha=0.7, color="purple", label="Strategy Count"
+    )
+
+    # Add performance range as line
+    ax2 = axes[1, 1].twinx()
+    ax2.plot(
+        categories,
+        performance_ranges,
+        "o-",
+        color="red",
+        linewidth=2,
+        label="Performance Range",
+    )
+    ax2.set_ylabel("Performance Range (%)", color="red")
+    ax2.tick_params(axis="y", labelcolor="red")
+
+    for bar, count in zip(bars4, strategy_counts):
+        axes[1, 1].text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + 0.1,
+            f"{int(count)}",
+            ha="center",
+            va="bottom",
+            fontsize=10,
+            fontweight="bold",
+        )
+
+    axes[1, 1].set_title("Strategy Counts & Performance Ranges", fontweight="bold")
+    axes[1, 1].set_ylabel("Number of Strategies")
+    axes[1, 1].tick_params(axis="x", rotation=45)
+    axes[1, 1].legend(loc="upper left")
+    axes[1, 1].grid(True, alpha=0.3)
+
+    # Create combined legend
+    lines1, labels1 = axes[1, 1].get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    axes[1, 1].legend(lines1 + lines2, labels1 + labels2, loc="upper left")
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.close()
+
+    print(f"✓ Strategy category performance plot saved: {output_path}")
+
+
+def create_indicator_performance_plot(
+    indicator_performance: Dict, output_path: str
+) -> None:
+    """
+    Create comprehensive indicator-specific performance analysis plot.
+
+    Args:
+        indicator_performance: Dict from analyze_indicator_specific_performance()
+        output_path: Path to save the plot
+    """
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    # Filter out errors
+    valid_indicators = {
+        k: v for k, v in indicator_performance.items() if "error" not in v
+    }
+
+    if not valid_indicators:
+        print(f"Warning: No valid indicator performance data for plot")
+        return
+
+    # Set style (fallback if seaborn not available)
+    try:
+        import seaborn as sns
+
+        sns.set_style("whitegrid")
+    except ImportError:
+        # Fallback to matplotlib default styling
+        plt.style.use("default")
+
+    plt.rcParams["figure.figsize"] = (16, 10)
+
+    # Create subplots
+    fig, axes = plt.subplots(2, 2, figsize=(16, 10))
+    fig.suptitle(
+        "Indicator-Specific LLM Performance Analysis", fontsize=16, fontweight="bold"
+    )
+
+    indicators = list(valid_indicators.keys())
+
+    # Plot 1: Returns comparison (signal vs no signal)
+    signal_returns = [
+        v.get("llm_return_when_signal", 0) * 100 for v in valid_indicators.values()
+    ]
+    no_signal_returns = [
+        v.get("llm_return_when_no_signal", 0) * 100 for v in valid_indicators.values()
+    ]
+
+    x = np.arange(len(indicators))
+    width = 0.35
+
+    bars1 = axes[0, 0].bar(
+        x - width / 2,
+        signal_returns,
+        width,
+        alpha=0.8,
+        color="darkblue",
+        label="When Indicator Signals",
+    )
+    bars2 = axes[0, 0].bar(
+        x + width / 2,
+        no_signal_returns,
+        width,
+        alpha=0.8,
+        color="lightblue",
+        label="When No Signal",
+    )
+
+    # Add value labels
+    for bar, value in zip(bars1, signal_returns):
+        if abs(value) > 1:  # Only label significant values
+            axes[0, 0].text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_height() + np.sign(value) * 2,
+                f"{value:+.1f}%",
+                ha="center",
+                va="bottom" if value >= 0 else "top",
+                fontsize=8,
+                fontweight="bold",
+            )
+
+    for bar, value in zip(bars2, no_signal_returns):
+        if abs(value) > 1:
+            axes[0, 0].text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_height() + np.sign(value) * 2,
+                f"{value:+.1f}%",
+                ha="center",
+                va="bottom" if value >= 0 else "top",
+                fontsize=8,
+                fontweight="bold",
+            )
+
+    axes[0, 0].set_title("Returns by Indicator Signal State", fontweight="bold")
+    axes[0, 0].set_ylabel("Total Return (%)")
+    axes[0, 0].set_xticks(x)
+    axes[0, 0].set_xticklabels(indicators, rotation=45)
+    axes[0, 0].legend()
+    axes[0, 0].grid(True, alpha=0.3)
+    axes[0, 0].axhline(y=0, color="black", linestyle="-", alpha=0.5)
+
+    # Plot 2: Win rates comparison
+    signal_win_rates = [
+        v.get("signal_win_rate", 0) * 100 for v in valid_indicators.values()
+    ]
+    no_signal_win_rates = [
+        v.get("no_signal_win_rate", 0) * 100 for v in valid_indicators.values()
+    ]
+
+    bars3 = axes[0, 1].bar(
+        x - width / 2,
+        signal_win_rates,
+        width,
+        alpha=0.8,
+        color="darkgreen",
+        label="When Indicator Signals",
+    )
+    bars4 = axes[0, 1].bar(
+        x + width / 2,
+        no_signal_win_rates,
+        width,
+        alpha=0.8,
+        color="lightgreen",
+        label="When No Signal",
+    )
+
+    for bar, value in zip(bars3, signal_win_rates):
+        axes[0, 1].text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + 1,
+            f"{value:.1f}%",
+            ha="center",
+            va="bottom",
+            fontsize=8,
+            fontweight="bold",
+        )
+
+    for bar, value in zip(bars4, no_signal_win_rates):
+        axes[0, 1].text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + 1,
+            f"{value:.1f}%",
+            ha="center",
+            va="bottom",
+            fontsize=8,
+            fontweight="bold",
+        )
+
+    axes[0, 1].set_title("Win Rates by Indicator Signal State", fontweight="bold")
+    axes[0, 1].set_ylabel("Win Rate (%)")
+    axes[0, 1].set_xticks(x)
+    axes[0, 1].set_xticklabels(indicators, rotation=45)
+    axes[0, 1].legend()
+    axes[0, 1].grid(True, alpha=0.3)
+    axes[0, 1].axhline(
+        y=50, color="black", linestyle="--", alpha=0.5, label="Random (50%)"
+    )
+
+    # Plot 3: Signal frequency and performance differential
+    signal_percentages = [
+        v.get("signal_percentage", 0) for v in valid_indicators.values()
+    ]
+    performance_diffs = [
+        v.get("performance_differential", 0) * 100 for v in valid_indicators.values()
+    ]
+
+    bars5 = axes[1, 0].bar(
+        indicators,
+        signal_percentages,
+        alpha=0.7,
+        color="orange",
+        label="Signal Frequency (%)",
+    )
+
+    for bar, value in zip(bars5, signal_percentages):
+        axes[1, 0].text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + 1,
+            f"{value:.1f}%",
+            ha="center",
+            va="bottom",
+            fontsize=8,
+            fontweight="bold",
+        )
+
+    axes[1, 0].set_title("Indicator Signal Frequency", fontweight="bold")
+    axes[1, 0].set_ylabel("Percentage of Days with Signals (%)")
+    axes[1, 0].tick_params(axis="x", rotation=45)
+    axes[1, 0].grid(True, alpha=0.3)
+
+    # Plot 4: Performance differential (signal vs no signal)
+    colors = ["green" if x > 0 else "red" for x in performance_diffs]
+    bars6 = axes[1, 1].bar(indicators, performance_diffs, alpha=0.8, color=colors)
+
+    for bar, value in zip(bars6, performance_diffs):
+        axes[1, 1].text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + np.sign(value) * 0.5,
+            f"{value:+.1f}%",
+            ha="center",
+            va="bottom" if value >= 0 else "top",
+            fontsize=8,
+            fontweight="bold",
+        )
+
+    axes[1, 1].set_title(
+        "Performance Differential (Signal - No Signal)", fontweight="bold"
+    )
+    axes[1, 1].set_ylabel("Return Difference (%)")
+    axes[1, 1].tick_params(axis="x", rotation=45)
+    axes[1, 1].grid(True, alpha=0.3)
+    axes[1, 1].axhline(y=0, color="black", linestyle="-", alpha=0.8)
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.close()
+
+    print(f"✓ Indicator performance analysis plot saved: {output_path}")
 
 
 def create_technical_indicators_plot(

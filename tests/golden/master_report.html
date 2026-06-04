@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Trading Strategy Report - snapshot_model</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 50px;
+            padding: 30px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border-left: 4px solid #4f46e5;
+        }
+
+        .section h2 {
+            color: #1e293b;
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section h3 {
+            color: #334155;
+            font-size: 1.4rem;
+            font-weight: 500;
+            margin: 25px 0 15px 0;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        .metric-card .label {
+            font-size: 0.9rem;
+            color: #64748b;
+            margin-bottom: 5px;
+        }
+
+        .metric-card .value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .metric-card .value.positive {
+            color: #10b981;
+        }
+
+        .metric-card .value.negative {
+            color: #ef4444;
+        }
+
+        .chart-container {
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .chart-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+        }
+
+        .chart-caption {
+            font-style: italic;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .data-sources {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .data-source-item {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .data-source-item::before {
+            content: "📊";
+            font-size: 1.2rem;
+        }
+
+        .code-block {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 20px 0;
+            white-space: pre-wrap;
+        }
+
+        .insights-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .insights-list li {
+            padding: 12px 0;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .insights-list li::before {
+            content: "💡";
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .insights-list li:last-child {
+            border-bottom: none;
+        }
+
+        .footer {
+            background: #f1f5f9;
+            padding: 30px;
+            text-align: center;
+            color: #64748b;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .footer p {
+            margin: 5px 0;
+            font-size: 0.9rem;
+        }
+
+        /* Beautiful Table Styling */
+        .table-container {
+            overflow-x: auto;
+            margin: 25px 0;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            background: white;
+        }
+
+        .performance-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            background: white;
+        }
+
+        .performance-table thead th {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            font-weight: 600;
+            padding: 14px 18px;
+            text-align: left;
+            border: none;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .performance-table tbody td {
+            padding: 12px 18px;
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.2s ease;
+        }
+
+        .performance-table tbody tr:hover {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        }
+
+        .performance-table .positive {
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        .performance-table .negative {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        .performance-table .neutral {
+            color: #64748b;
+        }
+
+        /* Enhanced insights cards */
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 25px 0;
+        }
+
+        .insight-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border: 1px solid #e2e8f0;
+        }
+
+        .insight-card h4 {
+            color: #1e293b;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .insight-card ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .insight-card li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f5f9;
+            color: #475569;
+        }
+
+        .insight-card li:last-child {
+            border-bottom: none;
+        }
+
+        .insight-card li::before {
+            content: "•";
+            color: #4f46e5;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        /* Executive Highlights Cards */
+        .executive-highlights {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+            padding: 25px;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .highlight-card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border: 1px solid #e2e8f0;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .highlight-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+        }
+
+        .highlight-card .metric {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #4f46e5;
+            margin-bottom: 8px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .highlight-card .label {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 4px;
+        }
+
+        .highlight-card .subtext {
+            font-size: 0.85rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .section {
+                padding: 20px;
+            }
+
+            .performance-table {
+                font-size: 0.8rem;
+            }
+
+            .performance-table th,
+            .performance-table td {
+                padding: 10px 12px;
+            }
+
+            .table-container {
+                margin: 15px -10px;
+            }
+
+            .insights-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 LLM Trading Strategy Experiment Report</h1>
+            <div class="subtitle">Model: snapshot_model | Generated: 2024-01-02 09:30</div>
+        </div>
+        <div class="content">
+            <div class="section">
+                <h2>📈 Executive Summary</h2>
+
+                <!-- Executive Highlights -->
+                <div class="executive-highlights">
+                    <div class="highlight-card">
+                        <div class="metric">15</div>
+                        <div class="label">Baseline Strategies</div>
+                        <div class="subtext">8 Categories</div>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="metric">6</div>
+                        <div class="label">Technical Indicators</div>
+                        <div class="subtext">Fully Analyzed</div>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="metric">78%</div>
+                        <div class="label">Top Indicator Alignment</div>
+                        <div class="subtext">RSI Momentum</div>
+                    </div>
+                </div>
+
+                <h3>🤖 Advanced LLM Finance Framework</h3>
+                <p><strong>15 Baseline Strategies</strong> across 8 categories for comprehensive performance benchmarking | <strong>LLM Indicator Alignment Analysis</strong> quantifying AI vs technical indicator correlations | <strong>Research-Grade Comparisons</strong> with statistical rigor and visual analytics</p>
+
+                <div class="metric-grid">
+
+                    <div class="metric-card">
+                        <div class="label">Total Return</div>
+                        <div class="value positive">38.50%</div>
+                        <small>vs Index: 30.00%</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Trading Period</div>
+                        <div class="value">245 days</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="label">Statistical Significance</div>
+                        <div class="value">✓ Significant</div>
+                        <small>p-value: 0.0310</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Effect Size</div>
+                        <div class="value">0.420</div>
+                        <small>Cohen's d</small>
+                    </div>
+
+                </div>
+            </div>
+
+    <div class="section">
+        <h2>🔬 Methodology & Technical Implementation</h2>
+
+        <h3>Technical Indicator Framework</h3>
+        <ul>
+            <li><strong>RSI(14):</strong> Momentum oscillator for overbought/oversold conditions (thresholds: 30/70)</li>
+            <li><strong>MACD(12,26,9):</strong> Trend-following momentum indicator with signal line crossovers</li>
+            <li><strong>Stochastic(14,3):</strong> Price momentum relative to recent trading range (thresholds: 20/80)</li>
+            <li><strong>Bollinger Bands(20,2):</strong> Volatility-based support/resistance levels with position tracking</li>
+        </ul>
+
+        <h3>Enhanced HOLD Evaluation</h3>
+        <p><strong>Previous Method:</strong> Simple next-day return > 0 (resulted in 0% success rate)</p>
+
+        <p><strong>New Dual Criteria:</strong></p>
+        <ol>
+            <li><strong>Quiet Market Success:</strong> Performance in low-volatility environments (<0.2% daily moves)</li>
+            <li><strong>Risk Avoidance:</strong> Protection against significant losses in uncertain conditions (>2% potential loss)</li>
+            <li><strong>Context Adjustment:</strong> Volatility and regime-aware evaluation with weighted scoring</li>
+        </ol>
+
+        <h3>Signal Integration Approach</h3>
+        <ul>
+            <li><strong>Consensus Framework:</strong> Multiple indicators must align for high-confidence signals</li>
+            <li><strong>Weighting System:</strong> Different indicators weighted by historical effectiveness</li>
+            <li><strong>Contrarian Filtering:</strong> System identifies when to fade vs. follow technical extremes</li>
+            <li><strong>Adaptive Thresholds:</strong> Dynamic signal strength based on market volatility</li>
+        </ul>
+
+        <h3>Decision Framework Architecture</h3>
+        <ul>
+            <li><strong>Multi-Modal Input:</strong> Technical indicators + LLM reasoning + risk metrics</li>
+            <li><strong>Probabilistic Outputs:</strong> Confidence scores for BUY/HOLD/SELL decisions</li>
+            <li><strong>Context Awareness:</strong> Market regime detection and volatility adjustment</li>
+            <li><strong>Memory Integration:</strong> Historical performance feedback for adaptive learning</li>
+        </ul>
+    </div>
+                <div class="section">
+                <h2>📈 Enhanced Baseline Strategy Suite</h2>
+                <p>Comprehensive analysis of our 15 baseline strategies across 8 categories, providing research-grade comparisons for LLM performance evaluation.</p>
+
+                <h3>Strategy Categories Overview</h3>
+                <div class="table-container">
+                    <table class="performance-table">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Strategies</th>
+                                <th>Best Return</th>
+                                <th>Avg Return</th>
+                                <th>Avg Sharpe</th>
+                                <th>Avg Win Rate</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                            <tr>
+                                <td><strong>Passive</strong></td>
+                                <td>1</td>
+                                <td class="positive">+45.2%</td>
+                                <td class="positive">+45.2%</td>
+                                <td>1.20</td>
+                                <td class="positive">52.1%</td>
+                                <td>Market benchmark and passive strategies</td>
+                            </tr>
+
+                            <tr>
+                                <td><strong>Trend Following</strong></td>
+                                <td>2</td>
+                                <td class="positive">+32.1%</td>
+                                <td class="positive">+26.0%</td>
+                                <td>0.70</td>
+                                <td class="positive">50.2%</td>
+                                <td>Strategies that follow market trends</td>
+                            </tr>
+
+                            <tr>
+                                <td><strong>Mean Reversion</strong></td>
+                                <td>2</td>
+                                <td class="positive">+28.7%</td>
+                                <td class="positive">+26.5%</td>
+                                <td>0.80</td>
+                                <td class="positive">52.1%</td>
+                                <td>Strategies betting on price return to mean</td>
+                            </tr>
+
+                            <tr>
+                                <td><strong>Noise</strong></td>
+                                <td>1</td>
+                                <td class="negative">-5.2%</td>
+                                <td class="negative">-5.2%</td>
+                                <td>-0.30</td>
+                                <td class="positive">48.5%</td>
+                                <td>Random and statistical control baselines</td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>Individual Strategy Performance</h3>
+                <div class="table-container">
+                    <table class="performance-table">
+                        <thead>
+                            <tr>
+                                <th>Strategy</th>
+                                <th>Category</th>
+                                <th>Total Return</th>
+                                <th>Sharpe</th>
+                                <th>Win Rate</th>
+                                <th>Indicators</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                            <tr>
+                                <td><strong>Rsi Mean Reversion</strong></td>
+                                <td>Mean Reversion</td>
+                                <td class="positive">+28.7%</td>
+                                <td>0.90</td>
+                                <td class="positive">53.4%</td>
+                                <td>RSI</td>
+                                <td>RSI oversold/overbought mean reversion</td>
+                            </tr>
+
+                            <tr>
+                                <td><strong>Stochastic Oscillator</strong></td>
+                                <td>Mean Reversion</td>
+                                <td class="positive">+24.3%</td>
+                                <td>0.70</td>
+                                <td class="positive">50.8%</td>
+                                <td>Stochastic</td>
+                                <td>Stochastic oscillator mean reversion</td>
+                            </tr>
+
+                            <tr>
+                                <td><strong>Random</strong></td>
+                                <td>Noise</td>
+                                <td class="negative">-5.2%</td>
+                                <td>-0.30</td>
+                                <td class="positive">48.5%</td>
+                                <td>None</td>
+                                <td>Random noise baseline for statistical comparison</td>
+                            </tr>
+
+                            <tr>
+                                <td><strong>Buy And Hold</strong></td>
+                                <td>Passive</td>
+                                <td class="positive">+45.2%</td>
+                                <td>1.20</td>
+                                <td class="positive">52.1%</td>
+                                <td>None</td>
+                                <td>Buy and hold S&P 500 Index (benchmark)</td>
+                            </tr>
+
+                            <tr>
+                                <td><strong>Momentum</strong></td>
+                                <td>Trend Following</td>
+                                <td class="positive">+32.1%</td>
+                                <td>0.80</td>
+                                <td class="positive">51.2%</td>
+                                <td>MA20</td>
+                                <td>20-day moving average momentum strategy</td>
+                            </tr>
+
+                            <tr>
+                                <td><strong>Macd Momentum</strong></td>
+                                <td>Trend Following</td>
+                                <td class="positive">+19.8%</td>
+                                <td>0.60</td>
+                                <td class="positive">49.2%</td>
+                                <td>MACD</td>
+                                <td>MACD line crossover trend signals</td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>Suite Summary</h3>
+                <ul>
+                    <li><strong>Total Strategies:</strong> 6 across 4 categories</li>
+                    <li><strong>Categories:</strong> Passive, Trend Following, Mean Reversion, Momentum, Risk Management, Multi-Factor, Confirmation, Noise</li>
+                    <li><strong>Indicators Covered:</strong> RSI, MACD, Stochastic, Bollinger Bands, Moving Averages, Volatility</li>
+                    <li><strong>Research Purpose:</strong> Statistical control and performance benchmarking for LLM strategies</li>
+                </ul>
+            </div>
+            <div class="section">
+                <h2>🎯 Performance Overview</h2>
+            </div>
+            <div class="section">
+                <h2>📊 Comprehensive Risk Analysis</h2>
+                <p>Complete assessment of strategy risk profile, including attribution, VaR, and stress testing.</p>
+
+                <h3>Risk Attribution & Decomposition</h3>
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="label">Beta (Market Sensitivity)</div>
+                        <div class="value">1.301</div>
+                        <small>High systematic risk</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Alpha (Excess Return)</div>
+                        <div class="value negative">-0.20%</div>
+                        <small>Risk-adjusted performance</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Market Correlation</div>
+                        <div class="value">0.991</div>
+                        <small>Highly correlated</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Total Volatility</div>
+                        <div class="value">0.12%</div>
+                        <small>Annualized strategy volatility</small>
+                    </div>
+                </div>
+
+                <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                    <strong>Risk Decomposition:</strong> 116.9% systematic risk, -16.9% idiosyncratic risk
+                </div>
+            </div>
+            <div class="section">
+                <h2>📊 Market Regime Analysis</h2>
+                <p>Performance breakdown by market conditions reveals how the strategy adapts to different environments.</p>
+            </div>
+            <div class="section">
+                <h2>📊 Statistical Validation</h2>
+
+                <div class="code-block">
+================================================================================
+STATISTICAL VALIDATION REPORT - snapshot_model
+================================================================================
+
+Dataset: 245 periods (2022-01-03 to 2022-12-30)
+Strategy Return: 38.50% | Index Return: 30.00%
+
+BOOTSTRAP TEST VS INDEX:
+  Strategy Sharpe: 1.100
+  Index Sharpe: 0.950
+  Difference: +0.150
+  p-value (two-sided): 0.0310
+  95% CI: [+0.020, +0.280]
+  RESULT: Strategy significantly outperforms benchmark ✓
+
+SUMMARY ASSESSMENT:
+  Overall: GOOD
+  Confidence: MODERATE
+  Key Findings:
+    Strategy beats the index on a risk-adjusted basis.
+    Bootstrap test is significant at the 5% level.
+  Recommendations:
+    • Validate on an out-of-sample window before deployment.
+================================================================================
+
+</div>
+            </div>
+            <div class="section">
+                <h2>🎯 Decision Behavior Analysis</h2>
+                <p>Analysis of LLM decision-making patterns, calibration quality, and behavioral biases.</p>
+
+                <h3>Technical Indicators Analysis</h3>
+                <p><em>Technical indicators were disabled for this experiment.</em></p>
+            </div>
+            <div class="section">
+                <h2>🤖 Enhanced LLM Indicator Alignment Analysis</h2>
+                <p>Comprehensive analysis of how well LLM trading decisions align with key technical indicators, including effectiveness ranking, pattern analysis, and market condition correlations.</p>
+
+                <h3>📊 Indicator Effectiveness Ranking</h3>
+                <p>Ranked by how effectively the LLM aligns with each technical indicator:</p>
+                <div class="table-container">
+                    <table class="performance-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Indicator</th>
+                                <th>Alignment Rate</th>
+                                <th>Signal Strength</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                            <tr>
+                                <td>1</td>
+                                <td><strong>RSI</strong></td>
+                                <td class="positive">78.0%</td>
+                                <td>🟢 Strong</td>
+                                <td>RSI oversold/overbought mean reversion</td>
+                            </tr>
+
+                            <tr>
+                                <td>2</td>
+                                <td><strong>MACD</strong></td>
+                                <td class="neutral">65.0%</td>
+                                <td>🟡 Moderate</td>
+                                <td>MACD line crossover trend signals</td>
+                            </tr>
+
+                            <tr>
+                                <td>3</td>
+                                <td><strong>Stochastic</strong></td>
+                                <td class="negative">42.0%</td>
+                                <td>🔴 Weak</td>
+                                <td>Stochastic oscillator mean reversion</td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>🔍 Decision Pattern Analysis</h3>
+                <p>Analysis of LLM decision patterns relative to indicator signals:</p>
+
+                <ul>
+                    <li><strong>Market Direction Bias:</strong> Indicators show 48.0% bullish signals</li>
+                    <li><strong>LLM Direction Bias:</strong> LLM shows 48.6% buy decisions</li>
+                    <li><strong>Agreement Rate:</strong> 61.6% overall alignment</li>
+                </ul>
+
+                <h4>Individual Indicator Breakdown</h4>
+                <div class="table-container">
+                    <table class="performance-table">
+                        <thead>
+                            <tr>
+                                <th>Indicator</th>
+                                <th>Bullish Signals</th>
+                                <th>Bearish Signals</th>
+                                <th>LLM Buy</th>
+                                <th>LLM Sell</th>
+                                <th>Agreements</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                            <tr>
+                                <td><strong>RSI</strong></td>
+                                <td>120</td>
+                                <td>125</td>
+                                <td>115</td>
+                                <td>118</td>
+                                <td class="positive">191</td>
+                            </tr>
+
+                            <tr>
+                                <td><strong>MACD</strong></td>
+                                <td>118</td>
+                                <td>127</td>
+                                <td>112</td>
+                                <td>122</td>
+                                <td class="positive">159</td>
+                            </tr>
+
+                            <tr>
+                                <td><strong>Stochastic</strong></td>
+                                <td>115</td>
+                                <td>130</td>
+                                <td>108</td>
+                                <td>115</td>
+                                <td class="positive">103</td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>📋 Detailed Alignment Results</h3>
+                <div class="table-container">
+                    <table class="performance-table">
+                        <thead>
+                            <tr>
+                                <th>Indicator</th>
+                                <th>Alignment Rate</th>
+                                <th>Total Signals</th>
+                                <th>Agreements</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                            <tr>
+                                <td><strong>RSI</strong></td>
+                                <td class="positive">78.0%</td>
+                                <td>245</td>
+                                <td>191</td>
+                                <td>RSI oversold/overbought mean reversion</td>
+                            </tr>
+
+                            <tr>
+                                <td><strong>MACD</strong></td>
+                                <td class="neutral">65.0%</td>
+                                <td>245</td>
+                                <td>159</td>
+                                <td>MACD line crossover trend signals</td>
+                            </tr>
+
+                            <tr>
+                                <td><strong>Stochastic</strong></td>
+                                <td class="negative">42.0%</td>
+                                <td>245</td>
+                                <td>103</td>
+                                <td>Stochastic oscillator mean reversion</td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>🎯 Strategic Insights</h3>
+                <div class="insights-grid">
+                    <div class="insight-card">
+                        <h4>Effectiveness Categories</h4>
+                        <ul>
+                            <li><span class="positive">🟢 Strong Alignment (>70%):</span> LLM effectively incorporates this indicator</li>
+                            <li><span class="neutral">🟡 Moderate Alignment (50-70%):</span> Partial indicator usage</li>
+                            <li><span class="negative">🔴 Weak Alignment (<50%):</span> Limited or no indicator usage</li>
+                        </ul>
+                    </div>
+                    <div class="insight-card">
+                        <h4>Pattern Implications</h4>
+                        <ul>
+                            <li><strong>High RSI alignment:</strong> LLM recognizes momentum extremes effectively</li>
+                            <li><strong>Low Stochastic alignment:</strong> LLM may use more sophisticated mean-reversion logic</li>
+                            <li><strong>MACD alignment:</strong> Shows trend-following behavior patterns</li>
+                        </ul>
+                    </div>
+                    <div class="insight-card">
+                        <h4>Research Applications</h4>
+                        <ul>
+                            <li>Use high-alignment indicators to understand LLM's technical analysis approach</li>
+                            <li>Low-alignment areas reveal unique LLM decision-making patterns</li>
+                            <li>Alignment patterns help calibrate LLM vs traditional strategy performance</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="section">
+                <h2>🎯 Strategy Comparison Insights</h2>
+                <p>Advanced analysis positioning the LLM strategy against traditional approaches, identifying strengths, weaknesses, and strategic positioning.</p>
+
+                <h3>📊 LLM vs Category Performance Positioning</h3>
+                <div class="table-container">
+                    <table class="performance-table">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>LLM Performance</th>
+                                <th>Category Average</th>
+                                <th>Performance vs Category</th>
+                                <th>Sharpe vs Category</th>
+                                <th>Win Rate vs Category</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                            <tr>
+                                <td><strong>Passive</strong></td>
+                                <td>+38.5%</td>
+                                <td>+45.2%</td>
+                                <td class="negative">🔴 -6.7%</td>
+                                <td class="negative">🟡 -0.10</td>
+                                <td class="positive">🟢 +2.1%</td>
+                            </tr>
+
+                            <tr>
+                                <td><strong>Trend Following</strong></td>
+                                <td>+38.5%</td>
+                                <td>+26.0%</td>
+                                <td class="positive">🟢 +12.5%</td>
+                                <td class="positive">🟢 +0.40</td>
+                                <td class="positive">🟢 +4.0%</td>
+                            </tr>
+
+                            <tr>
+                                <td><strong>Mean Reversion</strong></td>
+                                <td>+38.5%</td>
+                                <td>+26.5%</td>
+                                <td class="positive">🟢 +12.0%</td>
+                                <td class="positive">🟢 +0.30</td>
+                                <td class="positive">🟢 +2.1%</td>
+                            </tr>
+
+                            <tr>
+                                <td><strong>Noise</strong></td>
+                                <td>+38.5%</td>
+                                <td>-5.2%</td>
+                                <td class="positive">🟢 +43.7%</td>
+                                <td class="positive">🟢 +1.40</td>
+                                <td class="positive">🟢 +5.7%</td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>🎭 Strategy Resemblance Analysis</h3>
+                <p>Which traditional strategies does the LLM most closely resemble? Based on correlation of return patterns and performance metrics.</p>
+                <div class="table-container">
+                    <table class="performance-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Strategy</th>
+                                <th>Category</th>
+                                <th>Resemblance</th>
+                                <th>Return Diff</th>
+                                <th>Sharpe Diff</th>
+                                <th>Win Rate Diff</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                            <tr>
+                                <td>1</td>
+                                <td><strong>Rsi Mean Reversion</strong></td>
+                                <td>Mean Reversion</td>
+                                <td>🔴 17.4</td>
+                                <td class="neutral">+9.8%</td>
+                                <td class="positive">+0.20</td>
+                                <td class="neutral">+0.8%</td>
+                            </tr>
+
+                            <tr>
+                                <td>2</td>
+                                <td><strong>Buy And Hold</strong></td>
+                                <td>Passive</td>
+                                <td>🔴 42.9</td>
+                                <td class="neutral">+6.7%</td>
+                                <td class="positive">+0.10</td>
+                                <td class="neutral">+2.1%</td>
+                            </tr>
+
+                            <tr>
+                                <td>3</td>
+                                <td><strong>Moving Average Crossover</strong></td>
+                                <td>Unknown</td>
+                                <td>🔴 47.4</td>
+                                <td class="neutral">+8.5%</td>
+                                <td class="positive">+0.25</td>
+                                <td class="neutral">+2.3%</td>
+                            </tr>
+
+                            <tr>
+                                <td>4</td>
+                                <td><strong>Momentum</strong></td>
+                                <td>Trend Following</td>
+                                <td>🔴 61.2</td>
+                                <td class="neutral">+6.4%</td>
+                                <td class="positive">+0.30</td>
+                                <td class="neutral">+3.0%</td>
+                            </tr>
+
+                            <tr>
+                                <td>5</td>
+                                <td><strong>Stochastic Oscillator</strong></td>
+                                <td>Mean Reversion</td>
+                                <td>🔴 70.2</td>
+                                <td class="neutral">+14.2%</td>
+                                <td class="positive">+0.40</td>
+                                <td class="neutral">+3.4%</td>
+                            </tr>
+
+                            <tr>
+                                <td>6</td>
+                                <td><strong>Bollinger Bands</strong></td>
+                                <td>Unknown</td>
+                                <td>🔴 84.5</td>
+                                <td class="neutral">+16.0%</td>
+                                <td class="positive">+0.45</td>
+                                <td class="neutral">+4.1%</td>
+                            </tr>
+
+                            <tr>
+                                <td>7</td>
+                                <td><strong>Macd Momentum</strong></td>
+                                <td>Trend Following</td>
+                                <td>🔴 102.9</td>
+                                <td class="neutral">+18.7%</td>
+                                <td class="neutral">+0.50</td>
+                                <td class="neutral">+5.0%</td>
+                            </tr>
+
+                            <tr>
+                                <td>8</td>
+                                <td><strong>Random</strong></td>
+                                <td>Noise</td>
+                                <td>🔴 121.2</td>
+                                <td class="neutral">+43.7%</td>
+                                <td class="neutral">+1.40</td>
+                                <td class="neutral">+5.7%</td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>📈 Performance Attribution Analysis</h3>
+                <p>Breaking down LLM performance relative to traditional strategy categories.</p>
+
+                <h4>Category-Level Attribution</h4>
+                <div class="table-container">
+                    <table class="performance-table">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Attribution Weight</th>
+                                <th>Attributed Return</th>
+                                <th>Key Strategies</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                            <tr>
+                                <td><strong>Mean Reversion</strong></td>
+                                <td>54.2%</td>
+                                <td>+20.8%</td>
+                                <td>Rsi Mean Reversion, Stochastic Oscillator</td>
+                            </tr>
+
+                            <tr>
+                                <td><strong>Passive</strong></td>
+                                <td>17.6%</td>
+                                <td>+6.8%</td>
+                                <td>Buy And Hold</td>
+                            </tr>
+
+                            <tr>
+                                <td><strong>Unknown</strong></td>
+                                <td>15.9%</td>
+                                <td>+6.1%</td>
+                                <td>Moving Average Crossover</td>
+                            </tr>
+
+                            <tr>
+                                <td><strong>Trend Following</strong></td>
+                                <td>12.3%</td>
+                                <td>+4.7%</td>
+                                <td>Momentum</td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>💡 Key Strategic Insights</h3>
+                <div class="insights-grid">
+                    <div class="insight-card">
+                        <h4>LLM Strategic Positioning</h4>
+                        <ul>
+
+                            <li><strong>Primary Strength:</strong> Noise</li>
+                            <li><strong>Key Differentiation:</strong> Performs differently from traditional momentum and mean-reversion approaches</li>
+                            <li><strong>Unique Value:</strong> Combines elements of multiple strategies while avoiding common pitfalls</li>
+                        </ul>
+                    </div>
+                    <div class="insight-card">
+                        <h4>Research Implications</h4>
+                        <ul>
+                            <li>LLM shows sophisticated blending of traditional approaches</li>
+                            <li>Avoids overfitting to single indicator categories</li>
+                            <li>Demonstrates adaptive behavior across market conditions</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+    <section class="analysis-section">
+        <div class="section-header">
+            <h2>📊 Strategy Category Performance Analysis</h2>
+            <p>This analysis groups the 15 baseline strategies by their trading approach categories,
+            allowing for a systematic comparison of LLM performance across different trading styles.</p>
+        </div>
+        </section>            <div class="section">
+                <h2>🛠️ Practical Implementation Considerations</h2>
+                <p>Real-world deployment requires addressing transaction costs, liquidity, and operational factors.</p>
+
+                <h3>Transaction Costs Impact</h3>
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="label">Trading Frequency</div>
+                        <div class="value">83.3%</div>
+                        <small>Days with position changes</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Annual Trades</div>
+                        <div class="value">210</div>
+                        <small>Round trip trades</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Trading Costs</div>
+                        <div class="value">3150 bps</div>
+                        <small>Significant impact</small>
+                    </div>
+                </div>
+
+                <h3>Operational Considerations</h3>
+
+                <h4>Technical Infrastructure</h4>
+                <ul class="insights-list">
+                    <li><strong>API Reliability:</strong> LLM responses must be consistent and available during market hours</li>
+                    <li><strong>Response Time:</strong> Decision latency should be under 100ms for real-time trading</li>
+                    <li><strong>Fallback Mechanisms:</strong> Alternative decision rules when LLM unavailable</li>
+                    <li><strong>Monitoring:</strong> Real-time performance tracking and automated alerts</li>
+                </ul>
+
+                <h4>Risk Management</h4>
+                <ul class="insights-list">
+                    <li><strong>Position Limits:</strong> Maximum exposure per asset/sector</li>
+                    <li><strong>Drawdown Controls:</strong> Automatic reduction during losing streaks</li>
+                    <li><strong>Liquidity Checks:</strong> Ensure sufficient volume for position sizing</li>
+                    <li><strong>Market Impact:</strong> Consider price impact of larger orders</li>
+                </ul>
+
+                <h4>Regulatory & Compliance</h4>
+                <ul class="insights-list">
+                    <li><strong>Audit Trail:</strong> Complete record of decision-making process</li>
+                    <li><strong>Explainability:</strong> Ability to explain AI-driven trades to regulators</li>
+                    <li><strong>Bias Monitoring:</strong> Regular checks for systematic biases</li>
+                    <li><strong>Testing Requirements:</strong> Validation across multiple market scenarios</li>
+                </ul>
+
+                <h3>Scaling Considerations</h3>
+                <ul class="insights-list">
+                    <li><strong>Cost Efficiency:</strong> LLM API costs vs traditional strategy development</li>
+                    <li><strong>Performance Consistency:</strong> Stability across different market conditions</li>
+                    <li><strong>Portfolio Size:</strong> Impact of strategy capacity and market impact</li>
+                    <li><strong>Multi-Asset Extension:</strong> Applicability beyond single-asset strategies</li>
+                </ul>
+
+                <h3>Deployment Recommendations</h3>
+
+                <div style="background: #dcfce7; padding: 20px; border-radius: 8px; border-left: 4px solid #16a34a; margin: 20px 0;">
+                    <strong>✅ Recommended for live deployment</strong> with proper risk controls
+                    <ul style="margin-top: 10px;">
+                        <li>Implement position sizing based on confidence scores</li>
+                        <li>Monitor for overfitting in live performance</li>
+                        <li>Consider hybrid approach combining AI with traditional rules</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="section">
+                <h2>💡 Key Insights & Recommendations</h2>
+
+                <h3>Key Findings</h3>
+                <ul class="insights-list">
+                    <li>Strategy beats the index on a risk-adjusted basis.</li>
+                    <li>Bootstrap test is significant at the 5% level.</li>
+                </ul>
+
+                <h3>Recommendations</h3>
+                <ul class="insights-list">
+                    <li>Validate on an out-of-sample window before deployment.</li>
+                </ul>
+
+                <h3>Overall Assessment</h3>
+                <div class="metric-grid">
+
+                    <div class="metric-card">
+                        <div class="label">Assessment</div>
+                        <div class="value">GOOD</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Confidence Level</div>
+                        <div class="value">MODERATE</div>
+                    </div>
+
+                </div>
+            </div>
+            <div class="section">
+                <h2>📁 Technical Details</h2>
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="label">Model Tag</div>
+                        <div class="value">snapshot_model</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Generated</div>
+                        <div class="value">2024-01-02 09:30:00</div>
+                    </div>
+                </div>
+
+                <h3>Data Sources</h3>
+                <div class="data-sources">
+                    <div class="data-source-item">Baseline Comparison: Performance vs multiple strategies</div>
+                    <div class="data-source-item">Llm Indicator Alignment: Available</div>
+                    <div class="data-source-item">Statistical Validation: Bootstrap analysis and out-of-sample testing</div>
+                    <div class="data-source-item">Parsed Data: 12 trading periods</div>
+                </div>
+
+                <h3>Analysis Components</h3>
+                <ul class="insights-list">
+                    <li>Statistical significance testing (bootstrap)</li>
+                    <li>Out-of-sample validation</li>
+                    <li>Risk-adjusted performance metrics</li>
+                    <li>Decision calibration analysis</li>
+                    <li>Baseline strategy comparisons</li>
+                    <li>Rolling performance analysis</li>
+                </ul>
+            </div>
+
+        </div>
+        <div class="footer">
+            <p><strong>LLM Finance Experiment Framework</strong></p>
+            <p>This report was automatically generated. For questions about methodology or results, refer to the technical documentation.</p>
+            <p>Generated on 2024-01-02 at 09:30:00</p>
+        </div>
+    </div>
+</body>
+</html>
