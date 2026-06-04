@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-06-03
+
+This release reworks the data layer, model providers, configuration, and reporting
+into a reproducible, zero-setup research framework.
+
+### 🗃️ Data, Providers & Reproducibility
+- **Vendored data source (new default)**: `DATA_SOURCE = "vendored"` loads a committed, SHA-256-checksummed SPY snapshot (`data/raw/spy_daily.csv` + `MANIFEST.json`), so fresh clones run fully offline and deterministically with zero setup. Refresh via `scripts/refresh_data.py`.
+- **Provider selection via `LLM_PROVIDER`**: a single knob with `"dummy"`, `"openrouter"`, `"claude_code"`, and `"claude_code_subagents"`. `USE_DUMMY_MODEL` is now a derived value (`LLM_PROVIDER == "dummy"`) kept only for backward compatibility; never set it by hand. See [docs/providers.md](docs/providers.md).
+- **Local Claude Code provider**: run experiments through a locally installed Claude Code CLI (`claude_code` / `claude_code_subagents`) on your Claude subscription, with no OpenRouter key and no per-call API cost.
+- **Reproducibility**: `RANDOM_SEED`, a per-run `RUN_MANIFEST.json`, and a disk response cache (`results/llm_cache/`) make runs repeatable. See `docs/REPRODUCIBILITY.md`.
+- **Pinned dependencies**: `requirements.txt` now pins exact versions (Python 3.11.2 target) for reproducible installs.
+
+### 🧱 Architecture & Code Quality
+- **Single-source configuration**: `src/config.py` is the one source of truth; the legacy multi-file configuration shim was removed.
+- **Reporting package**: the monolithic `report_generator.py` was split into a focused `reporting/` package, with golden snapshots guaranteeing byte-for-byte identical output.
+- **Trading engine decomposition**: the decision loop and post-run analysis were separated for readability, again guarded by golden snapshots and integration tests.
+- **Blocking CI gates**: critical flake8 (E9,F63,F7,F82), `black --check`, and `isort --check-only` now fail the build (previously non-blocking).
+
+### 🚀 Features
+- **Chain of Thought reasoning**: structured analytical reasoning in LLM prompts, toggled independently via `ENABLE_CHAIN_OF_THOUGHT` regardless of experiment selection.
+- **Trader personality system**: 5 behavioral frameworks (Cautious, Aggressive, Balanced, Momentum, Contrarian) that influence LLM decision-making for behavioral research.
+- **Dynamic symbol naming**: prompts reference the configured symbol (SPY, QQQ, AAPL, BTC-USD, and others) instead of a hardcoded "S&P 500".
+
+### 🔄 Changed
+- **Python 3.11+ now required**: the pinned environment and CI target Python 3.11, so `requires-python` is now `>=3.11` (previously `>=3.8`).
+- **Stooq is no longer the default or zero-setup data source**: it now requires an apikey (and may present a captcha). It remains available as a live-refresh option (`DATA_SOURCE = "stooq"`), but the default is the vendored snapshot above.
+- **Configuration variables**: added `DATA_SOURCE`, `VENDORED_DATA_PATH`, `VENDORED_MANIFEST_PATH`, `CSV_DATA_PATH`, and `STOOQ_SYMBOL`. Older configurations still work, with helpful migration warnings.
+
+### 🧪 Testing & Quality
+- **Golden snapshot tests**: the master report (markdown + HTML) and the matplotlib chart functions are guarded against accidental output changes.
+- **Deterministic offline tests**: the full pipeline (data → features → prompts → baselines → reports) runs without network access or API keys.
+- **Test coverage**: 306 tests in the suite (298 passing, 8 live-API tests skipped by default).
+
+### 📚 Documentation
+- **README, `docs/configuration.md`, `docs/methodology.md`, `docs/providers.md`, and `docs/REPRODUCIBILITY.md`** updated for the new data layer, provider selection, single-source configuration, and reproducibility workflow.
+
 ## [0.3.1] - 2025-12-03
 
 ### Added

@@ -2,6 +2,33 @@
 
 This document details the statistical and methodological framework used to evaluate LLM trading strategies.
 
+## ⚙️ Symbol Configuration
+
+The framework supports dynamic symbol configuration to enable research across different asset classes:
+
+### Supported Symbols
+- **SPY** → "SPY ETF (S&P 500 tracker)"
+- **QQQ** → "QQQ ETF (Nasdaq 100 tracker)"
+- **AAPL** → "Apple Inc. stock"
+- **MSFT** → "Microsoft Corp. stock"
+- **GOOGL** → "Alphabet Inc. stock"
+- **BTC-USD** → "Bitcoin USD"
+- **^GSPC** → "S&P 500 Index"
+
+### Configuration
+```python
+# In config.py
+STOOQ_SYMBOL = "SPY"  # For Stooq data source
+# or
+SYMBOL = "^GSPC"      # For CSV data source
+```
+
+### Impact on Research
+- **LLM Prompts**: Automatically reference the configured symbol instead of hardcoded "S&P 500"
+- **Performance Summaries**: Display the actual symbol name in trading results
+- **Benchmark Comparisons**: Compare against the configured symbol's performance
+- **Research Flexibility**: Enables studies across different markets and asset classes
+
 ## 📊 Statistical Validation Framework
 
 ### Bootstrap Significance Testing
@@ -67,6 +94,9 @@ overfitting_indicators = {
     "high_train_overfitting": train_sharpe > 1.0 and test_sharpe < 0.0
 }
 ```
+
+#### Bootstrap Parameters
+**Statistical Validation**: Uses 5,000 bootstrap resamples for robust significance testing with 95% confidence intervals.
 
 ### HOLD Decision Evaluation
 
@@ -176,6 +206,73 @@ max_drawdown = min(cumulative_returns - running_maximum)
 
 ## 🎯 LLM Prompt Architecture & Hierarchical Memory System
 
+### Chain of Thought Integration
+
+#### Conditional Response Parsing
+When `ENABLE_CHAIN_OF_THOUGHT = True`, LLM responses use conditional line indexing:
+
+**Response Format:**
+```
+Line 0: Chain of thought reasoning text
+Line 1: BUY/HOLD/SELL decision
+Line 2+: Additional explanation (optional)
+```
+
+**Parsing Logic:**
+```python
+def parse_response_text(response_lines, enable_chain_of_thought):
+    if enable_chain_of_thought:
+        chain_of_thought = response_lines[0] if len(response_lines) > 0 else ""
+        decision_line = response_lines[1] if len(response_lines) > 1 else response_lines[0]
+    else:
+        chain_of_thought = ""
+        decision_line = response_lines[0]
+
+    decision = parse_decision(decision_line)
+    return decision, chain_of_thought
+```
+
+#### CSV Output Enhancement
+Results include `chain_of_thought` column when feature is enabled:
+```csv
+date,decision,position,result,chain_of_thought
+2023-01-01,BUY,1.0,0.0234,"Market analysis shows bullish momentum with RSI above 50..."
+```
+
+#### Dummy Model Compatibility
+Dummy model generates correct response formats for all 8 feature flag combinations:
+- `ENABLE_CHAIN_OF_THOUGHT = True/False`
+- `ENABLE_STRATEGIC_JOURNAL = True/False`
+- `ENABLE_FEELING_LOG = True/False`
+- `SHOW_DATE_TO_LLM = True/False`
+
+### Comprehensive Report Integration
+
+When `ENABLE_CHAIN_OF_THOUGHT = True`, comprehensive reports automatically include chain of thought analysis sections that provide detailed reasoning quality metrics and performance correlations.
+
+#### Automatic Analysis Generation
+Reports detect the presence of `chain_of_thought` column in parsed CSV data and automatically generate:
+
+- **Reasoning Quality Metrics**: Completeness scores, length analysis, and analytical framework adherence
+- **Performance Correlations**: Statistical relationships between reasoning quality and trading outcomes
+- **Confidence Analysis**: Calibration between decision confidence and reasoning depth
+- **Quality Distribution Visualizations**: Charts showing reasoning patterns and correlations
+
+#### Conditional Content Inclusion
+Chain of thought sections appear only when relevant data is available:
+```python
+if "chain_of_thought_quality" in data_sources:
+    report_lines.extend(generate_chain_of_thought_section(data_sources, model_tag))
+```
+
+This ensures backward compatibility - reports for models without chain of thought data remain unchanged while providing enhanced analysis for experiments using structured reasoning.
+
+#### Research Impact
+The reporting integration enables systematic evaluation of whether structured analytical reasoning improves:
+- Decision quality and consistency
+- Performance correlation analysis
+- Behavioral pattern identification in LLM reasoning processes
+
 ### Prompt Construction Process
 
 The framework builds prompts through a systematic 4-stage process that combines static context with dynamic, hierarchical memory layers.
@@ -185,10 +282,13 @@ The framework builds prompts through a systematic 4-stage process that combines 
 **Purpose**: Establishes LLM role and provides invariant context
 
 ```python
-SYSTEM_PROMPT = """
-You are a cautious but rational equity index hedge fund trader. Your role is to beat the S&P500.
+# System prompt dynamically adapts to configured symbol
+_, symbol_name = get_current_symbol_info()  # e.g., "SPY ETF (S&P 500 tracker)"
 
-Your task is to decide a trading action for the S and P 500 index for the next trading day based only on the information provided in the user message.
+SYSTEM_PROMPT = f"""
+You are a cautious but rational equity index hedge fund trader. Your role is to beat the {symbol_name}.
+
+Your task is to decide a trading action for the {symbol_name} for the next trading day based only on the information provided in the user message.
 
 Technical indicators available include:
 - 20-day moving average momentum (trend strength)
@@ -395,7 +495,7 @@ def get_performance_summary(self) -> str:
         return (
             "No trades executed yet.\n"
             "Strategy cumulative return so far  0.00 percent.\n"
-            "S and P 500 cumulative return so far  0.00 percent.\n"
+            f"{self.symbol_name} cumulative return so far  0.00 percent.\n"  # Dynamic symbol
             "BUY 0, HOLD 0, SELL 0.\n"
             "Win rate undefined."
         )
@@ -406,7 +506,7 @@ def get_performance_summary(self) -> str:
 
     return (
         f"Total strategy return so far  {self.cumulative_return:.2f} percent.\n"
-        f"Total S&P 500 return so far  {self.index_cumulative_return:.2f} percent.\n"
+        f"Total {self.symbol_name} return so far  {self.index_cumulative_return:.2f} percent.\n"  # Dynamic symbol
         f"You are {outperform_word} the index by {edge:.2f} percent.\n"
         f"Number of decisions so far  {self.decision_count} "
         f"(BUY {self.buy_count}, HOLD {self.hold_count}, SELL {self.sell_count}).\n"
@@ -414,9 +514,18 @@ def get_performance_summary(self) -> str:
     )
 ```
 
+**Example with SPY ETF configured:**
+```
+Total strategy return so far  4.00 percent.
+Total SPY ETF (S&P 500 tracker) return so far  3.00 percent.
+You are outperforming the index by 1.00 percent.
+Number of decisions so far  4 (BUY 2, HOLD 1, SELL 1).
+Win rate so far  50.0 percent.
+```
+
 **Technical Implementation**:
 - **Real-time Updates**: Metrics updated after each trading decision
-- **Benchmark Comparison**: Continuous tracking vs S&P 500 performance
+- **Benchmark Comparison**: Continuous tracking vs configured symbol performance
 - **Decision Analytics**: Breakdown by decision type (BUY/HOLD/SELL)
 - **Win Rate Calculation**: Percentage of profitable trades
 - **Position Tracking**: Duration of current market position
@@ -754,8 +863,8 @@ This architecture enables LLMs to maintain consistency, learn from feedback, and
 ## 🧪 Data and Preprocessing
 
 ### Data Source
-- **Provider**: Stooq Financial Data
-- **Asset**: S&P 500 Index (^GSPC)
+- **Provider**: Vendored frozen SPY snapshot by default (SPY via yfinance, SHA-256 verified, offline). Stooq is available as a live-refresh option (requires an apikey).
+- **Asset**: Configurable symbol (e.g., SPY ETF, QQQ ETF, S&P 500 Index, individual stocks)
 - **Period**: Configurable date range (default: 2015-2023)
 - **Frequency**: Daily trading data
 
@@ -808,6 +917,21 @@ df["bb_position"] = (df["close"] - bb_lower) / (bb_upper - bb_lower)
 df["next_return_1d"] = df["return_1d"].shift(-1)  # Next day's return
 ```
 
+### ⚠️ Automatic Row Removal & Effective Start Date
+
+**Critical for understanding START_ROW behavior:**
+
+1. **Raw Dataset**: Contains all data from `DATA_START` to `DATA_END`
+2. **Technical Indicator Computation**: Requires historical data buffers:
+   - RSI: 14+ days for reliable signals
+   - MACD: 35+ days for proper convergence
+   - Bollinger Bands: 20+ days for statistical validity
+   - Combined minimum: ~40 trading days
+3. **Automatic Cleaning**: `df.dropna()` removes rows where any indicator is NaN
+4. **START_ROW Applied To**: The cleaned dataset (not raw data)
+
+**Result:** `START_ROW = 0` starts ~40 trading days after `DATA_START`, not on the first day of raw data.
+
 ### Data Quality Checks
 - **Missing data**: Remove rows with NaN values (df.dropna())
 - **Data validation**: Ensure close prices are not all NaN
@@ -820,13 +944,13 @@ df["next_return_1d"] = df["return_1d"].shift(-1)  # Next day's return
 The framework implements a modular Python architecture with specialized modules for each stage of the evaluation pipeline:
 
 - **`main.py`**: Orchestrates the complete evaluation pipeline from data to results
-- **`data_prep.py`**: Loads Stooq CSV data, computes comprehensive technical indicators (RSI, MACD, Stochastic, Bollinger Bands)
+- **`data_prep.py`**: Loads the configured data source (vendored snapshot by default; CSV or Stooq optional), computes comprehensive technical indicators (RSI, MACD, Stochastic, Bollinger Bands)
 - **`prompts.py`**: Generates context-rich prompts with hierarchical memory integration
 - **`trading_engine.py`**: Manages OpenRouter API calls and temporal memory systems
 - **`backtest.py`**: Calculates Sharpe ratios, drawdowns, and equity curves
-- **`statistical_validation.py`**: Implements bootstrap testing with 10,000 resamples
+- **`statistical_validation.py`**: Implements bootstrap testing (pipeline runs 5,000 resamples; the function default is 10,000)
 - **`decision_analysis.py`**: Detects behavioral biases, confidence calibration, and market regime analysis
-- **`reporting.py`**: Generates matplotlib visualizations and markdown reports
+- **`reporting/`**: Generates matplotlib visualizations and runtime period summaries (charts.py, period_summary.py)
 
 ### Position Management
 - **BUY**: +1.0 (long position)
@@ -844,6 +968,64 @@ strategy_return = position × next_day_return
 - **No transaction costs**: Baseline comparison
 - **Daily rebalancing**: End-of-day position changes
 
+### Output File Naming Conventions
+Results follow consistent naming patterns:
+
+**Report Files:**
+- `{model_tag}_{experiment}_comprehensive_report.html` - Full HTML report with charts
+- `{model_tag}_{experiment}_comprehensive_report.md` - Markdown version of report
+- `{model_tag}_{experiment}_error_report.html` - Error reports (when failures occur)
+
+**Data Files:**
+- `{model_tag}_{experiment}_parsed.csv` - Parsed trading decisions with metadata
+- `{model_tag}_{experiment}_statistical_validation.json` - Bootstrap testing results
+
+**Analysis Files:**
+- `{model_tag}_{experiment}_calibration_analysis.md` - Confidence calibration analysis
+- `{model_tag}_{experiment}_pattern_analysis.md` - Behavioral pattern analysis
+
+**Examples:**
+- `deepseek-r1-0528_memory_feeling_comprehensive_report.html`
+- `dummy_model_baseline_parsed.csv`
+- `gpt-oss-20b_dates_full_statistical_validation.json`
+
+## 🎭 Personality-Based Behavioral Analysis
+
+### Research Framework
+The personality system enables systematic study of how behavioral frameworks influence LLM decision-making in financial contexts.
+
+### Behavioral Consistency Metrics
+
+#### Personality Adherence Score
+```python
+def calculate_personality_adherence(decisions: List[Dict], personality: str) -> float:
+    """
+    Measure how well LLM decisions align with personality framework.
+
+    Example: For 'cautious' personality:
+    - High score: Decisions show risk-averse patterns (quick exits, conservative positions)
+    - Low score: Decisions show risk-seeking patterns (holding through volatility)
+    """
+```
+
+#### Cross-Personality Statistical Comparison
+- **Decision Pattern Analysis**: Compare win rates, position duration, conviction levels
+- **Market Regime Performance**: Evaluate personality effectiveness across bull/bear/sideways markets
+- **Behavioral Drift Measurement**: Track whether personalities maintain consistency over time
+- **Interaction Effects**: Study how personality × experiment combinations affect outcomes
+
+### LLM Psychology Insights
+- **Behavioral Frameworks**: How different personality prompts influence decision consistency
+- **Risk Perception**: How cautious vs aggressive frameworks affect risk assessment
+- **Learning Patterns**: How personality affects adaptation to market feedback
+- **Cognitive Biases**: Whether certain personalities exhibit systematic behavioral biases
+
+### Experimental Design Considerations
+- **Personality Randomization**: Rotate personalities across experimental runs to control for ordering effects
+- **Market Regime Stratification**: Analyze personality performance within specific market conditions
+- **Longitudinal Tracking**: Monitor how personality effects evolve over extended trading periods
+- **Cross-Validation**: Verify personality effects generalize across different symbols and time periods
+
 ## 🎯 Research Rigor Standards
 
 ### Reproducibility
@@ -859,7 +1041,7 @@ strategy_return = position × next_day_return
 - **HOLD evaluation**: Dual-criteria assessment framework
 
 ### Experimental Controls
-- **Multiple baselines**: 7 quantitative strategies for comparison
+- **Multiple baselines**: 15 quantitative strategies for comparison
 - **Controlled configurations**: 6 standardized experiment setups
 - **Data integrity**: Consistent preprocessing across experiments
 - **Position management**: Standardized trading rules

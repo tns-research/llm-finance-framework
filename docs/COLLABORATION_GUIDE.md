@@ -29,6 +29,12 @@ dev setup
 
 # Linux/Mac users can also use:
 make setup
+
+# Data source defaults to the vendored offline snapshot (no setup needed)
+# Edit src/config.py only to change it:
+# DATA_SOURCE = "vendored"  # default: committed SPY snapshot, offline
+# DATA_SOURCE = "csv"       # your own local CSV dataset
+# DATA_SOURCE = "stooq"     # live refresh (requires an apikey)
 ```
 
 ### **3. Create Feature Branch**
@@ -112,8 +118,8 @@ Every pull request and push to main automatically triggers our CI pipeline:
 
 #### Quality Gates
 - ✅ **Dependency Installation**: `pip install -e .[dev]`
-- ✅ **Code Linting**: flake8 (PEP 8), black (formatting), isort (imports)
-- ✅ **Type Checking**: mypy validation of type hints
+- ✅ **Code Linting (blocking)**: flake8 critical errors (E9,F63,F7,F82), black (formatting), isort (imports). These fail the build.
+- ⚠️ **Type Checking (advisory)**: mypy runs with `continue-on-error`, so type issues are reported but do not fail the build.
 - ✅ **Test Execution**: pytest with coverage reporting
 - ✅ **Import Validation**: All dependencies properly declared
 - ✅ **Basic Functionality**: Core imports and basic operations tested
@@ -128,7 +134,7 @@ on:
     branches: [ main ]
 
 # Checks performed:
-# 1. Python 3.8 environment setup
+# 1. Python 3.11 environment setup
 # 2. Dependency caching for faster builds
 # 3. Code quality validation
 # 4. Test execution with coverage

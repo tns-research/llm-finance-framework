@@ -6,14 +6,97 @@ This guide helps researchers choose the right configuration for their study and 
 
 Choose your experiment based on what you want to study:
 
-| Experiment Type | Research Question | Key Settings | Master Toggles | What It Tests | Best For |
+| Experiment Type | Research Question | Key Settings | Independent Toggles | What It Tests | Best For |
 |---|---|---|---|---|---|
-| **`baseline`** | How does LLM perform with no context? | `ACTIVE_EXPERIMENT = "baseline"` | `ENABLE_TECHNICAL_INDICATORS = True`<br>`ENABLE_FULL_TRADING_HISTORY = True`<br>`ENABLE_STRATEGIC_JOURNAL = False`<br>`ENABLE_FEELING_LOG = False`<br>`SHOW_DATE_TO_LLM = False` | Pure algorithmic capability<br>Technical indicator usage | Establishing baseline performance<br>Model capability assessment |
-| **`memory_only`** | How does LLM learn from experience? | `ACTIVE_EXperiment = "memory_only"` | `ENABLE_TECHNICAL_INDICATORS = True`<br>`ENABLE_FULL_TRADING_HISTORY = True`<br>`ENABLE_STRATEGIC_JOURNAL = True`<br>`ENABLE_FEELING_LOG = False`<br>`SHOW_DATE_TO_LLM = False` | Self-reflection and adaptation<br>Pattern recognition from history | Learning dynamics research<br>Memory system evaluation |
-| **`memory_feeling`** | How do emotions affect trading? | `ACTIVE_EXPERIMENT = "memory_feeling"` | `ENABLE_TECHNICAL_INDICATORS = True`<br>`ENABLE_FULL_TRADING_HISTORY = True`<br>`ENABLE_STRATEGIC_JOURNAL = True`<br>`ENABLE_FEELING_LOG = True`<br>`SHOW_DATE_TO_LLM = False` | Emotional intelligence<br>Confidence vs performance<br>Behavioral biases | Behavioral finance studies<br>LLM psychology research |
-| **`dates_only`** | Do LLMs use calendar patterns? | `ACTIVE_EXPERIMENT = "dates_only"` | `ENABLE_TECHNICAL_INDICATORS = True`<br>`ENABLE_FULL_TRADING_HISTORY = True`<br>`ENABLE_STRATEGIC_JOURNAL = False`<br>`ENABLE_FEELING_LOG = False`<br>`SHOW_DATE_TO_LLM = True` | Historical knowledge usage<br>Pattern recognition ability<br>Potential data leakage ⚠️ | Data contamination studies<br>Calendar effect research |
-| **`dates_memory`** | How do dates + memory interact? | `ACTIVE_EXPERIMENT = "dates_memory"` | `ENABLE_TECHNICAL_INDICATORS = True`<br>`ENABLE_FULL_TRADING_HISTORY = True`<br>`ENABLE_STRATEGIC_JOURNAL = True`<br>`ENABLE_FEELING_LOG = False`<br>`SHOW_DATE_TO_LLM = True` | Context integration<br>Historical + experiential learning | Advanced learning research<br>Context utilization studies |
-| **`dates_full`** | What's the maximum LLM capability? | `ACTIVE_EXPERIMENT = "dates_full"` | `ENABLE_TECHNICAL_INDICATORS = True`<br>`ENABLE_FULL_TRADING_HISTORY = True`<br>`ENABLE_STRATEGIC_JOURNAL = True`<br>`ENABLE_FEELING_LOG = True`<br>`SHOW_DATE_TO_LLM = True` | Peak performance assessment<br>All context utilization | Benchmarking studies<br>Capability demonstration |
+| **`baseline`** | How does LLM perform with no context? | `ACTIVE_EXPERIMENT = "baseline"` | `ENABLE_CHAIN_OF_THOUGHT = True/False`<br>`ENABLE_TECHNICAL_INDICATORS = True`<br>`ENABLE_FULL_TRADING_HISTORY = True`<br>`ENABLE_STRATEGIC_JOURNAL = False`<br>`ENABLE_FEELING_LOG = False`<br>`SHOW_DATE_TO_LLM = False` | Pure algorithmic capability<br>Technical indicator usage | Establishing baseline performance<br>Model capability assessment |
+| **`memory_only`** | How does LLM learn from experience? | `ACTIVE_EXPERIMENT = "memory_only"` | `ENABLE_CHAIN_OF_THOUGHT = True/False`<br>`ENABLE_TECHNICAL_INDICATORS = True`<br>`ENABLE_FULL_TRADING_HISTORY = True`<br>`ENABLE_STRATEGIC_JOURNAL = True`<br>`ENABLE_FEELING_LOG = False`<br>`SHOW_DATE_TO_LLM = False` | Self-reflection and adaptation<br>Pattern recognition from history | Learning dynamics research<br>Memory system evaluation |
+| **`memory_feeling`** | How do emotions affect trading? | `ACTIVE_EXPERIMENT = "memory_feeling"` | `ENABLE_CHAIN_OF_THOUGHT = True/False`<br>`ENABLE_TECHNICAL_INDICATORS = True`<br>`ENABLE_FULL_TRADING_HISTORY = True`<br>`ENABLE_STRATEGIC_JOURNAL = True`<br>`ENABLE_FEELING_LOG = True`<br>`SHOW_DATE_TO_LLM = False` | Emotional intelligence<br>Confidence vs performance<br>Behavioral biases | Behavioral finance studies<br>LLM psychology research |
+| **`dates_only`** | Do LLMs use calendar patterns? | `ACTIVE_EXPERIMENT = "dates_only"` | `ENABLE_CHAIN_OF_THOUGHT = True/False`<br>`ENABLE_TECHNICAL_INDICATORS = True`<br>`ENABLE_FULL_TRADING_HISTORY = True`<br>`ENABLE_STRATEGIC_JOURNAL = False`<br>`ENABLE_FEELING_LOG = False`<br>`SHOW_DATE_TO_LLM = True` | Historical knowledge usage<br>Pattern recognition ability<br>Potential data leakage ⚠️ | Data contamination studies<br>Calendar effect research |
+| **`dates_memory`** | How do dates + memory interact? | `ACTIVE_EXPERIMENT = "dates_memory"` | `ENABLE_CHAIN_OF_THOUGHT = True/False`<br>`ENABLE_TECHNICAL_INDICATORS = True`<br>`ENABLE_FULL_TRADING_HISTORY = True`<br>`ENABLE_STRATEGIC_JOURNAL = True`<br>`ENABLE_FEELING_LOG = False`<br>`SHOW_DATE_TO_LLM = True` | Context integration<br>Historical + experiential learning | Advanced learning research<br>Context utilization studies |
+| **`dates_full`** | What's the maximum LLM capability? | `ACTIVE_EXPERIMENT = "dates_full"` | `ENABLE_CHAIN_OF_THOUGHT = True/False`<br>`ENABLE_TECHNICAL_INDICATORS = True`<br>`ENABLE_FULL_TRADING_HISTORY = True`<br>`ENABLE_STRATEGIC_JOURNAL = True`<br>`ENABLE_FEELING_LOG = True`<br>`SHOW_DATE_TO_LLM = True` | Peak performance assessment<br>All context utilization | Benchmarking studies<br>Capability demonstration |
+
+## 🎭 Personality Research Dimension
+
+### Overview
+Beyond experiment types, you can now study how **trader personality** affects LLM decision-making. This adds a behavioral psychology layer to your research.
+
+### Personality × Experiment Matrix
+
+| Personality | Research Focus | Best Experiment Type | Key Behavioral Question |
+|-------------|----------------|---------------------|-------------------------|
+| **Cautious** | Risk management | `memory_feeling` | How does risk-aversion affect learning from experience? |
+| **Aggressive** | Alpha generation | `baseline` | Does boldness improve pure algorithmic performance? |
+| **Balanced** | Systematic trading | `dates_memory` | How does balanced analysis utilize different context types? |
+| **Momentum** | Trend following | `dates_only` | Does momentum focus enhance calendar pattern recognition? |
+| **Contrarian** | Market timing | `memory_only` | How does contrarian thinking affect experiential learning? |
+
+### Personality Impact on Master Toggles
+
+| Toggle | Personality Influence | Research Question |
+|--------|----------------------|-------------------|
+| `ENABLE_CHAIN_OF_THOUGHT` | All personalities can use structured reasoning | Do different personalities benefit from analytical frameworks? |
+| `ENABLE_STRATEGIC_JOURNAL` | All personalities use self-reflection differently | Do cautious personalities learn more from mistakes? |
+| `ENABLE_FEELING_LOG` | Behavioral frameworks affect emotional reporting | Do aggressive personalities show more confidence? |
+| `ENABLE_TECHNICAL_INDICATORS` | Different personalities interpret signals differently | Do momentum traders use indicators more effectively? |
+| `SHOW_DATE_TO_LLM` | Personality affects calendar pattern usage | Do contrarian personalities avoid date-based biases? |
+
+### Research Workflow with Personalities
+
+```python
+# Example: Study how personality affects memory utilization
+experiments = [
+    {"experiment": "memory_feeling", "personality": "cautious"},
+    {"experiment": "memory_feeling", "personality": "aggressive"},
+    {"experiment": "memory_feeling", "personality": "balanced"}
+]
+
+# Compare: How does personality influence learning from experience?
+# - Cautious: More conservative adaptation patterns?
+# - Aggressive: More volatile learning responses?
+# - Balanced: More systematic improvement?
+```
+
+### Expected Personality Effects
+
+#### Decision Pattern Differences
+- **Cautious**: Lower win rate but higher consistency, fewer large losses
+- **Aggressive**: Higher win rate but more volatility, occasional large gains/losses
+- **Balanced**: Moderate performance, most consistent across market regimes
+- **Momentum**: Strong in trending markets, weak in sideways/choppy conditions
+- **Contrarian**: Performs well during reversals, struggles in strong trends
+
+#### Behavioral Insights
+- **Conviction Levels**: Aggressive personalities show higher confidence scores
+- **Position Duration**: Momentum traders hold positions longer during trends
+- **Risk Management**: Cautious personalities exit positions more quickly
+- **Market Timing**: Contrarian personalities show more counter-cyclical behavior
+
+## 🧠 Chain of Thought Reasoning
+
+### Breaking Change: Independent Toggle
+**⚠️ BREAKING CHANGE**: As of recent updates, `ENABLE_CHAIN_OF_THOUGHT` works **independently** of experiment selection.
+
+### What It Does
+- **Structured Reasoning**: Prompts include step-by-step analytical reasoning
+- **Independent Control**: Toggle works regardless of `ACTIVE_EXPERIMENT` setting
+- **Enhanced Decision Quality**: LLMs break down complex market analysis systematically
+- **Research Flexibility**: Can combine any experiment type with analytical reasoning
+
+### Configuration Examples
+```python
+# Chain of thought with any experiment
+ENABLE_CHAIN_OF_THOUGHT = True  # Independent master toggle
+
+# Works with all experiment types:
+ACTIVE_EXPERIMENT = "baseline"     # + reasoning
+ACTIVE_EXPERIMENT = "memory_only"  # + reasoning
+ACTIVE_EXPERIMENT = "dates_full"   # + reasoning
+```
+
+### Research Applications
+- **Decision Quality**: Study if structured reasoning improves trading decisions
+- **Process Transparency**: Analyze LLM thought processes and decision logic
+- **Methodological Rigor**: Compare intuitive vs. analytical decision-making approaches
 
 ## ⚙️ Configuration Impact Guide
 
@@ -21,6 +104,7 @@ Choose your experiment based on what you want to study:
 
 | Toggle | Default | What It Controls | Research Impact |
 |---|---|---|---|
+| **`ENABLE_CHAIN_OF_THOUGHT`** | `True` | Step-by-step analytical reasoning | **Reasoning Quality**: `True` = structured analysis, `False` = direct decisions |
 | **`ENABLE_TECHNICAL_INDICATORS`** | `True` | RSI, MACD, Stochastic, Bollinger in prompts | **Quantitative vs Qualitative**: `True` = technical analysis, `False` = fundamental reasoning only |
 | **`ENABLE_FULL_TRADING_HISTORY`** | `True` | Complete trading record in context | **Memory Depth**: `True` = full history, `False` = limited context window |
 | **`ENABLE_STRATEGIC_JOURNAL`** | Varies | LLM's own trading notes and reasoning | **Self-Reflection**: `True` = learns from past decisions and outcomes |
@@ -41,7 +125,7 @@ Choose your experiment based on what you want to study:
 |---|---|---|---|
 | `TEST_MODE` | `True` | `False` | Quick iteration vs comprehensive analysis |
 | `TEST_LIMIT` | 100-500 | 2700+ | 6 months vs 10+ years of data |
-| `USE_DUMMY_MODEL` | `True` | `False` | Synthetic vs real LLM responses |
+| `LLM_PROVIDER` | `"dummy"` | `"openrouter"` / `"claude_code"` | Synthetic vs real LLM responses |
 
 ## 📊 Expected Outputs Guide
 
@@ -143,7 +227,7 @@ Analysis Focus:
 ```
 Configuration:
 ├── Any experiment type
-├── USE_DUMMY_MODEL = False
+├── LLM_PROVIDER = "openrouter" (or a Claude Code provider)
 ├── Multiple models in LLM_MODELS
 ├── TEST_MODE = False (full analysis)
 
@@ -184,7 +268,7 @@ Analysis Focus:
 
 **For Calendar Effects**: Use `dates_only` with caution ⚠️ (potential data leakage)
 
-**For Baseline Comparison**: Any experiment type with `USE_DUMMY_MODEL = False`
+**For Baseline Comparison**: Any experiment type with a real provider (`LLM_PROVIDER = "openrouter"` or a Claude Code provider)
 
 **For Parameter Sensitivity**: Vary `MA20_WINDOW`, `RET_5D_WINDOW`, `VOL20_WINDOW`
 
